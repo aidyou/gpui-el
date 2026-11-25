@@ -416,12 +416,126 @@ const LOADING: &[Row] = &[
         "添加被遮罩的内容。",
     ),
 ];
+const TAG: &[Row] = &[
+    (
+        "el_tag(), Tag::new, id",
+        "ElementId · call site",
+        "Create a tag. Supply a stable sibling-unique ID when creating repeated tags at the same call site.",
+        "创建标签。同一调用位置生成多个标签时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "label, content",
+        "SharedString / IntoElement · —",
+        "Label or custom contents; custom contents take precedence.",
+        "文字或自定义内容；自定义内容优先。",
+    ),
+    (
+        "kind, primary, success, info, warning, danger",
+        "TagType · Primary",
+        "Semantic color. Tag has no neutral variant.",
+        "语义颜色；标签没有默认（中性）变体。",
+    ),
+    (
+        "effect, dark, plain",
+        "TagEffect · Light",
+        "Dark uses the solid type color; plain uses the blank fill with a light border.",
+        "Dark 为类型色实底；plain 为留白底加浅色边框。",
+    ),
+    (
+        "size, small, large",
+        "TagSize · Default (24 px)",
+        "Small is 20 px; Large is 32 px. Font size stays 12 px.",
+        "Small 为 20 px，Large 为 32 px；字号均为 12 px。",
+    ),
+    (
+        "round",
+        "bool · false",
+        "Capsule shape; the radius is derived from the outer height.",
+        "胶囊形状；圆角按外框高度计算。",
+    ),
+    (
+        "hit",
+        "bool · false",
+        "Replace the border with the full-strength type color.",
+        "以完整类型色替换边框。",
+    ),
+    (
+        "color",
+        "Rgba · —",
+        "Override only the background, like the upstream inline style.",
+        "仅覆盖背景色，与上游内联样式一致。",
+    ),
+    (
+        "closable",
+        "bool · false",
+        "Show the close button. Its accessible name comes from the built-in locale.",
+        "显示关闭按钮；其无障碍名称来自内置语言词条。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · label",
+        "Name icon-only and custom-content tags for assistive technology.",
+        "为纯图标或自定义内容的标签提供无障碍名称。",
+    ),
+];
+const CHECK_TAG: &[Row] = &[
+    (
+        "el_check_tag(), CheckTag::new, id",
+        "ElementId · call site",
+        "Create a check tag with a stable sibling-unique ID.",
+        "创建可选择标签；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "label, content, accessibility_label",
+        "SharedString / IntoElement / SharedString · —",
+        "Label, custom contents, or the accessible name.",
+        "文字、自定义内容或无障碍名称。",
+    ),
+    (
+        "checked",
+        "bool · false",
+        "Controlled checked state; the application updates it in on_change.",
+        "受控选中状态；由应用在 on_change 中更新。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Block activation and keep the hover fill unchanged.",
+        "禁止切换，悬停底色保持不变。",
+    ),
+    (
+        "kind, primary, success, info, warning, danger",
+        "TagType · Primary",
+        "Semantic color of the checked state.",
+        "选中状态的语义颜色。",
+    ),
+];
 const BUTTON_EVENTS: &[Row] = &[(
     "on_click",
     "&ClickEvent, &mut Window, &mut App",
     "Standard pointer or keyboard activation; not emitted while disabled or loading.",
     "标准指针或键盘激活时触发；禁用或加载时不触发。",
 )];
+const TAG_EVENTS: &[Row] = &[
+    (
+        "Tag::on_click",
+        "&ClickEvent, &mut Window, &mut App",
+        "Activation of the whole tag; the root becomes a keyboard-focusable button.",
+        "点击整个标签时触发；根元素成为可键盘聚焦的按钮。",
+    ),
+    (
+        "Tag::on_close",
+        "&ClickEvent, &mut Window, &mut App",
+        "Activation of the close button. The application removes the tag from its own state.",
+        "点击关闭按钮时触发；由应用从自身状态中移除该标签。",
+    ),
+    (
+        "CheckTag::on_change",
+        "bool, &mut Window, &mut App",
+        "Reports the next checked state on pointer or keyboard activation; not emitted while disabled.",
+        "指针或键盘切换时上报下一个选中状态；禁用时不触发。",
+    ),
+];
 const MENU_EVENTS: &[Row] = &[
     (
         "Menu::on_select",
@@ -458,6 +572,7 @@ pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
         Page::Container => (CONTAINER, &[]),
         Page::Layout => (LAYOUT, &[]),
         Page::Space => (SPACE, &[]),
+        Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
     };
@@ -502,8 +617,13 @@ pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
     div().flex().flex_col().gap(px(12.))
         .child(heading("API"))
         .child(table(if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, api))
+        .when(page == Page::Tag, |el| {
+            el.child(heading("CheckTag API"))
+                .child(table(if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECK_TAG))
+        })
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table(if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
+        .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
 }

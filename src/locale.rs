@@ -19,6 +19,7 @@ impl Global for Locale {}
 struct Messages {
     button: ButtonMessages,
     menu: MenuMessages,
+    tag: TagMessages,
 }
 
 #[derive(Deserialize)]
@@ -31,6 +32,12 @@ struct MenuMessages {
 #[serde(deny_unknown_fields)]
 struct ButtonMessages {
     loading: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TagMessages {
+    close: String,
 }
 
 impl Locale {
@@ -50,6 +57,9 @@ impl Locale {
     }
     pub(crate) fn menu_more(self) -> &'static str {
         &self.messages().menu.more
+    }
+    pub(crate) fn tag_close(self) -> &'static str {
+        &self.messages().tag.close
     }
 
     fn messages(self) -> &'static Messages {
@@ -71,5 +81,7 @@ mod tests {
     fn both_built_in_locales_define_loading() {
         assert_eq!(Locale::default().button_loading(), "Loading");
         assert_eq!(Locale::SimplifiedChinese.button_loading(), "加载中");
+        assert_eq!(Locale::default().tag_close(), "Close");
+        assert_eq!(Locale::SimplifiedChinese.tag_close(), "关闭");
     }
 }

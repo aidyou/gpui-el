@@ -9,6 +9,7 @@ init_fonts: Use the optional fonts list to register embedded font bytes. Use the
 container_intro: Arrange headers, sidebars, main content and footers in nested containers.
 layout_intro: Divide rows into 24 responsive columns.
 space_intro: Set the spacing and alignment between adjacent elements.
+tag_intro: Mark content with tags, or toggle a selection with check tags.
 menu_intro: Navigate with nested entries, collapsible sidebars, and horizontal menus.
 loading_intro: Show progress over a specific region without blocking the rest of the window.
 grid_basic: Basic layout
@@ -40,6 +41,7 @@ icon_page: Icon
 container_page: Container
 layout_page: Layout
 space_page: Space
+tag_page: Tag
 menu_page: Menu
 loading_page: Loading
 icon_pack_error: Could not load the Tabler font. The current pack is unchanged.
@@ -89,3 +91,22 @@ count_increment: Count +1
 disabled: Disabled
 saving: Saving
 activation_help: 'Activated %{count} times. Press Tab to focus, then Enter or Space to activate.'
+tag_basic: Basic usage
+tag_removable: Removable tags
+tag_editable: Dynamic tags
+tag_sizes: Sizes
+tag_theme: Themes
+tag_rounded: Rounded tags
+tag_checkable: Checkable tags
+tag_effect_dark: Dark
+tag_effect_light: Light
+tag_effect_plain: Plain
+tag_hit: Highlighted border
+tag_add: New tag
+tag_reset: Reset
+tag_removed: 'Closed %{count} tags. The application removes the tag in the close callback.'
+tag_checked: Checked
+tag_toggle: Toggle me
+tag_label: Tag
+tag_checked_count: 'Checked tags: %{count} of 7'
+tag_editable_help: The library has no text input yet, so the button adds the next tag.

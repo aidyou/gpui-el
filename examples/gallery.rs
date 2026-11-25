@@ -7,9 +7,9 @@ use gpui::{
 };
 use gpui_el::{
     ButtonType, ButtonVariant, Direction, Icon, IconPack, Locale, MenuMode, MenuTrigger, Space,
-    Theme, el_aside, el_button, el_button_group, el_col, el_container, el_footer, el_header,
-    el_icon, el_init, el_loading, el_main, el_menu, el_menu_item, el_menu_item_group, el_row,
-    el_space, el_sub_menu,
+    TagEffect, TagType, Theme, el_aside, el_button, el_button_group, el_check_tag, el_col,
+    el_container, el_footer, el_header, el_icon, el_init, el_loading, el_main, el_menu,
+    el_menu_item, el_menu_item_group, el_row, el_space, el_sub_menu, el_tag,
 };
 use serde::Deserialize;
 
@@ -20,7 +20,6 @@ mod catalog;
 #[path = "gallery/search.rs"]
 mod search;
 
-#[derive(Default)]
 struct Gallery {
     dark: bool,
     reduced_motion: bool,
@@ -34,6 +33,36 @@ struct Gallery {
     icon_group: usize,
     icon_search: Option<gpui::Entity<search::Search>>,
     icon_copied: Option<&'static str>,
+    tag_toggle: bool,
+    closed_tags: HashSet<u32>,
+    dynamic_tags: Vec<SharedString>,
+    check_tags: Vec<bool>,
+}
+
+impl Default for Gallery {
+    fn default() -> Self {
+        Self {
+            dark: false,
+            reduced_motion: false,
+            clicks: 0,
+            page: Page::default(),
+            expanded: HashSet::new(),
+            masked: false,
+            menu_collapsed: false,
+            menu_selection: None,
+            icon_pack_error: false,
+            icon_group: 0,
+            icon_search: None,
+            icon_copied: None,
+            tag_toggle: false,
+            closed_tags: HashSet::new(),
+            dynamic_tags: ["Tag 1", "Tag 2", "Tag 3"]
+                .into_iter()
+                .map(SharedString::from)
+                .collect(),
+            check_tags: vec![true; 6],
+        }
+    }
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -45,18 +74,20 @@ enum Page {
     Container,
     Layout,
     Space,
+    Tag,
     Menu,
     Loading,
 }
 
 impl Page {
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::Init,
         Self::Button,
         Self::Icon,
         Self::Container,
         Self::Layout,
         Self::Space,
+        Self::Tag,
         Self::Menu,
         Self::Loading,
     ];
@@ -69,6 +100,7 @@ impl Page {
             Self::Container => &s.container_intro,
             Self::Layout => &s.layout_intro,
             Self::Space => &s.space_intro,
+            Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
             Self::Loading => &s.loading_intro,
         }
@@ -82,6 +114,7 @@ impl Page {
             Self::Container => "container",
             Self::Layout => "layout",
             Self::Space => "space",
+            Self::Tag => "tag",
             Self::Menu => "menu",
             Self::Loading => "loading",
         }
@@ -95,6 +128,7 @@ impl Page {
             Self::Container => &s.container_page,
             Self::Layout => &s.layout_page,
             Self::Space => &s.space_page,
+            Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
             Self::Loading => &s.loading_page,
         }
@@ -114,6 +148,7 @@ impl Page {
             ],
             Self::Layout => &["el-row", "el-col"],
             Self::Space => &["el-space"],
+            Self::Tag => &["el-tag", "el-check-tag"],
             Self::Menu => &[
                 "el-menu",
                 "el-sub-menu",
@@ -140,6 +175,7 @@ struct Copy {
     container_intro: String,
     layout_intro: String,
     space_intro: String,
+    tag_intro: String,
     menu_intro: String,
     loading_intro: String,
     grid_basic: String,
@@ -170,6 +206,7 @@ struct Copy {
     container_page: String,
     layout_page: String,
     space_page: String,
+    tag_page: String,
     menu_page: String,
     loading_page: String,
     icon_pack_error: String,
@@ -219,6 +256,25 @@ struct Copy {
     disabled: String,
     saving: String,
     activation_help: String,
+    tag_basic: String,
+    tag_removable: String,
+    tag_editable: String,
+    tag_sizes: String,
+    tag_theme: String,
+    tag_rounded: String,
+    tag_checkable: String,
+    tag_effect_dark: String,
+    tag_effect_light: String,
+    tag_effect_plain: String,
+    tag_hit: String,
+    tag_add: String,
+    tag_reset: String,
+    tag_removed: String,
+    tag_checked: String,
+    tag_toggle: String,
+    tag_label: String,
+    tag_checked_count: String,
+    tag_editable_help: String,
 }
 
 fn strings(locale: Locale) -> &'static Copy {
@@ -321,6 +377,8 @@ impl Gallery {
                 "grid-basic" | "grid-gutter" | "grid-mixed" | "grid-offset" | "grid-alignment"
                 | "grid-responsive" => demo_source("grids").into(),
                 "space-presets" | "space-wrap" => demo_source("spaces").into(),
+                "tag-basic" | "tag-removable" | "tag-editable" | "tag-sizes" | "tag-theme"
+                | "tag-rounded" | "tag-checkable" => demo_source("tags").into(),
                 "container" => demo_source("containers").into(),
                 "mask" => demo_source("loading").into(),
                 _ => example,
@@ -1052,6 +1110,201 @@ impl Gallery {
             )
     }
 
+    fn tags(&mut self, s: &'static Copy, cx: &mut Context<Self>) -> Div {
+        let types = [
+            (TagType::Primary, s.primary.as_str()),
+            (TagType::Success, s.success.as_str()),
+            (TagType::Info, s.info.as_str()),
+            (TagType::Warning, s.warning.as_str()),
+            (TagType::Danger, s.danger.as_str()),
+        ];
+        let typed = |prefix: &'static str, effect, round: bool| {
+            row().children(
+                types
+                    .into_iter()
+                    .enumerate()
+                    .map(move |(i, (kind, label))| {
+                        el_tag()
+                            .id((prefix, i as u32))
+                            .label(label)
+                            .kind(kind)
+                            .when(effect != TagEffect::Light, |tag| tag.effect(effect))
+                            .when(round, |tag| tag.round(true))
+                    }),
+            )
+        };
+        let basic = row()
+            .children(types.into_iter().enumerate().map(|(i, (kind, label))| {
+                el_tag().id(("tag-basic", i as u32)).label(label).kind(kind)
+            }))
+            .child(
+                el_tag()
+                    .id("tag-custom-color")
+                    .label(s.primary.as_str())
+                    .color(rgb(0x626aef)),
+            )
+            .child(el_tag().id("tag-hit").label(s.tag_hit.as_str()).hit(true));
+        let removable = row()
+            .children(types.into_iter().enumerate().map(|(i, (kind, label))| {
+                let index = i as u32;
+                if self.closed_tags.contains(&index) {
+                    return div().into_any_element();
+                }
+                el_tag()
+                    .id(("tag-removable", index))
+                    .label(label)
+                    .kind(kind)
+                    .closable(true)
+                    .on_close(cx.listener(move |this, _, _, cx| {
+                        this.closed_tags.insert(index);
+                        cx.notify();
+                    }))
+                    .into_any_element()
+            }))
+            .child(
+                el_button()
+                    .id("tag-reset")
+                    .small()
+                    .label(s.tag_reset.as_str())
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.closed_tags.clear();
+                        cx.notify();
+                    })),
+            )
+            .child(
+                s.tag_removed
+                    .replace("%{count}", &self.closed_tags.len().to_string()),
+            );
+        let editable = row()
+            .children(self.dynamic_tags.iter().enumerate().map(|(i, tag)| {
+                let tag = tag.clone();
+                el_tag()
+                    .id(("tag-dynamic", i as u32))
+                    .label(tag.clone())
+                    .closable(true)
+                    .on_close(cx.listener(move |this, _, _, cx| {
+                        this.dynamic_tags.retain(|item| item != &tag);
+                        cx.notify();
+                    }))
+            }))
+            .child(
+                el_button()
+                    .id("tag-new")
+                    .small()
+                    .label(s.tag_add.as_str())
+                    .icon(el_icon("plus"))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        let next = this.dynamic_tags.len() + 1;
+                        this.dynamic_tags
+                            .push(format!("{} {next}", s.tag_label).into());
+                        cx.notify();
+                    })),
+            )
+            .child(s.tag_editable_help.as_str());
+        let sizes = row()
+            .child(el_tag().id("tag-large").label(s.large.as_str()).large())
+            .child(el_tag().id("tag-default-size").label(s.default.as_str()))
+            .child(el_tag().id("tag-small").label(s.compact.as_str()).small());
+        let effects = [
+            (s.tag_effect_dark.as_str(), TagEffect::Dark),
+            (s.tag_effect_light.as_str(), TagEffect::Light),
+            (s.tag_effect_plain.as_str(), TagEffect::Plain),
+        ];
+        let theme =
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(12.))
+                .children(effects.map(|(label, effect)| {
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .child(label)
+                        .child(typed("tag-theme", effect, false))
+                }));
+        let rounded =
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(12.))
+                .children(effects.map(|(label, effect)| {
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .child(label)
+                        .child(typed("tag-rounded", effect, true))
+                }));
+        let checked_count =
+            self.tag_toggle as usize + self.check_tags.iter().filter(|&&checked| checked).count();
+        let view = cx.entity();
+        let checkable = div()
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(
+                row()
+                    .child(
+                        el_check_tag()
+                            .id("tag-always-checked")
+                            .label(s.tag_checked.as_str())
+                            .checked(true),
+                    )
+                    .child(
+                        el_check_tag()
+                            .id("tag-toggle")
+                            .label(s.tag_toggle.as_str())
+                            .checked(self.tag_toggle)
+                            .on_change(move |checked, _, cx| {
+                                view.update(cx, |this, cx| {
+                                    this.tag_toggle = checked;
+                                    cx.notify();
+                                });
+                            }),
+                    )
+                    .child(
+                        el_check_tag()
+                            .id("tag-check-disabled")
+                            .label(s.disabled.as_str())
+                            .disabled(true),
+                    ),
+            )
+            .child(
+                row().children(self.check_tags.iter().enumerate().map(|(i, &checked)| {
+                    let kind = types[i.min(4)].0;
+                    let view = cx.entity();
+                    el_check_tag()
+                        .id(("tag-checked", i as u32))
+                        .label(format!("{} {}", s.tag_label, i + 1))
+                        .kind(kind)
+                        .checked(checked)
+                        .when(i == 5, |tag| tag.disabled(true))
+                        .on_change(move |checked, _, cx| {
+                            view.update(cx, |this, cx| {
+                                this.check_tags[i] = checked;
+                                cx.notify();
+                            });
+                        })
+                })),
+            )
+            .child(
+                s.tag_checked_count
+                    .replace("%{count}", &checked_count.to_string()),
+            );
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(24.))
+            .child(self.section(cx, "tag-basic", &s.tag_basic, "", basic))
+            .child(self.section(cx, "tag-removable", &s.tag_removable, "", removable))
+            .child(self.section(cx, "tag-editable", &s.tag_editable, "", editable))
+            .child(self.section(cx, "tag-sizes", &s.tag_sizes, "", sizes))
+            .child(self.section(cx, "tag-theme", &s.tag_theme, "", theme))
+            .child(self.section(cx, "tag-rounded", &s.tag_rounded, "", rounded))
+            .child(self.section(cx, "tag-checkable", &s.tag_checkable, "", checkable))
+    }
+
     fn initialization(&self, s: &'static Copy, cx: &Context<Self>) -> Div {
         let standard = "use gpui::App;\nuse gpui_el::{el_init, IconPack, Locale};\n\nfn configure(cx: &mut App) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {\n    el_init!(cx, locale: Locale::SimplifiedChinese, icons: IconPack::ElementPlus)\n}";
         let custom = "use gpui::App;\nuse gpui_el::{el_init, IconPack, Locale};\n\nfn configure_with_font(cx: &mut App) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {\n    el_init!(cx, locale: Locale::English, icons: IconPack::Tabler,\n        fonts: [include_bytes!(\"assets/icons.ttf\")])\n}";
@@ -1419,6 +1672,7 @@ impl Render for Gallery {
                                     Page::Container,
                                     Page::Layout,
                                     Page::Space,
+                                    Page::Tag,
                                 ]
                                 .map(item),
                             ),
@@ -1435,6 +1689,7 @@ impl Render for Gallery {
             Page::Container => self.containers(s, cx),
             Page::Layout => self.grids(s, cx),
             Page::Space => self.spaces(s, cx),
+            Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),
             Page::Loading => self.loading(s, cx),
         };
@@ -1573,6 +1828,7 @@ mod tests {
                                 "grid-responsive",
                                 "space-presets",
                                 "space-wrap",
+                                "tag-editable",
                                 "menu-horizontal",
                                 "mask",
                             ]),

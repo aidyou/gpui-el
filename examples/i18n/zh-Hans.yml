@@ -9,6 +9,7 @@ init_fonts: 可用 fonts 列表注册嵌入的字体文件。调用 Icon::from_f
 container_intro: 嵌套容器来组织顶栏、侧栏、主内容和底栏。
 layout_intro: 用响应式的 24 列栅格组织内容。
 space_intro: 为相邻元素设置间距和对齐方式。
+tag_intro: 用标签标记内容，或用可选择标签切换选中状态。
 menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
 loading_intro: 在指定区域显示加载提示，不影响窗口内其他区域的操作。
 grid_basic: 基础布局
@@ -40,6 +41,7 @@ icon_page: Icon 图标
 container_page: Container 布局容器
 layout_page: Layout 布局
 space_page: Space 间距
+tag_page: Tag 标签
 menu_page: Menu 菜单
 loading_page: Loading 加载
 icon_pack_error: 无法载入 Tabler 字体，当前图标库未更改。
@@ -89,3 +91,22 @@ count_increment: 计数 +1
 disabled: 已禁用
 saving: 保存中
 activation_help: '已激活 %{count} 次。按 Tab 聚焦，再按 Enter 或空格触发。'
+tag_basic: 基础用法
+tag_removable: 可关闭标签
+tag_editable: 动态编辑
+tag_sizes: 尺寸
+tag_theme: 主题
+tag_rounded: 圆角标签
+tag_checkable: 可选中标签
+tag_effect_dark: 深色
+tag_effect_light: 浅色
+tag_effect_plain: 朴素
+tag_hit: 描边标签
+tag_add: 添加标签
+tag_reset: 重置
+tag_removed: '已关闭 %{count} 个标签。标签在 close 回调中由应用移除。'
+tag_checked: 已选中
+tag_toggle: 点击切换
+tag_label: 标签
+tag_checked_count: '已选中 %{count} / 7 个标签'
+tag_editable_help: 本库暂无文本输入组件，此处用按钮添加下一个标签。

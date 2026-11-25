@@ -2,3 +2,5 @@ button:
   loading: 加载中
 menu:
   more: 更多
+tag:
+  close: 关闭

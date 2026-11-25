@@ -45,6 +45,14 @@
 //!     .on_select(|event, _, _| println!("{:?}", event.index_path));
 //! ```
 //!
+//! Tags mark content and forward their own removal; check tags toggle:
+//!
+//! ```
+//! use gpui_el::{el_check_tag, el_tag};
+//! let tag = el_tag().label("Tag 1").success().round(true).closable(true);
+//! let check = el_check_tag().label("Toggle me").checked(true);
+//! ```
+//!
 //! Menu follows the Element Plus `menu.md`, `components/menu/src`, and
 //! Theme Chalk `menu.scss` baseline. Native differences: there is no Vue
 //! router, DOM teleport, CSS class, or persistent DOM. `popup_style` overrides
@@ -58,6 +66,14 @@
 //! color transition. HTML form attributes are not part of the API. The default
 //! button loading indicator follows the upstream rotating spokes; the standalone
 //! `Loading` uses a circular dash and a scoped mask, not a modal service.
+//!
+//! Tag and CheckTag follow `tag.md`, `check-tag.md`, `components/tag/src`,
+//! `components/check-tag/src`, and Theme Chalk `tag.scss` / `check-tag.scss`.
+//! Native differences: there is no Vue transition scope, so tags mount and
+//! unmount immediately instead of playing `el-zoom-in-center`, and the
+//! `disable-transitions` property is therefore not reproduced. `color` overrides
+//! only the background, as upstream's inline style does. CheckTag is focusable
+//! and keyboard activatable, which the upstream `span` is not.
 
 mod button;
 mod grid;
@@ -66,6 +82,7 @@ mod layout;
 mod loading;
 mod locale;
 mod menu;
+mod tag;
 mod theme;
 
 pub use button::{
@@ -84,6 +101,7 @@ pub use menu::{
     Menu, MenuEntry, MenuEvent, MenuItem, MenuItemGroup, MenuMode, MenuPopupTheme, MenuState,
     MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
+pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use theme::Theme;
 
 /// Sets the defaults for one GPUI application. Individual controls may still
