@@ -7,7 +7,7 @@ documentation = "https://docs.rs/gpui-el"
 license = "MIT"
 keywords = ["gpui", "element-plus", "gui", "components"]
 categories = ["gui"]
-include = ["/src/**", "/examples/**", "/i18n/**", "/README.md", "/CONSTITUTION.md", "/LICENSE", "/Cargo.toml", "/build.rs"]
+include = ["/src/**", "/examples/**", "/i18n/**", "/README.md", "/CONSTITUTION.md", "/COMPONENT_EXCLUSIONS.md", "/LICENSE", "/Cargo.toml", "/build.rs"]
 
 [dependencies]
 gpui = { package = "gpui-pre", version = "=0.3.14" }
