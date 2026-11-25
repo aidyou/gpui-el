@@ -1,0 +1,1948 @@
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+    time::Duration,
+};
+
+use gpui::{
+    AnyElement, App, Bounds, ClickEvent, Div, ElementId, Entity, FocusHandle, Hsla, IntoElement,
+    ParentElement, Pixels, RenderOnce, SharedString, Task, Window, anchored, deferred, div, point,
+    prelude::*, px, rgb,
+};
+
+use crate::{Icon, Locale, Theme, el_icon, theme::PRIMARY};
+
+const MORE: &str = "\0gpui-el:more";
+const ITEM_HEIGHT: f32 = 56.;
+const HORIZONTAL_HEIGHT: f32 = 60.;
+const POPUP_ITEM_HEIGHT: f32 = 36.;
+const ITEM_PADDING: f32 = 20.;
+const COLLAPSED_WIDTH: f32 = 64.;
+const POPUP_MIN_WIDTH: f32 = 200.;
+const POPUP_PRIORITY: usize = 10;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MenuMode {
+    #[default]
+    Vertical,
+    Horizontal,
+}
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MenuTrigger {
+    #[default]
+    Hover,
+    Click,
+}
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MenuPopupTheme {
+    #[default]
+    Dark,
+    Light,
+}
+
+/// One selection or submenu event. `index_path` includes the item itself.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MenuEvent {
+    pub index: SharedString,
+    pub index_path: Vec<SharedString>,
+}
+
+type Listener = Rc<dyn Fn(&MenuEvent, &mut Window, &mut App)>;
+type ClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
+type Content = Rc<dyn Fn() -> AnyElement>;
+type PopupStyle = Rc<dyn Fn(Div) -> Div>;
+
+pub fn el_menu() -> Menu {
+    Menu::default()
+}
+pub fn el_menu_item(index: impl Into<SharedString>, label: impl Into<SharedString>) -> MenuItem {
+    let index = index.into();
+    MenuItem::new(index.clone(), label).index(index)
+}
+pub fn el_sub_menu(index: impl Into<SharedString>, title: impl Into<SharedString>) -> SubMenu {
+    SubMenu {
+        index: index.into(),
+        title: title.into(),
+        disabled: false,
+        icon: None,
+        title_slot: None,
+        nodes: Vec::new(),
+        offset: None,
+        show_timeout: None,
+        hide_timeout: None,
+        expand_icons: None,
+        collapse_icons: None,
+        popup_style: None,
+    }
+}
+pub fn el_menu_item_group(title: impl Into<SharedString>) -> MenuItemGroup {
+    MenuItemGroup {
+        title: title.into(),
+        title_slot: None,
+        items: Vec::new(),
+    }
+}
+
+/// A typed tree preserves logical index paths even when entries move into a popup.
+#[derive(Clone)]
+pub enum MenuEntry {
+    Item(MenuItem),
+    SubMenu(Box<SubMenu>),
+    Group(MenuItemGroup),
+}
+impl From<MenuItem> for MenuEntry {
+    fn from(value: MenuItem) -> Self {
+        Self::Item(value)
+    }
+}
+impl From<SubMenu> for MenuEntry {
+    fn from(value: SubMenu) -> Self {
+        Self::SubMenu(Box::new(value))
+    }
+}
+impl From<MenuItemGroup> for MenuEntry {
+    fn from(value: MenuItemGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+#[derive(Clone)]
+pub struct SubMenu {
+    index: SharedString,
+    title: SharedString,
+    disabled: bool,
+    icon: Option<Icon>,
+    title_slot: Option<Content>,
+    nodes: Vec<MenuEntry>,
+    offset: Option<f32>,
+    show_timeout: Option<Duration>,
+    hide_timeout: Option<Duration>,
+    expand_icons: Option<(Icon, Icon)>,
+    collapse_icons: Option<(Icon, Icon)>,
+    popup_style: Option<PopupStyle>,
+}
+impl SubMenu {
+    pub fn entry(mut self, entry: impl Into<MenuEntry>) -> Self {
+        self.nodes.push(entry.into());
+        self
+    }
+    pub fn entries(mut self, entries: impl IntoIterator<Item = impl Into<MenuEntry>>) -> Self {
+        self.nodes.extend(entries.into_iter().map(Into::into));
+        self
+    }
+    pub fn disabled(mut self, value: bool) -> Self {
+        self.disabled = value;
+        self
+    }
+    pub fn icon(mut self, value: Icon) -> Self {
+        self.icon = Some(value);
+        self
+    }
+    pub fn title_slot<E: IntoElement>(mut self, draw: impl Fn() -> E + 'static) -> Self {
+        self.title_slot = Some(Rc::new(move || draw().into_any_element()));
+        self
+    }
+    /// Overrides the popup offset in logical pixels (nonnegative).
+    pub fn popper_offset(mut self, value: f32) -> Self {
+        self.offset = (value.is_finite() && value >= 0.).then_some(value);
+        self
+    }
+    pub fn show_timeout(mut self, value: Duration) -> Self {
+        self.show_timeout = Some(value);
+        self
+    }
+    pub fn hide_timeout(mut self, value: Duration) -> Self {
+        self.hide_timeout = Some(value);
+        self
+    }
+    pub fn expand_icons(mut self, closed: Icon, open: Icon) -> Self {
+        self.expand_icons = Some((closed, open));
+        self
+    }
+    pub fn collapse_icons(mut self, closed: Icon, open: Icon) -> Self {
+        self.collapse_icons = Some((closed, open));
+        self
+    }
+    pub fn popup_style(mut self, style: impl Fn(Div) -> Div + 'static) -> Self {
+        self.popup_style = Some(Rc::new(style));
+        self
+    }
+}
+
+#[derive(Clone)]
+pub struct MenuItemGroup {
+    title: SharedString,
+    title_slot: Option<Content>,
+    items: Vec<MenuItem>,
+}
+impl MenuItemGroup {
+    pub fn item(mut self, item: MenuItem) -> Self {
+        self.items.push(item);
+        self
+    }
+    pub fn items(mut self, items: impl IntoIterator<Item = MenuItem>) -> Self {
+        self.items.extend(items);
+        self
+    }
+    pub fn title_slot<E: IntoElement>(mut self, draw: impl Fn() -> E + 'static) -> Self {
+        self.title_slot = Some(Rc::new(move || draw().into_any_element()));
+        self
+    }
+}
+
+/// Persistent menu data. `Menu::state` exposes programmatic control; otherwise
+/// the component keeps this state under its own stable element ID.
+#[derive(Default)]
+pub struct MenuState {
+    active: Option<SharedString>,
+    opened: HashSet<SharedString>,
+    initialized: bool,
+    default_active: Option<SharedString>,
+    popup: bool,
+    paths: HashMap<SharedString, Vec<SharedString>>,
+    branches: HashMap<SharedString, Vec<SharedString>>,
+    focus_request: Option<(SharedString, FocusHandle)>,
+    frame: std::rc::Weak<Frame>,
+    focus: HashMap<SharedString, FocusHandle>,
+    current: Option<SharedString>,
+    bounds: HashMap<SharedString, Bounds<Pixels>>,
+    popup_bounds: HashMap<SharedString, Bounds<Pixels>>,
+    width: Option<Pixels>,
+    pending: HashMap<SharedString, Task<()>>,
+    unique_opened: bool,
+}
+impl MenuState {
+    pub fn active_index(&self) -> Option<&str> {
+        self.active.as_deref()
+    }
+    pub fn is_open(&self, index: &str) -> bool {
+        self.opened.contains(index)
+    }
+    /// Opens a registered submenu and its ancestors, without emitting user-intent events.
+    pub fn open(&mut self, index: &str, window: &mut Window) {
+        if let Some(path) = self.branches.get(index).cloned() {
+            if self.unique_opened || self.popup {
+                self.opened.retain(|key| path.contains(key));
+            }
+            self.opened.extend(path);
+            self.focus_request = None;
+            window.refresh();
+        }
+    }
+    pub fn close(&mut self, index: &str, window: &mut Window) {
+        self.opened.remove(index);
+        if self.popup {
+            self.opened.retain(|key| {
+                !self
+                    .branches
+                    .get(key)
+                    .is_some_and(|path| path.iter().any(|part| part.as_ref() == index))
+            });
+        }
+        self.pending.clear();
+        self.focus_request = None;
+        window.refresh();
+    }
+    pub fn update_active_index(&mut self, index: impl Into<SharedString>, window: &mut Window) {
+        self.active = Some(index.into());
+        self.reveal_active();
+        window.refresh();
+    }
+    fn reveal_active(&mut self) {
+        if !self.popup
+            && let Some(path) = self.active.as_ref().and_then(|key| self.paths.get(key))
+        {
+            self.opened.extend(
+                path.iter()
+                    .filter(|key| self.branches.contains_key(*key))
+                    .cloned(),
+            );
+        }
+    }
+}
+
+#[derive(Clone)]
+struct Options {
+    mode: MenuMode,
+    trigger: MenuTrigger,
+    collapse: bool,
+    ellipsis: bool,
+    ellipsis_icon: Option<Icon>,
+    unique: bool,
+    outside: bool,
+    border: bool,
+    offset: f32,
+    show: Duration,
+    hide: Duration,
+    popup_theme: MenuPopupTheme,
+    popup_style: Option<PopupStyle>,
+    bg: Option<Hsla>,
+    text: Option<Hsla>,
+    active: Option<Hsla>,
+    on_select: Option<Listener>,
+    on_open: Option<Listener>,
+    on_close: Option<Listener>,
+}
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            mode: MenuMode::Vertical,
+            trigger: MenuTrigger::Hover,
+            collapse: false,
+            ellipsis: true,
+            ellipsis_icon: None,
+            unique: false,
+            outside: false,
+            border: true,
+            offset: 6.,
+            show: Duration::from_millis(300),
+            hide: Duration::from_millis(300),
+            popup_theme: MenuPopupTheme::Dark,
+            popup_style: None,
+            bg: None,
+            text: None,
+            active: None,
+            on_select: None,
+            on_open: None,
+            on_close: None,
+        }
+    }
+}
+impl Options {
+    fn horizontal(&self) -> bool {
+        self.mode == MenuMode::Horizontal
+    }
+    fn collapsed(&self) -> bool {
+        !self.horizontal() && self.collapse
+    }
+    fn popup(&self) -> bool {
+        self.horizontal() || self.collapsed()
+    }
+    fn hover(&self) -> bool {
+        self.collapsed() || self.horizontal() && self.trigger == MenuTrigger::Hover
+    }
+}
+
+/// Vertical or horizontal navigation following Element Plus Menu. Supply a
+/// sibling-unique `.id()` for multiple menus and stable unique indices for entries.
+#[derive(Default, IntoElement)]
+pub struct Menu {
+    id: Option<ElementId>,
+    nodes: Vec<MenuEntry>,
+    state: Option<Entity<MenuState>>,
+    default_active: Option<SharedString>,
+    active: Option<SharedString>,
+    default_openeds: Vec<SharedString>,
+    options: Options,
+}
+impl Menu {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    pub fn id(mut self, id: impl Into<ElementId>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+    pub fn state(mut self, state: &Entity<MenuState>) -> Self {
+        self.state = Some(state.clone());
+        self
+    }
+    pub fn entry(mut self, node: impl Into<MenuEntry>) -> Self {
+        self.nodes.push(node.into());
+        self
+    }
+    pub fn entries(mut self, nodes: impl IntoIterator<Item = impl Into<MenuEntry>>) -> Self {
+        self.nodes.extend(nodes.into_iter().map(Into::into));
+        self
+    }
+    pub fn mode(mut self, value: MenuMode) -> Self {
+        self.options.mode = value;
+        self
+    }
+    pub fn collapse(mut self, value: bool) -> Self {
+        self.options.collapse = value;
+        self
+    }
+    pub fn ellipsis(mut self, value: bool) -> Self {
+        self.options.ellipsis = value;
+        self
+    }
+    pub fn ellipsis_icon(mut self, value: Icon) -> Self {
+        self.options.ellipsis_icon = Some(value);
+        self
+    }
+    pub fn unique_opened(mut self, value: bool) -> Self {
+        self.options.unique = value;
+        self
+    }
+    pub fn menu_trigger(mut self, value: MenuTrigger) -> Self {
+        self.options.trigger = value;
+        self
+    }
+    /// Draws the menu's edge divider (enabled by default).
+    pub fn border(mut self, value: bool) -> Self {
+        self.options.border = value;
+        self
+    }
+    pub fn close_on_click_outside(mut self, value: bool) -> Self {
+        self.options.outside = value;
+        self
+    }
+    /// Popup offset in logical pixels (nonnegative, default 6).
+    pub fn popper_offset(mut self, value: f32) -> Self {
+        self.options.offset = if value.is_finite() && value >= 0. {
+            value
+        } else {
+            6.
+        };
+        self
+    }
+    pub fn show_timeout(mut self, value: Duration) -> Self {
+        self.options.show = value;
+        self
+    }
+    pub fn hide_timeout(mut self, value: Duration) -> Self {
+        self.options.hide = value;
+        self
+    }
+    pub fn popper_effect(mut self, value: MenuPopupTheme) -> Self {
+        self.options.popup_theme = value;
+        self
+    }
+    pub fn popup_style(mut self, value: impl Fn(Div) -> Div + 'static) -> Self {
+        self.options.popup_style = Some(Rc::new(value));
+        self
+    }
+    pub fn background_color(mut self, value: impl Into<Hsla>) -> Self {
+        self.options.bg = Some(value.into());
+        self
+    }
+    pub fn text_color(mut self, value: impl Into<Hsla>) -> Self {
+        self.options.text = Some(value.into());
+        self
+    }
+    pub fn active_text_color(mut self, value: impl Into<Hsla>) -> Self {
+        self.options.active = Some(value.into());
+        self
+    }
+    pub fn default_active(mut self, value: impl Into<SharedString>) -> Self {
+        self.default_active = Some(value.into());
+        self
+    }
+    /// Controlled selection. Handle `on_select` and pass the accepted index back.
+    pub fn active_index(mut self, value: impl Into<SharedString>) -> Self {
+        self.active = Some(value.into());
+        self
+    }
+    pub fn default_openeds(
+        mut self,
+        values: impl IntoIterator<Item = impl Into<SharedString>>,
+    ) -> Self {
+        self.default_openeds = values.into_iter().map(Into::into).collect();
+        self
+    }
+    pub fn on_select(
+        mut self,
+        callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.options.on_select = Some(Rc::new(callback));
+        self
+    }
+    pub fn on_open(
+        mut self,
+        callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.options.on_open = Some(Rc::new(callback));
+        self
+    }
+    pub fn on_close(
+        mut self,
+        callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.options.on_close = Some(Rc::new(callback));
+        self
+    }
+}
+
+#[derive(Clone, IntoElement)]
+pub struct MenuItem {
+    id: ElementId,
+    index: SharedString,
+    label: SharedString,
+    selected: bool,
+    disabled: bool,
+    icon: Option<Icon>,
+    slot: Option<Content>,
+    click: Option<ClickHandler>,
+    on_click: Option<Listener>,
+}
+impl MenuItem {
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Self {
+        let id = id.into();
+        Self {
+            index: id.to_string().into(),
+            id,
+            label: label.into(),
+            selected: false,
+            disabled: false,
+            icon: None,
+            slot: None,
+            click: None,
+            on_click: None,
+        }
+    }
+    pub fn index(mut self, index: impl Into<SharedString>) -> Self {
+        self.index = index.into();
+        self
+    }
+    pub fn selected(mut self, value: bool) -> Self {
+        self.selected = value;
+        self
+    }
+    pub fn disabled(mut self, value: bool) -> Self {
+        self.disabled = value;
+        self
+    }
+    pub fn icon(mut self, value: Icon) -> Self {
+        self.icon = Some(value);
+        self
+    }
+    pub fn title_slot<E: IntoElement>(mut self, draw: impl Fn() -> E + 'static) -> Self {
+        self.slot = Some(Rc::new(move || draw().into_any_element()));
+        self
+    }
+    pub fn on_click(
+        mut self,
+        callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_click = Some(Rc::new(callback));
+        self
+    }
+    /// Compatibility callback that receives the GPUI activation event.
+    pub fn on_select(
+        mut self,
+        callback: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.click = Some(Rc::new(callback));
+        self
+    }
+}
+
+impl RenderOnce for MenuItem {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = Theme::current(cx);
+        let mut el = div()
+            .id(self.id)
+            .role(gpui::Role::MenuItem)
+            .aria_label(self.label.clone())
+            .aria_selected(self.selected)
+            .h(px(ITEM_HEIGHT))
+            .flex()
+            .items_center()
+            .px(px(ITEM_PADDING))
+            .gap(px(5.))
+            .text_size(px(14.))
+            .text_color(rgb(if self.selected {
+                PRIMARY
+            } else {
+                theme.primary_text()
+            }));
+        if let Some(icon) = self.icon {
+            el = el.child(icon.size(18.));
+        }
+        el = el.child(title(&self.label, &self.slot));
+        if self.disabled {
+            return el.opacity(0.25).cursor_not_allowed();
+        }
+        let event = MenuEvent {
+            index: self.index.clone(),
+            index_path: vec![self.index],
+        };
+        let hover = theme.tint(PRIMARY, 9);
+        el.focusable()
+            .tab_stop(true)
+            .cursor_pointer()
+            .hover(move |s| s.bg(rgb(hover)))
+            .focus_visible(|s| s.border_1().border_color(rgb(PRIMARY)))
+            .on_click(move |click, window, cx| {
+                if click.standard_click() {
+                    if let Some(cb) = &self.on_click {
+                        cb(&event, window, cx);
+                    }
+                    if let Some(cb) = &self.click {
+                        cb(click, window, cx);
+                    }
+                }
+            })
+    }
+}
+
+fn title(label: &SharedString, slot: &Option<Content>) -> AnyElement {
+    slot.as_ref()
+        .map_or_else(|| label.clone().into_any_element(), |draw| draw())
+}
+
+#[derive(Clone)]
+struct Node {
+    index: SharedString,
+    label: SharedString,
+    icon: Option<Icon>,
+    slot: Option<Content>,
+    disabled: bool,
+    item: Option<MenuItem>,
+    branch: Option<SubMenu>,
+    children: Vec<Node>,
+    group: bool,
+}
+fn nodes(
+    entries: Vec<MenuEntry>,
+    path: &[SharedString],
+    paths: &mut HashMap<SharedString, Vec<SharedString>>,
+) -> Vec<Node> {
+    entries
+        .into_iter()
+        .filter_map(|entry| {
+            let (key, mut node) = match entry {
+                MenuEntry::Group(group) => {
+                    return Some(Node {
+                        index: SharedString::default(),
+                        label: group.title,
+                        slot: group.title_slot,
+                        icon: None,
+                        disabled: true,
+                        item: None,
+                        branch: None,
+                        group: true,
+                        children: nodes(
+                            group.items.into_iter().map(MenuEntry::Item).collect(),
+                            path,
+                            paths,
+                        ),
+                    });
+                }
+                MenuEntry::Item(item) => (
+                    item.index.clone(),
+                    Node {
+                        index: item.index.clone(),
+                        label: item.label.clone(),
+                        icon: item.icon.clone(),
+                        slot: item.slot.clone(),
+                        disabled: item.disabled,
+                        item: Some(item),
+                        branch: None,
+                        children: vec![],
+                        group: false,
+                    },
+                ),
+                MenuEntry::SubMenu(branch) => (
+                    branch.index.clone(),
+                    Node {
+                        index: branch.index.clone(),
+                        label: branch.title.clone(),
+                        icon: branch.icon.clone(),
+                        slot: branch.title_slot.clone(),
+                        disabled: branch.disabled,
+                        item: None,
+                        branch: Some(*branch),
+                        children: vec![],
+                        group: false,
+                    },
+                ),
+            };
+            if key.is_empty() || key.as_ref() == MORE || paths.contains_key(&key) {
+                return None;
+            }
+            let mut full = path.to_vec();
+            full.push(key.clone());
+            paths.insert(key, full.clone());
+            if let Some(branch) = &mut node.branch {
+                node.children = nodes(std::mem::take(&mut branch.nodes), &full, paths);
+            }
+            Some(node)
+        })
+        .collect()
+}
+
+fn overflow_at(widths: &[Pixels], available: Pixels, more: Pixels) -> usize {
+    if widths.iter().copied().sum::<Pixels>() <= available {
+        return widths.len();
+    }
+    let mut sum = more;
+    widths
+        .iter()
+        .take_while(|&&w| {
+            sum += w;
+            sum <= available
+        })
+        .count()
+}
+
+impl RenderOnce for Menu {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let id = self.id.unwrap_or_else(|| "el-menu".into());
+        let options = Rc::new(self.options);
+        let theme = Theme::current(cx);
+        let font = theme.resolved_font(cx);
+        let state = self
+            .state
+            .unwrap_or_else(|| window.use_keyed_state(id.clone(), cx, |_, _| MenuState::default()));
+        let mut paths = HashMap::new();
+        let mut roots = nodes(self.nodes, &[], &mut paths);
+        let available = state.read(cx).width.unwrap_or(window.viewport_size().width);
+        if options.horizontal() && options.ellipsis && !roots.is_empty() {
+            let more_label = Locale::current(cx).menu_more();
+            let mut more = Node {
+                index: MORE.into(),
+                label: more_label.into(),
+                icon: Some(
+                    options
+                        .ellipsis_icon
+                        .clone()
+                        .unwrap_or_else(|| el_icon("More")),
+                ),
+                slot: None,
+                disabled: false,
+                item: None,
+                branch: Some(el_sub_menu(MORE, more_label)),
+                children: vec![],
+                group: false,
+            };
+            let natural = |node: &Node, window: &mut Window, cx: &mut App| {
+                let mut row = div()
+                    .flex()
+                    .items_center()
+                    .gap(px(5.))
+                    .px(px(ITEM_PADDING))
+                    .text_size(px(14.))
+                    .whitespace_nowrap()
+                    .when_some(font.clone(), |el, font| el.font_family(font));
+                if node.icon.is_some() {
+                    row = row.child(div().w(px(24.)));
+                }
+                if node.index.as_ref() != MORE {
+                    row = row.child(title(&node.label, &node.slot));
+                }
+                if node.branch.is_some() && node.index.as_ref() != MORE {
+                    row = row.child(div().w(px(12.)));
+                }
+                row.into_any_element()
+                    .layout_as_root(gpui::AvailableSpace::min_size(), window, cx)
+                    .width
+            };
+            let widths: Vec<_> = roots.iter().map(|n| natural(n, window, cx)).collect();
+            let split = overflow_at(&widths, available, natural(&more, window, cx));
+            if split < roots.len() {
+                more.children = roots.split_off(split);
+                paths.insert(MORE.into(), vec![MORE.into()]);
+                roots.push(more);
+            }
+        }
+        let popup = options.popup();
+        let overflow = find_node(&roots, MORE).map(|more| &more.children);
+        let visual_paths: HashMap<_, _> = paths
+            .iter()
+            .map(|(key, path)| {
+                let mut path = path.clone();
+                if overflow.is_some_and(|nodes| find_node(nodes, key).is_some()) {
+                    path.insert(0, MORE.into());
+                }
+                (key.clone(), path)
+            })
+            .collect();
+        let branches: HashMap<_, _> = visual_paths
+            .into_iter()
+            .filter(|(_, path)| {
+                path.iter().all(|part| {
+                    find_node(&roots, part)
+                        .is_some_and(|node| !node.disabled && node.branch.is_some())
+                })
+            })
+            .collect();
+        let controlled = self.active.is_some();
+        let focused = state.read(cx).focus.iter().find_map(|(key, handle)| {
+            handle
+                .is_focused(window)
+                .then(|| (key.clone(), handle.clone()))
+        });
+        state.update(cx, |s, cx| {
+            let changed_mode = s.initialized && s.popup != popup;
+            if changed_mode {
+                s.opened.clear();
+                s.pending.clear();
+            }
+            s.popup = popup;
+            s.unique_opened = options.unique;
+            if !s.initialized && !options.collapsed() {
+                s.opened.extend(self.default_openeds);
+            }
+            let active_changed = !s.initialized
+                || s.default_active != self.default_active
+                || controlled && s.active != self.active;
+            if active_changed {
+                s.default_active = self.default_active;
+                s.active = self.active.or_else(|| s.default_active.clone());
+            }
+            s.paths = paths;
+            s.opened.retain(|key| {
+                branches.contains_key(key)
+                    && (!s.initialized || s.branches.get(key) == branches.get(key))
+            });
+            s.pending.retain(|key, _| {
+                options.hover()
+                    && branches.contains_key(key)
+                    && s.branches.get(key) == branches.get(key)
+            });
+            s.bounds.retain(|key, _| {
+                s.branches.get(key) == branches.get(key) && branches.contains_key(key)
+            });
+            s.branches = branches;
+            if popup {
+                let opened = s.opened.clone();
+                s.opened
+                    .retain(|key| s.branches[key].iter().all(|part| opened.contains(part)));
+            }
+            s.popup_bounds.clear();
+            s.focus.retain(|key, _| s.paths.contains_key(key));
+            if active_changed || changed_mode {
+                s.reveal_active();
+            }
+            s.initialized = true;
+            for key in s.paths.keys() {
+                s.focus
+                    .entry(key.clone())
+                    .or_insert_with(|| cx.focus_handle());
+            }
+        });
+        let visible = visible_rows(&roots, &state.read(cx).opened, None);
+        state.update(cx, |s, _| {
+            let enabled =
+                |key: &SharedString| visible.iter().any(|row| !row.disabled && &row.index == key);
+            if s.focus_request
+                .as_ref()
+                .is_some_and(|(key, _)| !enabled(key))
+            {
+                s.focus_request = None;
+            }
+            if let Some((key, origin)) = focused
+                && !enabled(&key)
+            {
+                let ancestor = s
+                    .paths
+                    .get(&key)
+                    .and_then(|path| path.iter().rev().find(|key| enabled(key)));
+                let more = find_node(&roots, MORE)
+                    .filter(|more| find_node(&more.children, &key).is_some());
+                let target = ancestor
+                    .or_else(|| more.map(|more| &more.index))
+                    .or_else(|| {
+                        visible
+                            .iter()
+                            .find(|row| !row.disabled)
+                            .map(|row| &row.index)
+                    });
+                s.focus_request = target.cloned().map(|target| (target, origin));
+            }
+        });
+        let first = visible
+            .iter()
+            .find(|row| !row.disabled)
+            .map(|row| row.index.clone());
+        let roving = state
+            .read(cx)
+            .current
+            .as_ref()
+            .filter(|key| {
+                visible
+                    .iter()
+                    .any(|row| !row.disabled && &row.index == *key)
+            })
+            .cloned()
+            .or_else(|| {
+                state
+                    .read(cx)
+                    .active
+                    .as_ref()
+                    .filter(|key| {
+                        visible
+                            .iter()
+                            .any(|row| !row.disabled && &row.index == *key)
+                    })
+                    .cloned()
+            })
+            .or(first);
+        let shared = Rc::new(Frame {
+            state,
+            options,
+            theme,
+            font,
+            roots,
+            roving,
+            controlled,
+            max_popup_height: (window.viewport_size().height - px(16.)).max(px(36.)),
+        });
+        shared
+            .state
+            .update(cx, |state, _| state.frame = Rc::downgrade(&shared));
+        if shared.state.read(cx).focus_request.is_some() {
+            let state = shared.state.downgrade();
+            window.defer(cx, move |window, cx| {
+                let Some(state) = state.upgrade() else {
+                    return;
+                };
+                let Some((key, origin)) = state.read(cx).focus_request.clone() else {
+                    return;
+                };
+                let handle = state.read(cx).focus.get(&key).cloned();
+                if !origin.is_focused(window) {
+                    state.update(cx, |s, _| s.focus_request = None);
+                } else if let Some(handle) = handle.filter(|handle| handle.is_rendered(window)) {
+                    state.update(cx, |s, _| {
+                        s.focus_request = None;
+                        s.current = Some(key);
+                    });
+                    handle.focus(window, cx);
+                    window.refresh();
+                }
+            });
+        }
+        let background = shared
+            .options
+            .bg
+            .unwrap_or_else(|| rgb(shared.theme.background()).into());
+        let mut root = div()
+            .flex()
+            .min_w_0()
+            .bg(background)
+            .border_color(rgb(shared.theme.border(false)))
+            .when(shared.options.horizontal(), |el| {
+                el.w_full()
+                    .h(px(HORIZONTAL_HEIGHT))
+                    .when(shared.options.border, |el| el.border_b_1())
+                    .items_center()
+            })
+            .when(!shared.options.horizontal(), |el| {
+                el.flex_col()
+                    .when(shared.options.border, |el| el.border_r_1())
+            })
+            .when(shared.options.collapsed(), |el| el.w(px(COLLAPSED_WIDTH)))
+            .when(!shared.options.collapsed(), |el| el.w_full());
+        if shared.options.horizontal() {
+            let state = shared.state.clone();
+            root = root.relative().child(
+                gpui::canvas(
+                    move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                        if state.read(cx).width != Some(bounds.size.width) {
+                            state.update(cx, |s, _| s.width = Some(bounds.size.width));
+                            window.on_next_frame(|window, _| window.refresh());
+                        }
+                    },
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .inset_0(),
+            );
+        }
+        let mut root = root.id(id).role(gpui::Role::Menu);
+        if shared.options.outside && shared.options.popup() {
+            root = root.on_mouse_down_out({
+                let shared = shared.clone();
+                move |ev, window, cx| {
+                    let inside = shared
+                        .state
+                        .read(cx)
+                        .popup_bounds
+                        .iter()
+                        .any(|(key, bounds)| {
+                            shared.state.read(cx).opened.contains(key)
+                                && bounds.contains(&ev.position)
+                        });
+                    // Popup surface bounds are tracked separately from trigger bounds.
+                    if !inside {
+                        shared.close_all(window, cx);
+                    }
+                }
+            });
+        }
+        root.children(
+            shared
+                .roots
+                .iter()
+                .map(|node| shared.draw(node, 0, false, cx)),
+        )
+    }
+}
+
+struct Frame {
+    state: Entity<MenuState>,
+    options: Rc<Options>,
+    theme: Theme,
+    font: Option<SharedString>,
+    roots: Vec<Node>,
+    roving: Option<SharedString>,
+    controlled: bool,
+    max_popup_height: Pixels,
+}
+
+struct Visible {
+    index: SharedString,
+    parent: Option<SharedString>,
+    branch: bool,
+    disabled: bool,
+}
+fn visible_rows(
+    roots: &[Node],
+    opened: &HashSet<SharedString>,
+    parent: Option<SharedString>,
+) -> Vec<Visible> {
+    let mut out = Vec::new();
+    for node in roots {
+        if node.group {
+            out.extend(visible_rows(&node.children, opened, parent.clone()));
+            continue;
+        }
+        out.push(Visible {
+            index: node.index.clone(),
+            parent: parent.clone(),
+            branch: node.branch.is_some(),
+            disabled: node.disabled,
+        });
+        if !node.disabled && opened.contains(&node.index) {
+            out.extend(visible_rows(
+                &node.children,
+                opened,
+                Some(node.index.clone()),
+            ));
+        }
+    }
+    out
+}
+fn find_node<'a>(roots: &'a [Node], key: &str) -> Option<&'a Node> {
+    roots.iter().find_map(|node| {
+        if !node.group && node.index.as_ref() == key {
+            Some(node)
+        } else {
+            find_node(&node.children, key)
+        }
+    })
+}
+impl Frame {
+    fn event(&self, key: &SharedString, cx: &App) -> Option<MenuEvent> {
+        (key.as_ref() != MORE)
+            .then(|| self.state.read(cx).paths.get(key).cloned())
+            .flatten()
+            .map(|index_path| MenuEvent {
+                index: key.clone(),
+                index_path,
+            })
+    }
+    fn set_open(&self, key: &SharedString, open: bool, window: &mut Window, cx: &mut App) {
+        let Some(path) = self.state.read(cx).branches.get(key).cloned() else {
+            return;
+        };
+        let changed = self.state.update(cx, |s, _| {
+            if open {
+                if s.opened.contains(key)
+                    || !path[..path.len() - 1]
+                        .iter()
+                        .all(|part| s.opened.contains(part))
+                {
+                    return false;
+                }
+                s.focus_request = None;
+                if self.options.unique || self.options.popup() {
+                    s.opened.retain(|other| path.contains(other));
+                    s.pending.retain(|other, _| path.contains(other));
+                }
+                s.opened.insert(key.clone())
+            } else if s.opened.remove(key) {
+                s.focus_request = None;
+                if self.options.popup() {
+                    s.opened.retain(|other| !s.branches[other].contains(key));
+                    s.pending
+                        .retain(|other, _| !s.branches.get(other).is_some_and(|p| p.contains(key)));
+                }
+                true
+            } else {
+                false
+            }
+        });
+        if changed {
+            self.restore_hidden_focus(window, cx);
+            window.refresh();
+            let listener = if open {
+                &self.options.on_open
+            } else {
+                &self.options.on_close
+            };
+            if let (Some(listener), Some(event)) = (listener, self.event(key, cx)) {
+                listener(&event, window, cx);
+            }
+        }
+    }
+    fn close_all(&self, window: &mut Window, cx: &mut App) {
+        let mut list: Vec<_> = self.state.read(cx).opened.iter().cloned().collect();
+        list.sort_by_key(|key| {
+            (
+                std::cmp::Reverse(self.state.read(cx).paths.get(key).map_or(0, Vec::len)),
+                key.to_string(),
+            )
+        });
+        let events: Vec<_> = list.iter().filter_map(|key| self.event(key, cx)).collect();
+        self.state.update(cx, |s, _| {
+            s.pending.clear();
+            s.opened.clear();
+            s.focus_request = None;
+        });
+        if !list.is_empty() {
+            self.restore_hidden_focus(window, cx);
+            window.refresh();
+        }
+        if let Some(listener) = &self.options.on_close {
+            for event in events {
+                listener(&event, window, cx);
+            }
+        }
+    }
+    fn restore_hidden_focus(&self, window: &mut Window, cx: &mut App) {
+        let s = self.state.read(cx);
+        let rows = visible_rows(&self.roots, &s.opened, None);
+        let focused = s.focus.iter().find(|(_, handle)| handle.is_focused(window));
+        let Some((key, _)) = focused else {
+            return;
+        };
+        let visible =
+            |key: &SharedString| rows.iter().any(|row| !row.disabled && &row.index == key);
+        if visible(key) {
+            return;
+        }
+        let target = s
+            .paths
+            .get(key)
+            .and_then(|path| path.iter().rev().find(|key| visible(key)))
+            .or_else(|| {
+                rows.iter()
+                    .find(|row| !row.disabled && row.index.as_ref() == MORE)
+                    .map(|row| &row.index)
+            })
+            .or_else(|| rows.iter().find(|row| !row.disabled).map(|row| &row.index))
+            .cloned();
+        if let Some(target) = target {
+            self.focus(&target, window, cx);
+        }
+    }
+    fn focus(&self, key: &SharedString, window: &mut Window, cx: &mut App) {
+        let handle = self.state.read(cx).focus.get(key).cloned();
+        self.state.update(cx, |s, _| s.current = Some(key.clone()));
+        if let Some(handle) = handle {
+            handle.focus(window, cx);
+        }
+        window.refresh();
+    }
+    fn click(&self, key: &SharedString, event: &ClickEvent, window: &mut Window, cx: &mut App) {
+        if !event.standard_click() {
+            return;
+        }
+        let Some(node) = find_node(&self.roots, key).filter(|node| !node.disabled) else {
+            return;
+        };
+        self.focus(key, window, cx);
+        self.state.update(cx, |s, _| {
+            s.pending.remove(key);
+        });
+        if node.branch.is_some() {
+            let open = !self.state.read(cx).is_open(key);
+            self.set_open(key, open, window, cx);
+            return;
+        }
+        let Some(payload) = self.event(key, cx) else {
+            return;
+        };
+        self.state.update(cx, |s, _| {
+            if !self.controlled {
+                s.active = Some(key.clone());
+            }
+            if self.options.popup() {
+                s.opened.clear();
+                s.pending.clear();
+            }
+        });
+        if self.options.popup() {
+            let rows = visible_rows(&self.roots, &HashSet::new(), None);
+            if !rows.iter().any(|r| &r.index == key) {
+                let fallback = payload
+                    .index_path
+                    .first()
+                    .filter(|key| rows.iter().any(|r| &r.index == *key))
+                    .cloned()
+                    .unwrap_or_else(|| MORE.into());
+                self.focus(&fallback, window, cx);
+            }
+        }
+        if let Some(listener) = &self.options.on_select {
+            listener(&payload, window, cx);
+        }
+        if let Some(item) = &node.item {
+            if let Some(listener) = &item.on_click {
+                listener(&payload, window, cx);
+            }
+            if let Some(listener) = &item.click {
+                listener(event, window, cx);
+            }
+        }
+    }
+    fn hover_later(
+        self: &Rc<Self>,
+        key: &SharedString,
+        open: bool,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let Some(branch) = find_node(&self.roots, key).and_then(|node| node.branch.as_ref()) else {
+            return;
+        };
+        let delay = if open {
+            branch.show_timeout.unwrap_or(self.options.show)
+        } else {
+            branch.hide_timeout.unwrap_or(self.options.hide)
+        };
+        self.state.update(cx, |s, _| {
+            s.pending.remove(key);
+        });
+        let state = self.state.downgrade();
+        let task_key = key.clone();
+        let task = window.spawn(cx, async move |cx| {
+            cx.background_executor().timer(delay).await;
+            let _ = cx.update(|window, cx| {
+                let Some(state) = state.upgrade() else {
+                    return;
+                };
+                let frame = state.read(cx).frame.upgrade();
+                let Some(frame) = frame else {
+                    return;
+                };
+                let s = state.read(cx);
+                let pointer = window.mouse_position();
+                let over_trigger = s
+                    .bounds
+                    .get(&task_key)
+                    .is_some_and(|b| b.contains(&pointer));
+                let over_popup = s.popup_bounds.iter().any(|(key, bounds)| {
+                    s.opened.contains(key)
+                        && bounds.contains(&pointer)
+                        && s.branches
+                            .get(key)
+                            .is_some_and(|path| path.contains(&task_key))
+                });
+                if if open {
+                    over_trigger
+                } else {
+                    !over_trigger && !over_popup
+                } {
+                    frame.set_open(&task_key, open, window, cx);
+                }
+            });
+        });
+        self.state.update(cx, |s, _| {
+            s.pending.insert(key.clone(), task);
+        });
+    }
+    fn key(&self, key: &SharedString, pressed: &str, window: &mut Window, cx: &mut App) -> bool {
+        let rows = visible_rows(&self.roots, &self.state.read(cx).opened, None);
+        let Some(index) = rows
+            .iter()
+            .position(|row| !row.disabled && &row.index == key)
+        else {
+            return false;
+        };
+        let row = &rows[index];
+        let at_horizontal = self.options.horizontal() && row.parent.is_none();
+        let neighbors: Vec<_> = rows
+            .iter()
+            .filter(|r| {
+                !r.disabled
+                    && if self.options.popup() {
+                        r.parent == row.parent
+                    } else {
+                        true
+                    }
+            })
+            .collect();
+        let current = neighbors.iter().position(|r| &r.index == key).unwrap_or(0);
+        let next = match pressed {
+            "home" => neighbors.first().map(|r| &r.index),
+            "end" => neighbors.last().map(|r| &r.index),
+            "left" if at_horizontal => neighbors
+                .get((current + neighbors.len() - 1) % neighbors.len())
+                .map(|r| &r.index),
+            "right" if at_horizontal => neighbors
+                .get((current + 1) % neighbors.len())
+                .map(|r| &r.index),
+            "up" if !at_horizontal => neighbors
+                .get((current + neighbors.len() - 1) % neighbors.len())
+                .map(|r| &r.index),
+            "down" if !at_horizontal => neighbors
+                .get((current + 1) % neighbors.len())
+                .map(|r| &r.index),
+            "down" | "up" | "right" if row.branch => {
+                self.state.update(cx, |s, _| {
+                    if let Some(path) = s.branches.get(key) {
+                        s.pending.retain(|part, _| !path.contains(part));
+                    }
+                });
+                self.set_open(key, true, window, cx);
+                let refreshed = visible_rows(&self.roots, &self.state.read(cx).opened, None);
+                let mut children = refreshed
+                    .iter()
+                    .filter(|r| !r.disabled && r.parent.as_ref() == Some(key));
+                let target = if pressed == "up" {
+                    children.next_back()
+                } else {
+                    children.next()
+                };
+                if let (Some(target), Some(origin)) = (target, window.focused(cx)) {
+                    let target = target.index.clone();
+                    self.state
+                        .update(cx, |s, _| s.focus_request = Some((target, origin)));
+                    window.refresh();
+                }
+                return true;
+            }
+            "escape" | "left" => {
+                if self.state.read(cx).is_open(key) {
+                    self.set_open(key, false, window, cx);
+                } else if let Some(parent) = &row.parent {
+                    self.set_open(parent, false, window, cx);
+                    self.focus(parent, window, cx);
+                } else {
+                    return false;
+                }
+                return true;
+            }
+            _ => return false,
+        };
+        if let Some(next) = next {
+            self.focus(next, window, cx);
+        }
+        true
+    }
+    fn draw(self: &Rc<Self>, node: &Node, depth: usize, floating: bool, cx: &App) -> AnyElement {
+        if node.group {
+            return div()
+                .flex()
+                .flex_col()
+                .child(
+                    div()
+                        .pt(px(7.))
+                        .px(px(ITEM_PADDING * (depth + 1) as f32))
+                        .text_size(px(12.))
+                        .text_color(rgb(self.theme.secondary_text()))
+                        .child(title(&node.label, &node.slot)),
+                )
+                .children(
+                    node.children
+                        .iter()
+                        .map(|n| self.draw(n, depth, floating, cx)),
+                )
+                .into_any_element();
+        }
+        let key = &node.index;
+        let state = self.state.read(cx);
+        let open = state.is_open(key);
+        let selected = node.item.as_ref().is_some_and(|item| item.selected)
+            || state.active.as_ref().is_some_and(|active| {
+                if key.as_ref() == MORE {
+                    find_node(&node.children, active).is_some()
+                } else {
+                    state
+                        .paths
+                        .get(active)
+                        .is_some_and(|path| path.contains(key))
+                }
+            });
+        let top = depth == 0 && self.options.horizontal();
+        let collapsed = depth == 0 && self.options.collapsed();
+        let compact = floating && self.options.horizontal();
+        let row_height = if top {
+            HORIZONTAL_HEIGHT
+        } else if compact {
+            POPUP_ITEM_HEIGHT
+        } else if depth > 0 && !floating {
+            50.
+        } else {
+            ITEM_HEIGHT
+        };
+        let mut row = div()
+            .id(key.clone())
+            .role(gpui::Role::MenuItem)
+            .aria_label(node.label.clone())
+            .aria_selected(selected)
+            .h(px(row_height))
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .gap(px(5.))
+            .text_size(px(14.))
+            .whitespace_nowrap()
+            .px(px(if compact {
+                10.
+            } else if floating || top {
+                ITEM_PADDING
+            } else {
+                ITEM_PADDING * (depth + 1) as f32
+            }))
+            .when(collapsed, |el| {
+                el.w(px(COLLAPSED_WIDTH)).px_0().justify_center()
+            })
+            .when_some(self.font.clone(), |el, font| el.font_family(font))
+            .text_color(if selected {
+                self.options.active.unwrap_or_else(|| rgb(PRIMARY).into())
+            } else {
+                self.options
+                    .text
+                    .unwrap_or_else(|| rgb(self.theme.primary_text()).into())
+            })
+            .when(top, |el| {
+                el.border_b_2().border_color(if selected {
+                    self.options.active.unwrap_or_else(|| rgb(PRIMARY).into())
+                } else {
+                    gpui::transparent_black()
+                })
+            });
+        if let Some(icon) = &node.icon {
+            row = row.child(
+                div()
+                    .w(px(24.))
+                    .flex()
+                    .justify_center()
+                    .child(icon.clone().size(18.)),
+            );
+        }
+        if !collapsed && key.as_ref() != MORE {
+            row = row.child(title(&node.label, &node.slot));
+        } else if collapsed && node.icon.is_none() {
+            row = row.child(
+                div()
+                    .max_w_full()
+                    .px(px(4.))
+                    .truncate()
+                    .child(node.label.clone()),
+            );
+        }
+        if let Some(branch) = &node.branch
+            && key.as_ref() != MORE
+            && !collapsed
+        {
+            let custom = if floating {
+                &branch.collapse_icons
+            } else {
+                &branch.expand_icons
+            };
+            let arrow = custom
+                .as_ref()
+                .map(|(closed, opened)| if open { opened.clone() } else { closed.clone() })
+                .unwrap_or_else(|| {
+                    el_icon(if floating {
+                        "ArrowRight"
+                    } else if open {
+                        "ArrowUp"
+                    } else {
+                        "ArrowDown"
+                    })
+                });
+            if !top {
+                row = row.child(div().flex_1());
+            }
+            row = row.child(arrow.size(12.));
+        }
+        if node.disabled {
+            return row.opacity(0.25).cursor_not_allowed().into_any_element();
+        }
+        let hover = self.theme.tint(PRIMARY, 9);
+        row = row
+            .cursor_pointer()
+            .hover(move |s| s.bg(rgb(hover)))
+            .focus_visible(|s| s.bg(rgb(0x409eff)).text_color(rgb(0xffffff)))
+            .when_some(state.focus.get(key), |el, handle| {
+                el.track_focus(handle)
+                    .tab_stop(self.roving.as_ref() == Some(key))
+            })
+            .on_click({
+                let this = self.clone();
+                let key = key.clone();
+                move |event, window, cx| this.click(&key, event, window, cx)
+            })
+            .on_key_down({
+                let this = self.clone();
+                let key = key.clone();
+                move |event, window, cx| {
+                    if this.key(&key, &event.keystroke.key, window, cx) {
+                        cx.stop_propagation();
+                    }
+                }
+            });
+        if collapsed && node.branch.is_none() && node.icon.is_some() {
+            let label = node.label.clone();
+            let dark = self.options.popup_theme == MenuPopupTheme::Dark;
+            row = row.tooltip(move |_, cx| {
+                cx.new(|_| CollapsedLabel {
+                    label: label.clone(),
+                    dark,
+                })
+                .into()
+            });
+        }
+        if node.branch.is_none() {
+            return row.into_any_element();
+        }
+        if self.options.hover() {
+            row = row.on_hover({
+                let this = self.clone();
+                let key = key.clone();
+                move |hover, window, cx| this.hover_later(&key, *hover, window, cx)
+            });
+        }
+        if !self.options.popup() {
+            return div()
+                .flex()
+                .flex_col()
+                .child(row)
+                .when(open, |el| {
+                    el.children(
+                        node.children
+                            .iter()
+                            .map(|n| self.draw(n, depth + 1, false, cx)),
+                    )
+                })
+                .into_any_element();
+        }
+        let prior = state.bounds.get(key).copied();
+        let wrapper = div().relative().flex().flex_shrink_0().child(row).child(
+            gpui::canvas(
+                {
+                    let owner = self.state.clone();
+                    let key = key.clone();
+                    move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                        if owner.read(cx).bounds.get(&key) != Some(&bounds) {
+                            owner.update(cx, |s, _| {
+                                s.bounds.insert(key.clone(), bounds);
+                            });
+                            if owner.read(cx).is_open(&key) {
+                                window.on_next_frame(|window, _| window.refresh());
+                            }
+                        }
+                    }
+                },
+                |_, _, _, _| {},
+            )
+            .absolute()
+            .inset_0(),
+        );
+        wrapper
+            .children(
+                prior
+                    .filter(|_| open)
+                    .map(|target| self.popup(node, depth, top, target, cx)),
+            )
+            .into_any_element()
+    }
+    fn popup(
+        self: &Rc<Self>,
+        node: &Node,
+        depth: usize,
+        top: bool,
+        target: Bounds<Pixels>,
+        cx: &App,
+    ) -> AnyElement {
+        let key = node.index.clone();
+        let popup_id: SharedString = format!("\u{1}{key}").into();
+        let branch = node.branch.as_ref().expect("popup branch");
+        let offset = px(branch.offset.unwrap_or(self.options.offset));
+        let base = div()
+            .flex()
+            .flex_col()
+            .py(px(5.))
+            .min_w(px(POPUP_MIN_WIDTH))
+            .max_h(self.max_popup_height)
+            .rounded(px(4.))
+            .shadow(vec![gpui::BoxShadow {
+                color: Hsla::from(rgb(0)).opacity(if self.theme.dark { 0.72 } else { 0.12 }),
+                offset: gpui::point(px(0.), px(0.)),
+                blur_radius: px(12.),
+                spread_radius: px(0.),
+                inset: false,
+            }])
+            .bg(rgb(if self.theme.dark { 0x1d1e1f } else { 0xffffff }));
+        let styled = if let Some(style) = branch
+            .popup_style
+            .as_ref()
+            .or(self.options.popup_style.as_ref())
+        {
+            style(base)
+        } else {
+            base
+        };
+        let popup = styled
+            .relative()
+            .child(
+                gpui::canvas(
+                    {
+                        let owner = self.state.clone();
+                        let key = key.clone();
+                        move |bounds: Bounds<Pixels>, _: &mut Window, cx: &mut App| {
+                            owner.update(cx, |s, _| {
+                                s.popup_bounds.insert(key.clone(), bounds);
+                            });
+                        }
+                    },
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .inset_0(),
+            )
+            .id(popup_id)
+            .overflow_y_scroll()
+            .occlude()
+            .when(self.options.hover(), |el| {
+                el.on_hover({
+                    let this = self.clone();
+                    let key = key.clone();
+                    move |hover, window, cx| {
+                        let chain = this
+                            .state
+                            .read(cx)
+                            .branches
+                            .get(&key)
+                            .cloned()
+                            .unwrap_or_default();
+                        if *hover {
+                            this.state.update(cx, |s, _| {
+                                for key in chain {
+                                    s.pending.remove(&key);
+                                }
+                            });
+                        } else {
+                            for ancestor in chain.into_iter().rev() {
+                                this.hover_later(&ancestor, false, window, cx);
+                            }
+                        }
+                    }
+                })
+            })
+            .children(
+                node.children
+                    .iter()
+                    .map(|n| self.draw(n, depth + 1, true, cx)),
+            );
+        deferred(
+            anchored()
+                .attach(
+                    target,
+                    if top {
+                        gpui::Anchor::BottomLeft
+                    } else {
+                        gpui::Anchor::TopRight
+                    },
+                )
+                .offset(if top {
+                    point(px(0.), offset)
+                } else {
+                    point(offset, px(0.))
+                })
+                .snap_to_window_with_margin(px(4.))
+                .child(popup),
+        )
+        .with_priority(POPUP_PRIORITY + depth.min(100))
+        .into_any_element()
+    }
+}
+
+struct CollapsedLabel {
+    label: SharedString,
+    dark: bool,
+}
+
+impl gpui::Render for CollapsedLabel {
+    fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+        div()
+            .rounded(px(4.))
+            .border_1()
+            .border_color(rgb(if self.dark { 0x303133 } else { 0xe4e7ed }))
+            .bg(rgb(if self.dark { 0x303133 } else { 0xffffff }))
+            .text_color(rgb(if self.dark { 0xffffff } else { 0x303133 }))
+            .text_size(px(12.))
+            .px(px(10.))
+            .py(px(5.))
+            .child(self.label.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    type EventLog = Rc<std::cell::RefCell<Vec<(&'static str, Vec<SharedString>)>>>;
+
+    struct Harness {
+        state: Entity<MenuState>,
+        events: EventLog,
+        width: f32,
+        trigger: MenuTrigger,
+    }
+
+    impl gpui::Render for Harness {
+        fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+            let listener = |kind: &'static str| {
+                let events = self.events.clone();
+                move |event: &MenuEvent, _: &mut Window, _: &mut App| {
+                    events.borrow_mut().push((kind, event.index_path.clone()));
+                }
+            };
+            div().id("menu-test").tab_group().size_full().child(
+                div().w(px(self.width)).child(
+                    el_menu()
+                        .state(&self.state)
+                        .mode(MenuMode::Horizontal)
+                        .menu_trigger(self.trigger)
+                        .close_on_click_outside(true)
+                        .entry(el_menu_item("home", "Home"))
+                        .entry(
+                            el_sub_menu("settings", "Settings")
+                                .entry(el_menu_item("disabled", "Disabled").disabled(true))
+                                .entry(el_menu_item("theme", "Theme").on_click(listener("click"))),
+                        )
+                        .on_select(listener("select"))
+                        .on_open(listener("open"))
+                        .on_close(listener("close")),
+                ),
+            )
+        }
+    }
+
+    #[gpui::test]
+    fn popup_keyboard_and_pointer_preserve_logical_paths(cx: &mut gpui::TestAppContext) {
+        let events = Rc::new(std::cell::RefCell::new(Vec::new()));
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        let (_, view) = cx.add_window_view({
+            let events = events.clone();
+            let state = state.clone();
+            move |_, _| Harness {
+                state,
+                events,
+                width: 500.,
+                trigger: MenuTrigger::Click,
+            }
+        });
+        let draw = |view: &mut gpui::VisualTestContext| view.update(|w, cx| w.draw(cx).clear(cx));
+        let key = |view: &mut gpui::VisualTestContext, key: &str| {
+            let keystroke = view.update(|_, cx| {
+                gpui::Keystroke::parse_with_os(key, cx.platform_info().os).unwrap()
+            });
+            view.simulate_event(gpui::KeyDownEvent {
+                keystroke: keystroke.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            view.simulate_event(gpui::KeyUpEvent { keystroke });
+        };
+        draw(view);
+        view.update(|w, cx| state.read(cx).focus["settings"].clone().focus(w, cx));
+        draw(view);
+        key(view, "down");
+        draw(view);
+        view.run_until_parked();
+        view.update(|w, cx| {
+            let s = state.read(cx);
+            assert!(s.is_open("settings"));
+            assert!(s.focus["theme"].is_rendered(w));
+            assert!(s.focus["theme"].is_focused(w));
+        });
+        key(view, "escape");
+        draw(view);
+        view.update(|w, cx| {
+            assert!(!state.read(cx).is_open("settings"));
+            assert!(state.read(cx).focus["settings"].is_focused(w));
+        });
+        let trigger = view.update(|_, cx| state.read(cx).bounds["settings"].center());
+        view.simulate_click(trigger, gpui::Modifiers::default());
+        draw(view);
+        let popup = view.update(|_, cx| state.read(cx).popup_bounds["settings"]);
+        view.simulate_click(
+            point(
+                popup.left() + px(25.),
+                popup.top() + px(5. + POPUP_ITEM_HEIGHT * 1.5),
+            ),
+            gpui::Modifiers::default(),
+        );
+        view.update(|_, cx| assert_eq!(state.read(cx).active_index(), Some("theme")));
+        assert_eq!(
+            *events.borrow(),
+            vec![
+                ("open", vec!["settings".into()]),
+                ("close", vec!["settings".into()]),
+                ("open", vec!["settings".into()]),
+                ("select", vec!["settings".into(), "theme".into()]),
+                ("click", vec!["settings".into(), "theme".into()]),
+            ]
+        );
+    }
+
+    #[gpui::test]
+    fn overflow_popup_selects_original_path_and_outside_closes(cx: &mut gpui::TestAppContext) {
+        let events = EventLog::default();
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        let (_, view) = cx.add_window_view({
+            let events = events.clone();
+            let state = state.clone();
+            move |_, _| Harness {
+                state,
+                events,
+                width: 80.,
+                trigger: MenuTrigger::Click,
+            }
+        });
+        for _ in 0..2 {
+            view.update(|w, cx| w.draw(cx).clear(cx));
+        }
+        let more = view.update(|_, cx| state.read(cx).bounds[MORE].center());
+        view.simulate_click(more, gpui::Modifiers::default());
+        view.update(|w, cx| w.draw(cx).clear(cx));
+        let settings = view.update(|_, cx| state.read(cx).bounds["settings"].center());
+        view.simulate_click(settings, gpui::Modifiers::default());
+        view.update(|w, cx| w.draw(cx).clear(cx));
+        let popup = view.update(|_, cx| state.read(cx).popup_bounds["settings"]);
+        view.simulate_click(
+            point(
+                popup.left() + px(25.),
+                popup.top() + px(5. + POPUP_ITEM_HEIGHT * 1.5),
+            ),
+            gpui::Modifiers::default(),
+        );
+        view.update(|w, cx| {
+            assert_eq!(state.read(cx).active_index(), Some("theme"));
+            assert!(state.read(cx).focus[MORE].is_focused(w));
+            w.draw(cx).clear(cx);
+        });
+        view.simulate_click(more, gpui::Modifiers::default());
+        view.update(|w, cx| w.draw(cx).clear(cx));
+        view.simulate_click(settings, gpui::Modifiers::default());
+        view.update(|w, cx| w.draw(cx).clear(cx));
+        view.simulate_click(point(px(650.), px(440.)), gpui::Modifiers::default());
+        view.update(|_, cx| assert!(state.read(cx).opened.is_empty()));
+        assert_eq!(
+            *events.borrow(),
+            vec![
+                ("open", vec!["settings".into()]),
+                ("select", vec!["settings".into(), "theme".into()]),
+                ("click", vec!["settings".into(), "theme".into()]),
+                ("open", vec!["settings".into()]),
+                ("close", vec!["settings".into()]),
+            ]
+        );
+    }
+
+    #[gpui::test]
+    fn hover_respects_delay_and_keeps_popup_open_when_entered(cx: &mut gpui::TestAppContext) {
+        let events = EventLog::default();
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        let (_, view) = cx.add_window_view({
+            let events = events.clone();
+            let state = state.clone();
+            move |_, _| Harness {
+                state,
+                events,
+                width: 500.,
+                trigger: MenuTrigger::Hover,
+            }
+        });
+        let draw = |view: &mut gpui::VisualTestContext| view.update(|w, cx| w.draw(cx).clear(cx));
+        let wait = |view: &mut gpui::VisualTestContext, millis| {
+            view.run_until_parked();
+            view.executor().advance_clock(Duration::from_millis(millis));
+            view.run_until_parked();
+            draw(view);
+        };
+        draw(view);
+        let trigger = view.update(|_, cx| state.read(cx).bounds["settings"].center());
+        view.simulate_mouse_move(trigger, None, Default::default());
+        wait(view, 299);
+        assert!(events.borrow().is_empty());
+        wait(view, 2);
+        let popup = view.update(|_, cx| state.read(cx).popup_bounds["settings"].center());
+        view.simulate_mouse_move(popup, None, Default::default());
+        wait(view, 350);
+        view.update(|_, cx| assert!(state.read(cx).is_open("settings")));
+        view.simulate_mouse_move(point(px(650.), px(440.)), None, Default::default());
+        wait(view, 350);
+        view.update(|_, cx| assert!(!state.read(cx).is_open("settings")));
+        assert_eq!(
+            *events.borrow(),
+            vec![
+                ("open", vec!["settings".into()]),
+                ("close", vec!["settings".into()])
+            ]
+        );
+    }
+
+    #[gpui::test]
+    fn keyboard_focus_survives_overflow_changes_and_discards_closed_requests(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        let events = EventLog::default();
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        let (root, view) = cx.add_window_view({
+            let state = state.clone();
+            let events = events.clone();
+            move |_, _| Harness {
+                state,
+                events,
+                width: 500.,
+                trigger: MenuTrigger::Click,
+            }
+        });
+        let draw = |view: &mut gpui::VisualTestContext| {
+            for _ in 0..2 {
+                view.update(|w, cx| w.draw(cx).clear(cx));
+                view.run_until_parked();
+            }
+        };
+        draw(view);
+        view.update(|w, cx| {
+            let frame = state.read(cx).frame.upgrade().unwrap();
+            let settings = "settings".into();
+            frame.focus(&settings, w, cx);
+            assert!(frame.key(&settings, "down", w, cx));
+            assert!(state.read(cx).focus_request.is_some());
+            assert!(frame.key(&settings, "escape", w, cx));
+            assert!(state.read(cx).focus_request.is_none());
+            assert!(frame.key(&settings, "down", w, cx));
+        });
+        draw(view);
+        view.update(|w, cx| assert!(state.read(cx).focus["theme"].is_focused(w)));
+        let prior_events = events.borrow().len();
+        for (width, target) in [(80., MORE), (500., "home")] {
+            view.update(|_, cx| {
+                root.update(cx, |h, cx| {
+                    h.width = width;
+                    cx.notify();
+                })
+            });
+            draw(view);
+            view.update(|w, cx| {
+                let focus = &state.read(cx).focus[target];
+                assert!(focus.is_rendered(w));
+                assert!(
+                    focus.is_focused(w),
+                    "expected focus on {target} at width {width}"
+                );
+            });
+        }
+        assert_eq!(events.borrow().len(), prior_events);
+    }
+
+    #[test]
+    fn overflow_reserves_space_only_when_needed() {
+        let widths = [px(40.), px(60.), px(100.)];
+        assert_eq!(overflow_at(&widths, px(200.), px(40.)), 3);
+        assert_eq!(overflow_at(&widths, px(139.), px(40.)), 1);
+        assert_eq!(overflow_at(&widths, px(60.), px(40.)), 0);
+    }
+}

@@ -1,0 +1,91 @@
+basics: Basic
+navigation: Navigation
+feedback: Feedback
+button_intro: Trigger an action with a button. Explore variants, sizes, icons, and keyboard activation.
+icon_intro: Use the application icon pack or choose a source for a single icon.
+init_title: Initialization
+init_intro: Configure the application locale and default icon pack before opening windows.
+init_fonts: Use the optional fonts list to register embedded font bytes. Use the font’s internal family name with Icon::from_font.
+container_intro: Arrange headers, sidebars, main content and footers in nested containers.
+layout_intro: Divide rows into 24 responsive columns.
+space_intro: Set the spacing and alignment between adjacent elements.
+menu_intro: Navigate with nested entries, collapsible sidebars, and horizontal menus.
+loading_intro: Show progress over a specific region without blocking the rest of the window.
+grid_basic: Basic layout
+grid_gutter: Column spacing
+grid_mixed: Mixed column widths
+grid_offset: Column offsets and shifts
+grid_alignment: Alignment
+grid_responsive: Responsive layout
+grid_resize: Resize the window to see the columns change at the viewport breakpoints.
+vertical_menu: Collapsible sidebar
+horizontal_menu: Horizontal menu and overflow
+menu_index_path: 'Selected index path: %{path}'
+menu_collapse: Collapse menu
+menu_expand: Expand menu
+menu_disabled: Unavailable
+window_minimize: Minimize window
+window_zoom: Maximize or restore window
+window_close: Close window
+language: 简体中文
+dark: Switch to dark theme
+light: Switch to light theme
+reduce_motion: Reduce motion
+restore_motion: Restore motion
+copy: Copy code
+show_code: Show source
+hide_code: Hide source
+button_page: Button
+icon_page: Icon
+container_page: Container
+layout_page: Layout
+space_page: Space
+menu_page: Menu
+loading_page: Loading
+icon_pack_error: Could not load the Tabler font. The current pack is unchanged.
+named_icons: Icon catalog
+icon_search: Search this group
+icon_empty: No matching icons. Try a different name or group.
+icon_copied: 'Copied %{name}'
+specific_icons: Choose a pack or a font for one icon
+container_title: Container regions
+space_title: Spacing and wrapping
+space_presets: Spacing presets
+menu_first: Overview
+menu_second: Settings
+layout_header: Header
+layout_aside: Aside
+layout_main: Main
+layout_footer: Footer
+show_loading: Show loading mask
+hide_loading: Hide loading mask
+loading_vertical: Element Plus Loading icon · text below
+loading_horizontal: Graduated dots · accelerating rotation · text to the right
+loading_clear: Custom rotating icon · transparent mask
+loading_text: Loading data
+solid_title: Default and semantic colors
+plain_title: Plain buttons
+dashed_title: Dashed buttons
+text_title: Text and link buttons
+size_title: Size, shape, and overrides
+icon_title: Icon buttons
+activation_title: Activation, disabled, and loading
+button_group: Button group
+button_custom: Custom color and label spacing
+button_confirm: Confirm
+default: Default
+primary: Primary
+success: Success
+warning: Warning
+danger: Danger
+info: Info
+text: Text button
+text_bg: With background
+link: View details
+large: Large
+compact: Small and round
+add: Add
+count_increment: Count +1
+disabled: Disabled
+saving: Saving
+activation_help: 'Activated %{count} times. Press Tab to focus, then Enter or Space to activate.'

@@ -1,0 +1,91 @@
+basics: 基础
+navigation: 导航
+feedback: 反馈
+button_intro: 用按钮触发操作。试用不同样式、尺寸、图标与键盘操作。
+icon_intro: 沿用应用默认的图标库，也可以为单个图标指定来源。
+init_title: 初始化
+init_intro: 在打开窗口前，配置应用语言和默认图标库。
+init_fonts: 可用 fonts 列表注册嵌入的字体文件。调用 Icon::from_font 时使用字体内部的字族名。
+container_intro: 嵌套容器来组织顶栏、侧栏、主内容和底栏。
+layout_intro: 用响应式的 24 列栅格组织内容。
+space_intro: 为相邻元素设置间距和对齐方式。
+menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
+loading_intro: 在指定区域显示加载提示，不影响窗口内其他区域的操作。
+grid_basic: 基础布局
+grid_gutter: 列间距
+grid_mixed: 混合布局
+grid_offset: 列偏移与移位
+grid_alignment: 对齐方式
+grid_responsive: 响应式布局
+grid_resize: 调整窗口宽度，查看列宽如何随视口断点变化。
+vertical_menu: 可折叠侧栏
+horizontal_menu: 横向菜单与溢出
+menu_index_path: '选中项索引路径：%{path}'
+menu_collapse: 折叠菜单
+menu_expand: 展开菜单
+menu_disabled: 不可用
+window_minimize: 最小化窗口
+window_zoom: 最大化或还原窗口
+window_close: 关闭窗口
+language: English
+dark: 切换深色主题
+light: 切换浅色主题
+reduce_motion: 减少动效
+restore_motion: 恢复动效
+copy: 复制代码
+show_code: 查看源码
+hide_code: 收起源码
+button_page: Button 按钮
+icon_page: Icon 图标
+container_page: Container 布局容器
+layout_page: Layout 布局
+space_page: Space 间距
+menu_page: Menu 菜单
+loading_page: Loading 加载
+icon_pack_error: 无法载入 Tabler 字体，当前图标库未更改。
+named_icons: 图标目录
+icon_search: 搜索当前分组
+icon_empty: 未找到匹配的图标，请换个名称或分组。
+icon_copied: '已复制 %{name}'
+specific_icons: 为单个图标指定图标库或字体
+container_title: 容器区域
+space_title: 间距与换行
+space_presets: 常用间距
+menu_first: 概览
+menu_second: 设置
+layout_header: 顶栏
+layout_aside: 侧栏
+layout_main: 主内容
+layout_footer: 底栏
+show_loading: 显示加载遮罩
+hide_loading: 关闭加载遮罩
+loading_vertical: Element Plus 官方 Loading 图标 · 文字在下
+loading_horizontal: 大小渐变圆点 · 加速旋转 · 文字在右
+loading_clear: 自定义旋转图标 · 透明遮罩
+loading_text: 正在加载数据
+solid_title: 默认与语义颜色
+plain_title: 朴素按钮
+dashed_title: 虚线按钮
+text_title: 文本与链接按钮
+size_title: 尺寸、形状与局部覆盖
+icon_title: 图标按钮
+activation_title: 激活、禁用与加载
+button_group: 按钮组
+button_custom: 自定义颜色与文字间距
+button_confirm: 确定
+default: 默认
+primary: 主要
+success: 成功
+warning: 警告
+danger: 危险
+info: 信息
+text: 文字按钮
+text_bg: 带底色
+link: 查看详情
+large: 大号
+compact: 小号圆角
+add: 新增
+count_increment: 计数 +1
+disabled: 已禁用
+saving: 保存中
+activation_help: '已激活 %{count} 次。按 Tab 聚焦，再按 Enter 或空格触发。'
