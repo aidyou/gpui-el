@@ -1,5 +1,31 @@
 use super::*;
 
+#[test]
+fn dynamic_tags_are_removed_by_stable_id_not_label() {
+    let mut state = pages::tag::State::default();
+    // Close "Tag 2", then add a tag that reuses the label "Tag 3".
+    state.close_dynamic(1);
+    state.add_dynamic(format!("Tag {}", state.dynamic_labels().len() + 1).into());
+    assert_eq!(
+        state
+            .dynamic_labels()
+            .iter()
+            .map(|label| label.to_string())
+            .collect::<Vec<_>>(),
+        ["Tag 1", "Tag 3", "Tag 3"]
+    );
+    // Closing the original "Tag 3" must leave the newly added one in place.
+    state.close_dynamic(2);
+    assert_eq!(
+        state
+            .dynamic_labels()
+            .iter()
+            .map(|label| label.to_string())
+            .collect::<Vec<_>>(),
+        ["Tag 1", "Tag 3"]
+    );
+}
+
 #[gpui::test]
 fn all_pages_draw_at_wide_and_narrow_sizes_in_both_languages_and_themes(
     cx: &mut gpui::TestAppContext,

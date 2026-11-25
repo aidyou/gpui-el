@@ -6,7 +6,7 @@
 
 use gpui::{
     AnyElement, App, ClickEvent, ElementId, FontWeight, IntoElement, RenderOnce, SharedString,
-    Window, div, prelude::*, px, rgb,
+    Window, div, prelude::*, px, rgb, rgba,
 };
 
 use crate::{
@@ -46,6 +46,17 @@ pub enum TagSize {
     #[default]
     Default,
     Small,
+}
+
+/// `$tag-font-size` in Theme Chalk `tag.scss`: 12 px at every size.
+const TAG_FONT_SIZE: f32 = 12.;
+
+/// Converts an sRGB color with alpha to a GPUI background color. Upstream's
+/// inline `backgroundColor` accepts any CSS color, so the alpha channel is
+/// preserved rather than dropped.
+fn background_color(color: gpui::Rgba) -> gpui::Rgba {
+    let byte = |channel: f32| (channel.clamp(0., 1.) * 255.).round() as u32;
+    rgba((byte(color.r) << 24) | (byte(color.g) << 16) | (byte(color.b) << 8) | byte(color.a))
 }
 
 struct Metrics {
@@ -245,7 +256,9 @@ impl Tag {
         self
     }
 
-    /// Overrides only the background with an opaque sRGB color.
+    /// Overrides only the background, keeping the alpha channel. Upstream's
+    /// inline style accepts any CSS color; text and border still come from the
+    /// type and effect.
     pub fn color(mut self, color: gpui::Rgba) -> Self {
         self.color = Some(color);
         self
@@ -306,11 +319,14 @@ impl RenderOnce for Tag {
         } else {
             palette.border
         };
-        let bg = self.color.map_or(palette.bg, |color| {
-            let byte = |c: f32| (c.clamp(0., 1.) * 255.).round() as u32;
-            (byte(color.r) << 16) | (byte(color.g) << 8) | byte(color.b)
-        });
-        let radius = if self.round { metrics.height / 2. } else { 4. };
+        let bg = self.color.map_or(rgb(palette.bg), background_color);
+        let radius = if self.round {
+            // Capsule: the tag's content keeps the outer width at or above
+            // the outer height, so the height is the shorter edge.
+            metrics.height / 2.
+        } else {
+            tokens::radius::BASE
+        };
         let accessibility_label = self.accessibility_label.or_else(|| self.label.clone());
         let content = self
             .content
@@ -328,14 +344,14 @@ impl RenderOnce for Tag {
                 metrics.padding_x
             }))
             .when(self.closable, |el| el.gap(px(metrics.close_gap)))
-            .text_size(px(12.))
-            .line_height(px(12.))
+            .text_size(px(TAG_FONT_SIZE))
+            .line_height(px(TAG_FONT_SIZE))
             .font_weight(FontWeight::NORMAL)
             .whitespace_nowrap()
             .border_1()
             .border_color(rgb(border))
             .rounded(px(radius))
-            .bg(rgb(bg))
+            .bg(bg)
             .text_color(rgb(palette.text))
             .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
             .children(content)
@@ -361,6 +377,18 @@ impl RenderOnce for Tag {
                 .cursor_pointer()
                 .focusable()
                 .tab_stop(true)
+                // Upstream gives the tag itself no focus style; a visible
+                // indicator is required for a native keyboard-focusable
+                // control, so reuse the close button's primary outline.
+                .focus_visible(move |s| {
+                    s.shadow(vec![gpui::BoxShadow {
+                        color: rgb(PRIMARY).into(),
+                        offset: gpui::point(px(0.), px(0.)),
+                        blur_radius: px(0.),
+                        spread_radius: px(2.),
+                        inset: false,
+                    }])
+                })
                 .on_click(move |event, window, cx| handler(event, window, cx));
         }
         root.into_any_element()
@@ -425,9 +453,13 @@ pub fn el_check_tag() -> CheckTag {
 
 /// A toggle tag that reports its next checked state, like upstream ElCheckTag.
 ///
-/// Native differences: the tag is focusable and keyboard activatable, which the
-/// upstream `span` element is not; the `update:checked` Vue binding is replaced
-/// by the application state that feeds [`CheckTag::checked`].
+/// Native differences: the tag is focusable and keyboard activatable with a
+/// visible focus outline, which the upstream `span` element is not; the
+/// checked state is exposed through the accessibility selection attribute
+/// because GPUI 0.3.14 has no `aria_pressed`. The `update:checked` Vue binding
+/// is replaced by the application state that feeds [`CheckTag::checked`].
+/// Disabled tags block activation and show a not-allowed cursor; GPUI has no
+/// `aria_disabled` to also convey that to assistive technology.
 #[derive(Default, IntoElement)]
 #[must_use]
 pub struct CheckTag {
@@ -562,6 +594,7 @@ impl RenderOnce for CheckTag {
             .flex()
             .flex_none()
             .items_center()
+            // `padding: 7px 15px` in Theme Chalk `check-tag.scss`.
             .py(px(7.))
             .px(px(15.))
             .rounded(px(tokens::radius::BASE))
@@ -583,6 +616,9 @@ impl RenderOnce for CheckTag {
         if let Some(label) = accessibility_label {
             root = root.aria_label(label);
         }
+        // GPUI 0.3.14 has no `aria_pressed` or `aria_disabled`; the selection
+        // attribute is the closest available state signal for a toggle.
+        root = root.aria_selected(self.checked);
         if self.disabled {
             return root.cursor_not_allowed().into_any_element();
         }
@@ -593,6 +629,18 @@ impl RenderOnce for CheckTag {
                 .cursor_pointer()
                 .focusable()
                 .tab_stop(true)
+                // Upstream exposes no focus or state semantics at all; the
+                // selection attribute and a visible focus outline are the
+                // native equivalents of the checked fill and pointer cursor.
+                .focus_visible(move |s| {
+                    s.shadow(vec![gpui::BoxShadow {
+                        color: rgb(PRIMARY).into(),
+                        offset: gpui::point(px(0.), px(0.)),
+                        blur_radius: px(0.),
+                        spread_radius: px(2.),
+                        inset: false,
+                    }])
+                })
                 .on_click(move |_, window, cx| handler(!checked, window, cx));
         }
         root.into_any_element()
@@ -641,6 +689,25 @@ mod tests {
             let metrics = size.metrics();
             assert_eq!(metrics.padding_x, metrics.close_gap + 3.);
         }
+    }
+
+    #[test]
+    fn custom_color_preserves_alpha_and_clamps_channels() {
+        assert_eq!(
+            background_color(gpui::rgba(0x626aefff)),
+            gpui::rgba(0x626aefff)
+        );
+        assert_eq!(
+            background_color(gpui::rgba(0x626aef80)),
+            gpui::rgba(0x626aef80)
+        );
+        let clamped = background_color(gpui::Rgba {
+            r: 1.5,
+            g: -0.5,
+            b: 0.4,
+            a: 2.0,
+        });
+        assert_eq!(clamped, gpui::rgba(0xff0066ff));
     }
 
     #[test]

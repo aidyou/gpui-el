@@ -462,8 +462,8 @@ const TAG: &[Row] = &[
     (
         "color",
         "Rgba · —",
-        "Override only the background, like the upstream inline style.",
-        "仅覆盖背景色，与上游内联样式一致。",
+        "Override only the background, like the upstream inline style; the alpha channel is preserved.",
+        "仅覆盖背景色，与上游内联样式一致；保留透明度通道。",
     ),
     (
         "closable",

@@ -12,8 +12,19 @@ use crate::{
 pub(crate) struct State {
     toggle: bool,
     closed: HashSet<u32>,
-    dynamic: Vec<SharedString>,
+    dynamic: Vec<DynamicTag>,
     checked: [bool; 6],
+    /// Monotonic counter backing [`DynamicTag::id`]; labels may repeat after
+    /// deletions, so names are never used as identity.
+    next_dynamic_id: u32,
+}
+
+/// A dynamically added tag. Removal is keyed by the stable id, never by the
+/// label or the array index: after a deletion the next added tag can reuse a
+/// display name, which would otherwise remove two entries at once.
+pub(crate) struct DynamicTag {
+    id: u32,
+    label: SharedString,
 }
 
 impl Default for State {
@@ -23,10 +34,37 @@ impl Default for State {
             closed: HashSet::new(),
             dynamic: ["Tag 1", "Tag 2", "Tag 3"]
                 .into_iter()
-                .map(SharedString::from)
+                .enumerate()
+                .map(|(id, label)| DynamicTag {
+                    id: id as u32,
+                    label: label.into(),
+                })
                 .collect(),
             checked: [true; 6],
+            next_dynamic_id: 3,
         }
+    }
+}
+
+impl State {
+    /// Removes one dynamic tag by its stable id. Labels may repeat after
+    /// deletions, so closing by name or array index could remove two entries
+    /// at once.
+    pub(crate) fn close_dynamic(&mut self, id: u32) {
+        self.dynamic.retain(|item| item.id != id);
+    }
+
+    /// Appends a dynamic tag under a fresh id.
+    pub(crate) fn add_dynamic(&mut self, label: SharedString) {
+        let id = self.next_dynamic_id;
+        self.next_dynamic_id += 1;
+        self.dynamic.push(DynamicTag { id, label });
+    }
+
+    /// Labels of the dynamic tags, in display order.
+    #[cfg(test)]
+    pub(crate) fn dynamic_labels(&self) -> Vec<SharedString> {
+        self.dynamic.iter().map(|item| item.label.clone()).collect()
     }
 }
 
@@ -94,14 +132,14 @@ impl Gallery {
                     .replace("%{count}", &self.tag.closed.len().to_string()),
             );
         let editable = row()
-            .children(self.tag.dynamic.iter().enumerate().map(|(i, tag)| {
-                let tag = tag.clone();
+            .children(self.tag.dynamic.iter().map(|tag| {
+                let id = tag.id;
                 el_tag()
-                    .id(("tag-dynamic", i as u32))
-                    .label(tag.clone())
+                    .id(("tag-dynamic", id))
+                    .label(tag.label.clone())
                     .closable(true)
                     .onclose(cx.listener(move |this, _, _, cx| {
-                        this.tag.dynamic.retain(|item| item != &tag);
+                        this.tag.close_dynamic(id);
                         cx.notify();
                     }))
             }))
@@ -111,11 +149,10 @@ impl Gallery {
                     .small()
                     .label(s.tag_add.as_str())
                     .icon(el_icon("plus"))
-                    .onclick(cx.listener(|this, _, _, cx| {
-                        let next = this.tag.dynamic.len() + 1;
-                        this.tag
-                            .dynamic
-                            .push(format!("{} {next}", s.tag_label).into());
+                    .onclick(cx.listener(move |this, _, _, cx| {
+                        let label =
+                            format!("{} {}", s.tag_label, this.tag.dynamic.len() + 1).into();
+                        this.tag.add_dynamic(label);
                         cx.notify();
                     })),
             )
