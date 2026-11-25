@@ -13,6 +13,7 @@ use crate::{
     Locale, Theme,
     icon::Icon,
     theme::{DANGER, INFO, PRIMARY, SUCCESS, WARNING, WHITE},
+    tokens,
 };
 
 type ClickHandler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
@@ -161,7 +162,7 @@ pub struct Tag {
     round: bool,
     closable: bool,
     on_click: Option<ClickHandler>,
-    on_close: Option<ClickHandler>,
+    onclose: Option<ClickHandler>,
 }
 
 impl Tag {
@@ -266,7 +267,7 @@ impl Tag {
 
     /// Handles native pointer and keyboard activation of the whole tag.
     #[track_caller]
-    pub fn on_click(
+    pub fn onclick(
         mut self,
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
@@ -278,11 +279,11 @@ impl Tag {
     /// Handles activation of the close button. The tag itself is not removed;
     /// the application updates its own state, as with upstream's `close` event.
     #[track_caller]
-    pub fn on_close(
+    pub fn onclose(
         mut self,
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.on_close = Some(Box::new(handler));
+        self.onclose = Some(Box::new(handler));
         self.ensure_id();
         self
     }
@@ -344,7 +345,7 @@ impl RenderOnce for Tag {
                     palette,
                     id.clone(),
                     Locale::current(cx),
-                    self.on_close,
+                    self.onclose,
                 ))
             });
         let Some(id) = id else {
@@ -437,7 +438,7 @@ pub struct CheckTag {
     checked: bool,
     disabled: bool,
     kind: TagType,
-    on_change: Option<ChangeHandler>,
+    onchange: Option<ChangeHandler>,
 }
 
 impl CheckTag {
@@ -473,7 +474,7 @@ impl CheckTag {
     }
 
     /// Sets the checked state. The application owns this value and updates it
-    /// in [`Self::on_change`], matching upstream's controlled usage.
+    /// in [`Self::onchange`], matching upstream's controlled usage.
     pub fn checked(mut self, checked: bool) -> Self {
         self.checked = checked;
         self
@@ -507,8 +508,8 @@ impl CheckTag {
     /// Reports the next checked state on native pointer or keyboard activation.
     /// Not emitted while disabled.
     #[track_caller]
-    pub fn on_change(mut self, handler: impl Fn(bool, &mut Window, &mut App) + 'static) -> Self {
-        self.on_change = Some(Box::new(handler));
+    pub fn onchange(mut self, handler: impl Fn(bool, &mut Window, &mut App) + 'static) -> Self {
+        self.onchange = Some(Box::new(handler));
         self.ensure_id();
         self
     }
@@ -563,9 +564,9 @@ impl RenderOnce for CheckTag {
             .items_center()
             .py(px(7.))
             .px(px(15.))
-            .rounded(px(4.))
-            .text_size(px(14.))
-            .line_height(px(14.))
+            .rounded(px(tokens::radius::BASE))
+            .text_size(px(tokens::font_size::BASE))
+            .line_height(px(tokens::font_size::BASE))
             .font_weight(FontWeight::BOLD)
             .whitespace_nowrap()
             .bg(rgb(bg))
@@ -586,7 +587,7 @@ impl RenderOnce for CheckTag {
             return root.cursor_not_allowed().into_any_element();
         }
         let checked = self.checked;
-        if let Some(handler) = self.on_change {
+        if let Some(handler) = self.onchange {
             root = root
                 .role(gpui::Role::Button)
                 .cursor_pointer()
@@ -687,15 +688,15 @@ mod tests {
                     el_tag()
                         .id("removable")
                         .closable(true)
-                        .on_click(move |_, _, _| clicks.set(clicks.get() + 1))
-                        .on_close(move |_, _, _| closes.set(closes.get() + 1)),
+                        .onclick(move |_, _, _| clicks.set(clicks.get() + 1))
+                        .onclose(move |_, _, _| closes.set(closes.get() + 1)),
                 )
                 .child(
                     el_check_tag()
                         .id("toggle")
                         .label("Toggle")
                         .checked(checked.get())
-                        .on_change(move |now_checked, _, cx| {
+                        .onchange(move |now_checked, _, cx| {
                             checked.set(now_checked);
                             view.update(cx, |_, cx| cx.notify());
                         }),
@@ -705,7 +706,7 @@ mod tests {
                         .id("blocked")
                         .label("Blocked")
                         .disabled(true)
-                        .on_change(move |checked, _, _| blocked.set(checked)),
+                        .onchange(move |checked, _, _| blocked.set(checked)),
                 )
         }
     }

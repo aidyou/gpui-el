@@ -494,8 +494,8 @@ const CHECK_TAG: &[Row] = &[
     (
         "checked",
         "bool · false",
-        "Controlled checked state; the application updates it in on_change.",
-        "受控选中状态；由应用在 on_change 中更新。",
+        "Controlled checked state; the application updates it in onchange.",
+        "受控选中状态；由应用在 onchange 中更新。",
     ),
     (
         "disabled",
@@ -511,26 +511,26 @@ const CHECK_TAG: &[Row] = &[
     ),
 ];
 const BUTTON_EVENTS: &[Row] = &[(
-    "on_click",
+    "onclick",
     "&ClickEvent, &mut Window, &mut App",
     "Standard pointer or keyboard activation; not emitted while disabled or loading.",
     "标准指针或键盘激活时触发；禁用或加载时不触发。",
 )];
 const TAG_EVENTS: &[Row] = &[
     (
-        "Tag::on_click",
+        "Tag::onclick",
         "&ClickEvent, &mut Window, &mut App",
         "Activation of the whole tag; the root becomes a keyboard-focusable button.",
         "点击整个标签时触发；根元素成为可键盘聚焦的按钮。",
     ),
     (
-        "Tag::on_close",
+        "Tag::onclose",
         "&ClickEvent, &mut Window, &mut App",
         "Activation of the close button. The application removes the tag from its own state.",
         "点击关闭按钮时触发；由应用从自身状态中移除该标签。",
     ),
     (
-        "CheckTag::on_change",
+        "CheckTag::onchange",
         "bool, &mut Window, &mut App",
         "Reports the next checked state on pointer or keyboard activation; not emitted while disabled.",
         "指针或键盘切换时上报下一个选中状态；禁用时不触发。",
@@ -538,25 +538,25 @@ const TAG_EVENTS: &[Row] = &[
 ];
 const MENU_EVENTS: &[Row] = &[
     (
-        "Menu::on_select",
+        "Menu::onselect",
         "&MenuEvent, &mut Window, &mut App",
         "Leaf selection; event has index and original index_path.",
         "选中菜单项；事件包含 index 和原始 index_path。",
     ),
     (
-        "Menu::on_open, on_close",
+        "Menu::onopen, onclose",
         "&MenuEvent, &mut Window, &mut App",
         "A submenu opens or closes.",
         "子菜单展开或关闭时触发。",
     ),
     (
-        "MenuItem::on_click",
+        "MenuItem::onclick",
         "&MenuEvent, &mut Window, &mut App",
         "Activate this item.",
         "激活当前菜单项。",
     ),
     (
-        "MenuItem::on_select",
+        "MenuItem::onselect",
         "&ClickEvent, &mut Window, &mut App",
         "Compatibility hook for the native activation event.",
         "原生激活事件的兼容回调。",

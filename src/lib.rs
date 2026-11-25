@@ -32,8 +32,8 @@
 //! `register_icon_font` and `Icon::from_font` for application-supplied glyphs.
 //!
 //! GPUI dispatches input and focus; components translate that into callbacks.
-//! Buttons expose `on_click`, while menus expose `on_select`, `on_open`, and
-//! `on_close` with the original index path (not the visual overflow path):
+//! Buttons expose `onclick`, while menus expose `onselect`, `onopen`, and
+//! `onclose` with the original index path (not the visual overflow path):
 //!
 //! ```
 //! use gpui_el::{el_menu, el_menu_item, el_sub_menu};
@@ -42,7 +42,7 @@
 //!     .entry(el_menu_item("overview", "Overview"))
 //!     .entry(el_sub_menu("settings", "Settings")
 //!         .entry(el_menu_item("theme", "Theme")))
-//!     .on_select(|event, _, _| println!("{:?}", event.index_path));
+//!     .onselect(|event, _, _| println!("{:?}", event.index_path));
 //! ```
 //!
 //! Tags mark content and forward their own removal; check tags toggle:
@@ -102,7 +102,7 @@ pub use menu::{
     MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
-pub use theme::Theme;
+pub use theme::{Theme, tokens};
 
 /// Sets the defaults for one GPUI application. Individual controls may still
 /// override their icon source. Register custom fonts before opening windows.

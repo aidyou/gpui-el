@@ -18,7 +18,7 @@ gpui = { package = "gpui-pre", version = "=0.3.14" }
 cargo run --example gallery
 ```
 
-展厅入口是 [`examples/gallery.rs`](examples/gallery.rs)，库入口是 [`src/lib.rs`](src/lib.rs)。例如 `el_button().label("确定")` 即可构造默认按钮；循环中从同一调用位置创建多个 Button、Aside、Main 或 Loading 时，应显式提供稳定且在同级唯一的 `.id(...)`。
+展厅入口是 [`examples/gallery.rs`](examples/gallery.rs)，组件页面位于 [`examples/gallery/pages/`](examples/gallery/pages/)；库入口是 [`src/lib.rs`](src/lib.rs)。例如 `el_button().label("确定")` 即可构造默认按钮，`.onclick(...)` 注册点击回调。组件事件统一使用 `on` 加事件名（如 `onselect`、`onclose`），旧的下划线方法名不再保留；GPUI 原生方法名不变。共用尺寸、间距和圆角见 `gpui_el::tokens`。循环中从同一调用位置创建多个 Button、Aside、Main 或 Loading 时，应显式提供稳定且在同级唯一的 `.id(...)`。
 
 ## 上游参考快照
 
@@ -37,7 +37,7 @@ cargo run --example gallery
 
 | 证据级别 | 已知状态 |
 | --- | --- |
-| 自动化检查 | 首提交准备期间跑过格式检查、全目标 lint、文档测试、展厅构建和针对 Loading、图标等宽网格的测试；`cargo test --all-targets` 的全量通过记录早于最后的图标网格修改，需在当前版本重跑。这里不把测试视为桌面实测。 |
+| 自动化检查 | 统一令牌与事件命名、拆分展厅后，重新执行了全目标测试（含展厅页面与图标等宽网格）和文档测试。这里不把测试视为桌面实测。 |
 | 源码对照 | Button 参考 Theme Chalk 的 `button.scss`、`mixins/_button.scss` 与明暗变量；Menu 参考上游 `packages/components/menu/src/`、`menu.scss` 和 `menu.md`；Tag/CheckTag 参考 `tag.scss`、`check-tag.scss`、`common/var.scss` 的 `$tag-*` 令牌与 `tag.md`。图标目录参考上游 `docs/.vitepress/vitepress/components/globals/icons.vue`：等宽 `7 / 6 / 4 / 3 / 2` 列，普通格高 90 px，窄窗口 80 px；这是展厅布局，不是 `Icon` 的默认尺寸。 |
 | 已知差异或缺项 | Button 的指针状态颜色即时切换，未复刻上游 100 ms 过渡，禁用／加载的原生无障碍状态待补；Menu 的折叠与浮层显隐目前无 CSS 对应过渡；Loading 是局部遮罩，不是全局模态服务；Tag/CheckTag 挂载与卸载立即完成，不重放上游 `el-zoom-in-center`（故无 `disable-transitions`），CheckTag 额外支持键盘聚焦与触发；完整的多组件组合演示未补齐。 |
 | 尚未验收 | 首提交准备环境缺少 `libxcb.so.1`，未完成干净桌面上的人工验收；没有 `gpui-fast` 兼容结论，也没有在干净环境完成发布包验收。 |

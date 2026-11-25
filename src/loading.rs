@@ -5,7 +5,10 @@ use gpui::{
     SharedString, Window, canvas, div, point, prelude::*, px, rgb,
 };
 
-use crate::{Icon, IconPack, Locale, Theme, theme::PRIMARY};
+use crate::{
+    Icon, IconPack, Locale, Theme,
+    theme::{Mask, PRIMARY},
+};
 
 /// Built-in loading indicators. A custom `indicator` takes precedence.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -44,7 +47,7 @@ impl LoadingMotion {
 
 pub(crate) fn animation_time(window: &mut Window, cx: &App) -> f64 {
     static EPOCH: OnceLock<Instant> = OnceLock::new();
-    if Theme::current(cx).reduced_motion || cx.reduce_motion() {
+    if Theme::motion_reduced(cx) {
         return 0.;
     }
     window.request_animation_frame();
@@ -176,7 +179,7 @@ impl RenderOnce for Loading {
         let size = if self.fullscreen { 50. } else { 42. };
         let background = self
             .background
-            .unwrap_or_else(|| theme_mask(theme.dark, self.opacity));
+            .unwrap_or_else(|| mask_background(&theme, self.opacity));
         let indicator = match self.indicator {
             Some(Indicator::Element(element)) => element,
             Some(Indicator::Icon(icon)) => icon
@@ -231,9 +234,12 @@ impl RenderOnce for Loading {
     }
 }
 
-fn theme_mask(dark: bool, opacity: Option<f32>) -> Hsla {
-    let (color, default) = if dark { (0, 0.8) } else { (0xffffff, 0.9) };
-    Hsla::from(rgb(color)).opacity(opacity.unwrap_or(default))
+fn mask_background(theme: &Theme, opacity: Option<f32>) -> Hsla {
+    let mask = theme.mask(Mask::Base);
+    Hsla {
+        a: opacity.unwrap_or(mask.a),
+        ..mask
+    }
 }
 
 fn css_easing(progress: f32, x2: f32) -> f32 {
@@ -312,7 +318,7 @@ fn animated_spinner(size: f32, style: LoadingSpinner, motion: LoadingMotion) -> 
             if !bounds.intersects(&window.content_mask().bounds) {
                 return;
             }
-            let reduced = Theme::current(cx).reduced_motion || cx.reduce_motion();
+            let reduced = Theme::motion_reduced(cx);
             let elapsed = animation_time(window, cx);
             let center = bounds.center();
             let color = window.text_style().color;
@@ -374,7 +380,7 @@ mod tests {
                     let clicks = self.0.clone();
                     crate::Button::new(id)
                         .label("Activate")
-                        .on_click(move |_, _, _| clicks.set(clicks.get() + 1))
+                        .onclick(move |_, _, _| clicks.set(clicks.get() + 1))
                 };
                 div()
                     .flex()
@@ -454,10 +460,12 @@ mod tests {
             .mask_opacity(0.)
             .spinner(LoadingSpinner::Dots);
         assert!(loading.horizontal);
-        assert_eq!(theme_mask(false, loading.opacity).a, 0.);
-        assert_eq!(theme_mask(true, loading.opacity).a, 0.);
-        assert_eq!(theme_mask(false, None).a, 0.9);
-        assert_eq!(theme_mask(true, None).a, 0.8);
+        assert_eq!(mask_background(&Theme::light(), loading.opacity).a, 0.);
+        assert_eq!(mask_background(&Theme::dark(), loading.opacity).a, 0.);
+        assert_eq!(mask_background(&Theme::light(), None).a, 0.9);
+        assert_eq!(mask_background(&Theme::dark(), None).a, 0.8);
+        assert_eq!(mask_background(&Theme::light(), Some(1.)).a, 1.);
+        assert_eq!(mask_background(&Theme::dark(), Some(1.)).a, 1.);
         let loading = loading.v_text("below");
         assert!(!loading.horizontal);
         assert_eq!(loading.spinner, LoadingSpinner::Dots);

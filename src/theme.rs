@@ -1,4 +1,4 @@
-use gpui::{App, Global, SharedString};
+use gpui::{App, BoxShadow, Global, Hsla, SharedString, point, px, rgb};
 
 /// Element Plus light/dark defaults and native rendering preferences.
 #[derive(Clone, Debug)]
@@ -71,12 +71,51 @@ impl Theme {
     }
 
     pub(crate) fn background(&self) -> u32 {
-        if self.dark { 0x141414 } else { WHITE }
+        if self.dark { DARK_BACKGROUND } else { WHITE }
+    }
+
+    /// Theme Chalk `--el-bg-color-overlay` (not the translucent modal overlay).
+    pub(crate) fn overlay_background(&self) -> u32 {
+        if self.dark { 0x1d1e1f } else { WHITE }
+    }
+
+    /// Theme Chalk `--el-disabled-text-color`, which aliases placeholder text.
+    pub(crate) fn disabled_text(&self) -> u32 {
+        if self.dark {
+            mix(self.background(), DARK_TEXT_BASE, 55)
+        } else {
+            0xa8abb2
+        }
+    }
+
+    /// Theme Chalk `--el-box-shadow-light` in light and dark `var.scss`.
+    pub(crate) fn light_shadow(&self) -> BoxShadow {
+        BoxShadow {
+            color: Hsla::from(rgb(0)).opacity(if self.dark { 0.72 } else { 0.12 }),
+            offset: point(px(0.), px(0.)),
+            blur_radius: px(12.),
+            spread_radius: px(0.),
+            inset: false,
+        }
+    }
+
+    /// Theme Chalk `--el-mask-color` and `--el-mask-color-extra-light`.
+    pub(crate) fn mask(&self, shade: Mask) -> Hsla {
+        let opacity = match shade {
+            Mask::Base if self.dark => 0.8,
+            Mask::Base => 0.9,
+            Mask::ExtraLight => 0.3,
+        };
+        Hsla::from(rgb(if self.dark { 0 } else { WHITE })).opacity(opacity)
+    }
+
+    pub(crate) fn motion_reduced(cx: &App) -> bool {
+        cx.reduce_motion() || Self::current(cx).reduced_motion
     }
 
     pub(crate) fn regular_text(&self) -> u32 {
         if self.dark {
-            mix(self.background(), 0xf0f5ff, 85)
+            mix(self.background(), DARK_TEXT_BASE, 85)
         } else {
             0x606266
         }
@@ -84,7 +123,7 @@ impl Theme {
 
     pub(crate) fn secondary_text(&self) -> u32 {
         if self.dark {
-            mix(self.background(), 0xf0f5ff, 65)
+            mix(self.background(), DARK_TEXT_BASE, 65)
         } else {
             0x909399
         }
@@ -92,7 +131,7 @@ impl Theme {
 
     pub(crate) fn primary_text(&self) -> u32 {
         if self.dark {
-            mix(self.background(), 0xf0f5ff, 95)
+            mix(self.background(), DARK_TEXT_BASE, 95)
         } else {
             0x303133
         }
@@ -151,6 +190,11 @@ const FONT_FALLBACKS: [&str; 7] = [
     "Arial",
 ];
 
+pub(crate) enum Mask {
+    Base,
+    ExtraLight,
+}
+
 pub(crate) enum Fill {
     Light,
     Base,
@@ -163,6 +207,63 @@ pub(crate) const SUCCESS: u32 = 0x67c23a;
 pub(crate) const WARNING: u32 = 0xe6a23c;
 pub(crate) const DANGER: u32 = 0xf56c6c;
 pub(crate) const INFO: u32 = 0x909399;
+pub(crate) const DARK_BACKGROUND: u32 = 0x141414;
+const DARK_TEXT_BASE: u32 = 0xf0f5ff;
+
+/// Shared Theme Chalk defaults. Component-specific recipes still follow
+/// their own maps rather than equating every `small` preset.
+pub mod tokens {
+    /// `$common-component-size` in Theme Chalk `common/var.scss`.
+    pub mod control_height {
+        pub const SMALL: f32 = 24.;
+        pub const DEFAULT: f32 = 32.;
+        pub const LARGE: f32 = 40.;
+    }
+
+    /// Element Plus Space `SIZE_MAP` (`components/space/src/use-space.ts`).
+    pub mod spacing {
+        pub const SMALL: f32 = 8.;
+        pub const DEFAULT: f32 = 12.;
+        pub const LARGE: f32 = 16.;
+    }
+
+    /// Theme Chalk `$border-radius` and the native capsule geometry.
+    pub mod radius {
+        pub const SMALL: f32 = 2.;
+        pub const BASE: f32 = 4.;
+        /// Upstream `round`; used by Button. There is no global `large` key.
+        pub const ROUND: f32 = 20.;
+
+        /// Fully rounds the ends using the shorter outer edge; equivalent to
+        /// the oversized CSS radius used by components such as rounded Tag.
+        pub fn capsule(width: f32, height: f32) -> f32 {
+            width.min(height).max(0.) / 2.
+        }
+    }
+
+    /// Theme Chalk `$border-width`.
+    pub const BORDER_WIDTH: f32 = 1.;
+
+    /// Theme Chalk `--el-font-weight-primary` (500).
+    pub const FONT_WEIGHT_PRIMARY: gpui::FontWeight = gpui::FontWeight::MEDIUM;
+
+    /// Theme Chalk `$font-size` values commonly used by controls.
+    pub mod font_size {
+        pub const EXTRA_SMALL: f32 = 12.;
+        pub const SMALL: f32 = 13.;
+        pub const BASE: f32 = 14.;
+        pub const MEDIUM: f32 = 16.;
+        pub const LARGE: f32 = 18.;
+        pub const EXTRA_LARGE: f32 = 20.;
+    }
+}
+
+/// Native order within GPUI deferred drawing, not the CSS `z-index` scale.
+/// Local overlays such as Loading remain in their own element tree.
+pub(crate) fn popup_priority(depth: usize) -> usize {
+    const POPPER: usize = 10;
+    POPPER + depth.min(100)
+}
 
 // Theme Chalk mixes opaque sRGB channels, rounded once at the end.
 pub(crate) fn mix(base: u32, target: u32, weight: u32) -> u32 {
@@ -174,4 +275,26 @@ pub(crate) fn mix(base: u32, target: u32, weight: u32) -> u32 {
             << shift
     };
     channel(16) | channel(8) | channel(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shared_layer_styles_match_theme_chalk() {
+        let light = Theme::light();
+        let dark = Theme::dark();
+        assert_eq!(light.overlay_background(), 0xffffff);
+        assert_eq!(dark.overlay_background(), 0x1d1e1f);
+        assert_eq!(light.disabled_text(), 0xa8abb2);
+        assert_eq!(dark.disabled_text(), 0x8d9095);
+        for (theme, shadow_alpha) in [(light, 0.12), (dark, 0.72)] {
+            let shadow = theme.light_shadow();
+            assert_eq!(shadow.color.a, shadow_alpha);
+            assert_eq!(shadow.blur_radius, px(12.));
+            assert_eq!(theme.mask(Mask::ExtraLight).a, 0.3);
+        }
+        assert!(popup_priority(1) > popup_priority(0));
+    }
 }

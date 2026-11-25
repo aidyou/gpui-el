@@ -55,19 +55,38 @@ pub(super) struct Metrics {
 
 impl ButtonSize {
     pub(super) fn metrics(self, shape: ButtonShape) -> Metrics {
-        let (height, padding_x, font_size, radius, icon_gap) = match self {
-            Self::Small => (24., 11., 12., 3., 4.),
-            Self::Default => (32., 15., 14., 4., 6.),
-            Self::Large => (40., 19., 14., 4., 8.),
+        use crate::tokens::{BORDER_WIDTH, control_height, font_size, radius};
+        let (height, outer_padding_x, font_size, normal_radius, icon_gap) = match self {
+            Self::Small => (
+                control_height::SMALL,
+                12.,
+                font_size::EXTRA_SMALL,
+                radius::BASE - 1.,
+                4.,
+            ),
+            Self::Default => (
+                control_height::DEFAULT,
+                16.,
+                font_size::BASE,
+                radius::BASE,
+                6.,
+            ),
+            Self::Large => (
+                control_height::LARGE,
+                20.,
+                font_size::BASE,
+                radius::BASE,
+                8.,
+            ),
         };
         let radius = match shape {
-            ButtonShape::Normal => radius,
-            ButtonShape::Round => 20.,
-            ButtonShape::Circle => height / 2.,
+            ButtonShape::Normal => normal_radius,
+            ButtonShape::Round => radius::ROUND,
+            ButtonShape::Circle => radius::capsule(height, height),
         };
         Metrics {
             height,
-            padding_x,
+            padding_x: outer_padding_x - BORDER_WIDTH,
             font_size,
             radius,
             icon_gap,
@@ -108,7 +127,15 @@ impl Palette {
         let (r, g, b) = (byte(color.r), byte(color.g), byte(color.b));
         let base = (r << 16) | (g << 8) | b;
         let tint = |n| theme.tint(base, n);
-        let active = crate::theme::mix(base, if theme.dark { WHITE } else { 0x141414 }, 20);
+        let active = crate::theme::mix(
+            base,
+            if theme.dark {
+                WHITE
+            } else {
+                crate::theme::DARK_BACKGROUND
+            },
+            20,
+        );
         let foreground = if 299 * r + 587 * g + 114 * b < 128_000 {
             WHITE
         } else {
@@ -213,7 +240,7 @@ impl Palette {
                     Paint::framed(regular, blank, theme.border(false)),
                     Paint::framed(base, hover_bg, hover_border),
                     Paint::framed(base, hover_bg, base),
-                    Paint::framed(0xa8abb2, blank, theme.border(true)),
+                    Paint::framed(theme.disabled_text(), blank, theme.border(true)),
                 )
             }
         };
@@ -273,6 +300,21 @@ mod tests {
         let dark = Palette::resolve(&Theme::dark(), ButtonType::Primary, ButtonVariant::Plain);
         assert_eq!(dark.normal.bg, Some(0x18222c));
         assert_eq!(dark.active.bg, Some(0x66b1ff));
+    }
+
+    #[test]
+    fn normal_geometry_matches_theme_chalk_sizes() {
+        for (size, expected) in [
+            (ButtonSize::Small, (24., 11., 12., 3., 4.)),
+            (ButtonSize::Default, (32., 15., 14., 4., 6.)),
+            (ButtonSize::Large, (40., 19., 14., 4., 8.)),
+        ] {
+            let m = size.metrics(ButtonShape::Normal);
+            assert_eq!(
+                (m.height, m.padding_x, m.font_size, m.radius, m.icon_gap),
+                expected
+            );
+        }
     }
 
     #[test]

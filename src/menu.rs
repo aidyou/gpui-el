@@ -10,7 +10,11 @@ use gpui::{
     prelude::*, px, rgb,
 };
 
-use crate::{Icon, Locale, Theme, el_icon, theme::PRIMARY};
+use crate::{
+    Icon, Locale, Theme, el_icon,
+    theme::{PRIMARY, popup_priority},
+    tokens,
+};
 
 const MORE: &str = "\0gpui-el:more";
 const ITEM_HEIGHT: f32 = 56.;
@@ -19,7 +23,6 @@ const POPUP_ITEM_HEIGHT: f32 = 36.;
 const ITEM_PADDING: f32 = 20.;
 const COLLAPSED_WIDTH: f32 = 64.;
 const POPUP_MIN_WIDTH: f32 = 200.;
-const POPUP_PRIORITY: usize = 10;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum MenuMode {
@@ -279,9 +282,9 @@ struct Options {
     bg: Option<Hsla>,
     text: Option<Hsla>,
     active: Option<Hsla>,
-    on_select: Option<Listener>,
-    on_open: Option<Listener>,
-    on_close: Option<Listener>,
+    onselect: Option<Listener>,
+    onopen: Option<Listener>,
+    onclose: Option<Listener>,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -302,9 +305,9 @@ impl Default for Options {
             bg: None,
             text: None,
             active: None,
-            on_select: None,
-            on_open: None,
-            on_close: None,
+            onselect: None,
+            onopen: None,
+            onclose: None,
         }
     }
 }
@@ -429,7 +432,7 @@ impl Menu {
         self.default_active = Some(value.into());
         self
     }
-    /// Controlled selection. Handle `on_select` and pass the accepted index back.
+    /// Controlled selection. Handle `onselect` and pass the accepted index back.
     pub fn active_index(mut self, value: impl Into<SharedString>) -> Self {
         self.active = Some(value.into());
         self
@@ -441,25 +444,25 @@ impl Menu {
         self.default_openeds = values.into_iter().map(Into::into).collect();
         self
     }
-    pub fn on_select(
+    pub fn onselect(
         mut self,
         callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.options.on_select = Some(Rc::new(callback));
+        self.options.onselect = Some(Rc::new(callback));
         self
     }
-    pub fn on_open(
+    pub fn onopen(
         mut self,
         callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.options.on_open = Some(Rc::new(callback));
+        self.options.onopen = Some(Rc::new(callback));
         self
     }
-    pub fn on_close(
+    pub fn onclose(
         mut self,
         callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.options.on_close = Some(Rc::new(callback));
+        self.options.onclose = Some(Rc::new(callback));
         self
     }
 }
@@ -511,7 +514,7 @@ impl MenuItem {
         self.slot = Some(Rc::new(move || draw().into_any_element()));
         self
     }
-    pub fn on_click(
+    pub fn onclick(
         mut self,
         callback: impl Fn(&MenuEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
@@ -519,7 +522,7 @@ impl MenuItem {
         self
     }
     /// Compatibility callback that receives the GPUI activation event.
-    pub fn on_select(
+    pub fn onselect(
         mut self,
         callback: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
@@ -541,7 +544,7 @@ impl RenderOnce for MenuItem {
             .items_center()
             .px(px(ITEM_PADDING))
             .gap(px(5.))
-            .text_size(px(14.))
+            .text_size(px(tokens::font_size::BASE))
             .text_color(rgb(if self.selected {
                 PRIMARY
             } else {
@@ -713,7 +716,7 @@ impl RenderOnce for Menu {
                     .items_center()
                     .gap(px(5.))
                     .px(px(ITEM_PADDING))
-                    .text_size(px(14.))
+                    .text_size(px(tokens::font_size::BASE))
                     .whitespace_nowrap()
                     .when_some(font.clone(), |el, font| el.font_family(font));
                 if node.icon.is_some() {
@@ -1070,9 +1073,9 @@ impl Frame {
             self.restore_hidden_focus(window, cx);
             window.refresh();
             let listener = if open {
-                &self.options.on_open
+                &self.options.onopen
             } else {
-                &self.options.on_close
+                &self.options.onclose
             };
             if let (Some(listener), Some(event)) = (listener, self.event(key, cx)) {
                 listener(&event, window, cx);
@@ -1097,7 +1100,7 @@ impl Frame {
             self.restore_hidden_focus(window, cx);
             window.refresh();
         }
-        if let Some(listener) = &self.options.on_close {
+        if let Some(listener) = &self.options.onclose {
             for event in events {
                 listener(&event, window, cx);
             }
@@ -1178,7 +1181,7 @@ impl Frame {
                 self.focus(&fallback, window, cx);
             }
         }
-        if let Some(listener) = &self.options.on_select {
+        if let Some(listener) = &self.options.onselect {
             listener(&payload, window, cx);
         }
         if let Some(item) = &node.item {
@@ -1381,7 +1384,7 @@ impl Frame {
             .items_center()
             .flex_shrink_0()
             .gap(px(5.))
-            .text_size(px(14.))
+            .text_size(px(tokens::font_size::BASE))
             .whitespace_nowrap()
             .px(px(if compact {
                 10.
@@ -1563,15 +1566,9 @@ impl Frame {
             .py(px(5.))
             .min_w(px(POPUP_MIN_WIDTH))
             .max_h(self.max_popup_height)
-            .rounded(px(4.))
-            .shadow(vec![gpui::BoxShadow {
-                color: Hsla::from(rgb(0)).opacity(if self.theme.dark { 0.72 } else { 0.12 }),
-                offset: gpui::point(px(0.), px(0.)),
-                blur_radius: px(12.),
-                spread_radius: px(0.),
-                inset: false,
-            }])
-            .bg(rgb(if self.theme.dark { 0x1d1e1f } else { 0xffffff }));
+            .rounded(px(tokens::radius::SMALL))
+            .shadow(vec![self.theme.light_shadow()])
+            .bg(rgb(self.theme.overlay_background()));
         let styled = if let Some(style) = branch
             .popup_style
             .as_ref()
@@ -1651,7 +1648,7 @@ impl Frame {
                 .snap_to_window_with_margin(px(4.))
                 .child(popup),
         )
-        .with_priority(POPUP_PRIORITY + depth.min(100))
+        .with_priority(popup_priority(depth))
         .into_any_element()
     }
 }
@@ -1707,11 +1704,11 @@ mod tests {
                         .entry(
                             el_sub_menu("settings", "Settings")
                                 .entry(el_menu_item("disabled", "Disabled").disabled(true))
-                                .entry(el_menu_item("theme", "Theme").on_click(listener("click"))),
+                                .entry(el_menu_item("theme", "Theme").onclick(listener("click"))),
                         )
-                        .on_select(listener("select"))
-                        .on_open(listener("open"))
-                        .on_close(listener("close")),
+                        .onselect(listener("select"))
+                        .onopen(listener("open"))
+                        .onclose(listener("close")),
                 ),
             )
         }

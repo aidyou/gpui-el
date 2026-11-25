@@ -293,10 +293,11 @@ pub enum SpaceSize {
 
 impl SpaceSize {
     fn gap(self) -> f32 {
+        use crate::tokens::spacing;
         match self {
-            Self::Small => 8.,
-            Self::Default => 12.,
-            Self::Large => 16.,
+            Self::Small => spacing::SMALL,
+            Self::Default => spacing::DEFAULT,
+            Self::Large => spacing::LARGE,
         }
     }
 }

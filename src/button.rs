@@ -1,11 +1,11 @@
 mod style;
 
 use gpui::{
-    AnyElement, App, ClickEvent, ElementId, FontWeight, Hsla, IntoElement, RenderOnce,
-    SharedString, StyleRefinement, Window, div, prelude::*, px, rgb, rgba,
+    AnyElement, App, ClickEvent, ElementId, Hsla, IntoElement, RenderOnce, SharedString,
+    StyleRefinement, Window, div, prelude::*, px, rgb,
 };
 
-use crate::{Direction, Locale, Theme, loading::inline_spinner};
+use crate::{Direction, Locale, Theme, loading::inline_spinner, theme::Mask, tokens};
 pub use style::{ButtonShape, ButtonSize, ButtonType, ButtonVariant};
 use style::{Paint, Palette};
 
@@ -23,7 +23,7 @@ pub fn el_button() -> Button {
 /// An Element Plus button that can be placed directly in the GPUI element tree.
 ///
 /// HTML attributes such as `tag` and `native-type` have no native equivalent.
-/// Connect app actions explicitly with [`Self::on_click`].
+/// Connect app actions explicitly with [`Self::onclick`].
 #[derive(Default, IntoElement)]
 #[must_use]
 pub struct Button {
@@ -254,7 +254,7 @@ impl Button {
 
     /// Handles native pointer and keyboard activation. Use a stable ID for
     /// buttons created in a loop or other repeated call site.
-    pub fn on_click(
+    pub fn onclick(
         mut self,
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
@@ -358,7 +358,7 @@ impl RenderOnce for Button {
             .map(group_shape)
             .text_size(px(font_size))
             .line_height(px(font_size))
-            .font_weight(FontWeight::MEDIUM)
+            .font_weight(tokens::FONT_WEIGHT_PRIMARY)
             .whitespace_nowrap()
             .px(px(if link {
                 2.
@@ -383,7 +383,7 @@ impl RenderOnce for Button {
                         .absolute()
                         .inset_0()
                         .rounded(px(metrics.radius))
-                        .bg(rgba(if theme.dark { 0x0000004d } else { 0xffffff4d })),
+                        .bg(theme.mask(Mask::ExtraLight)),
                 )
             });
         let base = if disabled {
@@ -454,7 +454,7 @@ impl gpui::Render for ButtonHint {
         div()
             .px(px(10.))
             .py(px(5.))
-            .rounded(px(4.))
+            .rounded(px(crate::tokens::radius::BASE))
             .text_size(px(12.))
             .bg(rgb(if self.1 { 0xe5eaf3 } else { 0x303133 }))
             .text_color(rgb(if self.1 { 0x141414 } else { 0xffffff }))
@@ -492,7 +492,7 @@ mod tests {
                 let count = self.0.clone();
                 Button::new(id)
                     .label("Activate")
-                    .on_click(move |_, _, _| count.set(count.get() + 1))
+                    .onclick(move |_, _, _| count.set(count.get() + 1))
             };
             div()
                 .id("button-tests")
