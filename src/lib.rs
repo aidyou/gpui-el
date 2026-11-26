@@ -69,9 +69,17 @@
 //! Theme Chalk `menu.scss` baseline. Native differences: there is no Vue
 //! router, DOM teleport, CSS class, or persistent DOM. `popup_style` overrides
 //! submenu surfaces via GPUI; vertical submenu expand and collapse animate
-//! their measured height over 300 ms like `el-zoom-in-center`, while popup
-//! visibility still changes immediately. Horizontal width is measured from the
-//! menu itself and overflow is updated after layout.
+//! through [`Transition`] like upstream's `ElCollapseTransition`, and popups
+//! fade like `el-zoom-in-center`. Horizontal width is measured from the menu
+//! itself and overflow is updated after layout.
+//!
+//! [`Transition`] collects Theme Chalk's `el-fade-in`, `el-fade-in-linear`,
+//! `el-zoom-in-center`, `el-collapse-transition`, and
+//! `horizontal-collapse-transition` into one declarative component that keeps
+//! content mounted while it leaves. GPUI has no transform animation, so the
+//! zoom effects reduce to their opacity channel. Motion curves and the
+//! animation clock are shared with `Loading`, whose spinner turns use the
+//! same easing and reduced-motion handling.
 //!
 //! Button styles were checked against Element Plus Theme Chalk's `button.scss`,
 //! `mixins/_button.scss`, and light/dark variables. The native sample switches
@@ -103,8 +111,10 @@ mod link;
 mod loading;
 mod locale;
 mod menu;
+mod motion;
 mod tag;
 mod theme;
+mod transition;
 
 pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
@@ -125,6 +135,7 @@ pub use menu::{
 };
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use theme::{Theme, tokens};
+pub use transition::{Transition, TransitionEffect, el_transition};
 
 /// Sets the defaults for one GPUI application. Individual controls may still
 /// override their icon source. Register custom fonts before opening windows.

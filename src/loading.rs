@@ -1,4 +1,4 @@
-use std::{f32::consts::TAU, sync::OnceLock, time::Instant};
+use std::f32::consts::TAU;
 
 use gpui::{
     AnyElement, App, ElementId, Hsla, IntoElement, ParentElement, PathBuilder, RenderOnce,
@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    Icon, IconPack, Locale, Theme,
+    Icon, IconPack, Locale, Theme, motion,
     theme::{Mask, PRIMARY},
 };
 
@@ -35,23 +35,13 @@ pub enum LoadingMotion {
 
 impl LoadingMotion {
     pub(crate) fn phase(self, elapsed: f64) -> f32 {
-        let period = if self == Self::EaseIn { 1. } else { 2. };
-        let progress = (elapsed % period / period) as f32;
+        let progress = motion::turn_phase(elapsed, if self == Self::EaseIn { 1. } else { 2. });
         match self {
             Self::Uniform => progress,
             Self::LinearAcceleration => progress * progress,
-            Self::EaseIn => css_easing(progress, 1.),
+            Self::EaseIn => motion::ease_in(progress),
         }
     }
-}
-
-pub(crate) fn animation_time(window: &mut Window, cx: &App) -> f64 {
-    static EPOCH: OnceLock<Instant> = OnceLock::new();
-    if Theme::motion_reduced(cx) {
-        return 0.;
-    }
-    window.request_animation_frame();
-    EPOCH.get_or_init(Instant::now).elapsed().as_secs_f64()
 }
 
 /// Creates an inactive scoped mask. It blocks pointers, not keyboard focus.
@@ -242,35 +232,15 @@ fn mask_background(theme: &Theme, opacity: Option<f32>) -> Hsla {
     }
 }
 
-fn css_easing(progress: f32, x2: f32) -> f32 {
-    // Sample x before y: ease-in-out uses x2=0.58 and ease-in x2=1.
-    let (mut lo, mut hi) = (0., 1.);
-    for _ in 0..16 {
-        let t = (lo + hi) / 2.;
-        let inv = 1. - t;
-        let x = 3. * inv * inv * t * 0.42 + 3. * inv * t * t * x2 + t * t * t;
-        if x < progress {
-            lo = t;
-        } else {
-            hi = t;
-        }
-    }
-    let t = (lo + hi) / 2.;
-    match progress {
-        0. | 1. => progress,
-        _ => t * t * (3. - 2. * t),
-    }
-}
-
 fn mask_geometry(size: f32, elapsed: f64, turn: f32) -> (f32, f32, f32, f32) {
     // SVG viewBox 50×50, radius 20 and stroke 2. Dash length and offset
     // animate independently from the two-second rotation.
     let p = (elapsed % 1.5) as f32 / 1.5;
     let (length, offset) = if p < 0.5 {
-        let x = css_easing(p * 2., 0.58);
+        let x = motion::ease_in_out(p * 2.);
         (1. + 89. * x, 40. * x)
     } else {
-        let x = css_easing((p - 0.5) * 2., 0.58);
+        let x = motion::ease_in_out((p - 0.5) * 2.);
         (90., 40. + 80. * x)
     };
     (
@@ -319,7 +289,7 @@ fn animated_spinner(size: f32, style: LoadingSpinner, motion: LoadingMotion) -> 
                 return;
             }
             let reduced = Theme::motion_reduced(cx);
-            let elapsed = animation_time(window, cx);
+            let elapsed = motion::animation_time(window, cx);
             let center = bounds.center();
             let color = window.text_style().color;
             let turn = motion.phase(elapsed);

@@ -1,7 +1,8 @@
 use crate::{Gallery, copy::Copy};
 use gpui::{Context, Div, div, prelude::*, px};
 use gpui_el::{
-    MenuEvent, MenuMode, MenuTrigger, el_button, el_icon, el_menu, el_menu_item, el_sub_menu,
+    MenuEvent, MenuMode, MenuTrigger, el_button, el_icon, el_menu, el_menu_item,
+    el_menu_item_group, el_sub_menu,
 };
 
 #[derive(Default)]
@@ -37,6 +38,48 @@ impl Gallery {
         .entry(el_menu_item("language", "Language"))
         .entry(el_menu_item("theme", "Theme"))
         .entry(el_menu_item("disabled", "Unavailable").disabled(true)))"#;
+        let nested = || {
+            el_menu()
+                .id("nested-demo")
+                .default_active("2")
+                .entry(
+                    el_sub_menu("1", s.menu_navigator_one.as_str())
+                        .icon(el_icon("Location"))
+                        .entry(
+                            el_menu_item_group(s.menu_group_one.as_str())
+                                .item(el_menu_item("1-1", s.menu_item_one.as_str()))
+                                .item(el_menu_item("1-2", s.menu_item_two.as_str())),
+                        )
+                        .entry(
+                            el_menu_item_group(s.menu_group_two.as_str())
+                                .item(el_menu_item("1-3", s.menu_item_three.as_str())),
+                        )
+                        .entry(
+                            el_sub_menu("1-4", s.menu_item_four.as_str())
+                                .entry(el_menu_item("1-4-1", s.menu_item_one.as_str())),
+                        ),
+                )
+                .entry(el_menu_item("2", s.menu_navigator_two.as_str()).icon(el_icon("Menu")))
+                .entry(
+                    el_menu_item("3", s.menu_navigator_three.as_str())
+                        .disabled(true)
+                        .icon(el_icon("Document")),
+                )
+                .entry(el_menu_item("4", s.menu_navigator_four.as_str()).icon(el_icon("Setting")))
+        };
+        let nested_entries = r#"    .default_active("2")
+    .entry(el_sub_menu("1", "Navigator One")
+        .icon(el_icon("Location"))
+        .entry(el_menu_item_group("Group One")
+            .item(el_menu_item("1-1", "Item one"))
+            .item(el_menu_item("1-2", "Item two")))
+        .entry(el_menu_item_group("Group Two")
+            .item(el_menu_item("1-3", "Item three")))
+        .entry(el_sub_menu("1-4", "Item four")
+            .entry(el_menu_item("1-4-1", "Item one"))))
+    .entry(el_menu_item("2", "Navigator Two").icon(el_icon("Menu")))
+    .entry(el_menu_item("3", "Navigator Three").disabled(true).icon(el_icon("Document")))
+    .entry(el_menu_item("4", "Navigator Four").icon(el_icon("Setting")))"#;
         div()
             .flex()
             .flex_col()
@@ -90,6 +133,13 @@ el_menu().id("vertical-demo").collapse(collapsed)
                         ),
                 ),
             )
+            .child(self.section(
+                cx,
+                "menu-nested",
+                &s.menu_nested,
+                || format!("el_menu().id(\"nested-demo\")\n{nested_entries};"),
+                div().w(px(224.)).max_w_full().child(nested()),
+            ))
             .child(
                 self.section(
                     cx,

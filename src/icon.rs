@@ -256,7 +256,7 @@ impl RenderOnce for Icon {
                         if !bounds.intersects(&window.content_mask().bounds) {
                             return;
                         }
-                        let elapsed = crate::loading::animation_time(window, cx);
+                        let elapsed = crate::motion::animation_time(window, cx);
                         let angle = std::f32::consts::TAU * motion.phase(elapsed);
                         let center = bounds.center();
                         let scale = window.scale_factor();

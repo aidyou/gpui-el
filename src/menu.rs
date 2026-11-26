@@ -1,8 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
-    sync::OnceLock,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use gpui::{
@@ -12,37 +11,42 @@ use gpui::{
 };
 
 use crate::{
-    Icon, Locale, Theme, el_icon,
+    Icon, Locale, Theme, TransitionEffect, el_icon, el_transition, motion,
     theme::{PRIMARY, popup_priority},
     tokens,
 };
 
 const MORE: &str = "\0gpui-el:more";
 const ITEM_HEIGHT: f32 = 56.;
+const HORIZONTAL_HEIGHT: f32 = 60.;
 const POPUP_ITEM_HEIGHT: f32 = 36.;
 const ITEM_PADDING: f32 = 20.;
 const COLLAPSED_WIDTH: f32 = 64.;
 const POPUP_MIN_WIDTH: f32 = 200.;
-/// Submenu expand/collapse duration, like Theme Chalk's `el-zoom-in-center`.
-const EXPAND_SECS: f64 = 0.3;
+/// Popup fade duration, like Theme Chalk's `el-zoom-in-center` transition.
+const FADE_SECS: f64 = 0.3;
 
-static EPOCH: OnceLock<Instant> = OnceLock::new();
-
-fn epoch_secs() -> f64 {
-    EPOCH.get_or_init(Instant::now).elapsed().as_secs_f64()
-}
-
-fn ease_out_cubic(t: f32) -> f32 {
-    1. - (1. - t).powi(3)
-}
-
-/// One in-flight submenu expand or collapse animation in a vertical menu.
+/// One in-flight popup fade. Vertical submenu bodies animate through
+/// [`Transition`] instead.
 #[derive(Clone, Copy)]
-struct Expand {
+struct Fade {
     started: f64,
     opening: bool,
 }
-const HORIZONTAL_HEIGHT: f32 = 60.;
+
+fn fade_progress(fade: Option<Fade>, reduced: bool) -> f32 {
+    match fade {
+        Some(fade) if !reduced => {
+            let t = ((motion::elapsed() - fade.started) / FADE_SECS).clamp(0., 1.) as f32;
+            if fade.opening {
+                motion::element_plus(t)
+            } else {
+                1. - motion::element_plus(t)
+            }
+        }
+        _ => 1.,
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum MenuMode {
@@ -233,19 +237,17 @@ pub struct MenuState {
     width: Option<Pixels>,
     pending: HashMap<SharedString, Task<()>>,
     unique_opened: bool,
-    /// Last measured natural heights of vertical submenu content, for animation.
-    bodies: HashMap<SharedString, f32>,
-    /// In-flight expand/collapse animations for vertical submenus.
-    animating: HashMap<SharedString, Expand>,
+    /// In-flight popup fade-ins and fade-outs.
+    fading: HashMap<SharedString, Fade>,
 }
 impl MenuState {
-    /// Records an expand/collapse animation for a vertical submenu branch.
+    /// Records a popup fade for a submenu branch.
     fn animate(&mut self, key: &SharedString, opening: bool) {
-        if !self.popup {
-            self.animating.insert(
+        if self.popup {
+            self.fading.insert(
                 key.clone(),
-                Expand {
-                    started: epoch_secs(),
+                Fade {
+                    started: motion::elapsed(),
                     opening,
                 },
             );
@@ -1219,6 +1221,11 @@ impl Frame {
                 s.active = Some(key.clone());
             }
             if self.options.popup() {
+                // Fade the open popups out instead of removing them instantly.
+                let closing: Vec<_> = s.opened.iter().cloned().collect();
+                for key in &closing {
+                    s.animate(key, false);
+                }
                 s.opened.clear();
                 s.pending.clear();
             }
@@ -1559,74 +1566,24 @@ impl Frame {
             });
         }
         if !self.options.popup() {
-            let mut container = div().flex().flex_col().child(row);
-            let anim = self.state.read(cx).animating.get(key).copied();
-            if open || anim.is_some() {
-                let key = key.clone();
-                let state = self.state.clone();
-                let reduced = Theme::motion_reduced(cx);
-                let progress = match anim {
-                    Some(anim) if !reduced => {
-                        let t = ((epoch_secs() - anim.started) / EXPAND_SECS).clamp(0., 1.) as f32;
-                        if anim.opening {
-                            ease_out_cubic(t)
-                        } else {
-                            1. - ease_out_cubic(t)
-                        }
-                    }
-                    _ => 1.,
-                };
-                let natural = self.state.read(cx).bodies.get(&key).copied();
-                // Until the body is measured it renders closed, so the first
-                // frame measures its natural height without flashing open.
-                let shown = natural.map(|natural| natural * progress).unwrap_or(0.);
-                container = container.child(
-                    div().flex_none().overflow_hidden().h(px(shown)).child(
-                        div()
-                            .relative()
-                            .children(
-                                node.children
-                                    .iter()
-                                    .map(|n| self.draw(n, depth + 1, false, cx)),
-                            )
-                            .child(
-                                gpui::canvas(
-                                    move |bounds, window, cx| {
-                                        let height = f32::from(bounds.size.height);
-                                        let reduced = Theme::motion_reduced(cx);
-                                        let mut finished = false;
-                                        state.update(cx, |s, _| {
-                                            if s.bodies.get(&key) != Some(&height) {
-                                                s.bodies.insert(key.clone(), height);
-                                            }
-                                            let done =
-                                                s.animating.get(&key).is_some_and(|expand| {
-                                                    reduced
-                                                        || (epoch_secs() - expand.started)
-                                                            >= EXPAND_SECS
-                                                });
-                                            if done {
-                                                s.animating.remove(&key);
-                                                finished = true;
-                                            }
-                                        });
-                                        if finished {
-                                            window.refresh();
-                                        } else if state.read(cx).animating.contains_key(&key) {
-                                            window.request_animation_frame();
-                                        }
-                                    },
-                                    |_, _, _, _| {},
-                                )
-                                .absolute()
-                                .inset_0(),
-                            ),
-                    ),
-                );
-            }
-            return container.into_any_element();
+            let body = div().flex().flex_col().children(
+                node.children
+                    .iter()
+                    .map(|n| self.draw(n, depth + 1, false, cx)),
+            );
+            // The transition keeps the body mounted while it collapses and
+            // drops it once settled, like upstream's ElCollapseTransition.
+            let body_id: SharedString = format!("\u{2}{key}").into();
+            return div()
+                .flex()
+                .flex_col()
+                .child(row)
+                .child(el_transition(body_id, open, TransitionEffect::Collapse).child(body))
+                .into_any_element();
         }
         let prior = state.bounds.get(key).copied();
+        let fade = self.state.read(cx).fading.get(key).copied();
+        let progress = fade_progress(fade, Theme::motion_reduced(cx));
         let wrapper = div().relative().flex().flex_shrink_0().child(row).child(
             gpui::canvas(
                 {
@@ -1651,8 +1608,8 @@ impl Frame {
         wrapper
             .children(
                 prior
-                    .filter(|_| open)
-                    .map(|target| self.popup(node, depth, top, target, cx)),
+                    .filter(|_| open || fade.is_some())
+                    .map(|target| self.popup(node, depth, top, target, progress, cx)),
             )
             .into_any_element()
     }
@@ -1662,6 +1619,7 @@ impl Frame {
         depth: usize,
         top: bool,
         target: Bounds<Pixels>,
+        progress: f32,
         cx: &App,
     ) -> AnyElement {
         let key = node.index.clone();
@@ -1688,15 +1646,30 @@ impl Frame {
         };
         let popup = styled
             .relative()
+            .opacity(progress)
             .child(
                 gpui::canvas(
                     {
                         let owner = self.state.clone();
                         let key = key.clone();
-                        move |bounds: Bounds<Pixels>, _: &mut Window, cx: &mut App| {
+                        move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                            let reduced = Theme::motion_reduced(cx);
+                            let mut finished = false;
                             owner.update(cx, |s, _| {
                                 s.popup_bounds.insert(key.clone(), bounds);
+                                let done = s.fading.get(&key).is_some_and(|fade| {
+                                    reduced || (motion::elapsed() - fade.started) >= FADE_SECS
+                                });
+                                if done {
+                                    s.fading.remove(&key);
+                                    finished = true;
+                                }
                             });
+                            if finished {
+                                window.refresh();
+                            } else if owner.read(cx).fading.contains_key(&key) {
+                                window.request_animation_frame();
+                            }
                         }
                     },
                     |_, _, _, _| {},
@@ -1723,6 +1696,14 @@ impl Frame {
                             this.state.update(cx, |s, _| {
                                 for key in chain {
                                     s.pending.remove(&key);
+                                    // Cancel an in-flight close fade so hovering
+                                    // the popup keeps it open.
+                                    if s.fading.get(&key).is_some_and(|fade| !fade.opening)
+                                        && !s.opened.contains(&key)
+                                    {
+                                        s.fading.remove(&key);
+                                        s.opened.insert(key);
+                                    }
                                 }
                             });
                         } else {
@@ -2084,7 +2065,7 @@ mod tests {
     }
 
     #[gpui::test]
-    fn vertical_submenu_expand_measures_body_and_settles(cx: &mut gpui::TestAppContext) {
+    fn vertical_submenu_expand_keeps_rows_laid_out(cx: &mut gpui::TestAppContext) {
         struct Vertical {
             state: Entity<MenuState>,
         }
@@ -2114,30 +2095,24 @@ mod tests {
         // The submenu title is the second 56 px row.
         view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
         view.update(|window, cx| window.draw(cx).clear(cx));
-        view.update(|_, cx| {
+        view.update(|window, cx| {
             assert!(state.read(cx).is_open("one"));
-            let measured = state
-                .read(cx)
-                .bodies
-                .get(&SharedString::from("one"))
-                .copied();
             assert!(
-                measured.is_some_and(|height| height > 0.),
-                "submenu body is measured while expanded"
-            );
-            assert!(
-                state.read(cx).animating.is_empty(),
-                "the expand animation settles"
+                state.read(cx).focus["one-a"].is_rendered(window),
+                "submenu rows stay laid out while expanded"
             );
         });
-        // Collapsing keeps the body mounted until the animation finishes.
+        // Collapsing removes the submenu from the open set right away; the
+        // transition unmounts the content once the collapse settles.
         view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
-        view.update(|_, cx| assert!(!state.read(cx).is_open("one")));
-        view.update(|window, cx| window.draw(cx).clear(cx));
-        view.update(|_, cx| {
+        view.update(|window, cx| {
+            assert!(!state.read(cx).is_open("one"));
+            window.draw(cx).clear(cx);
+        });
+        view.update(|window, cx| {
             assert!(
-                state.read(cx).animating.is_empty(),
-                "the collapse animation settles"
+                !state.read(cx).focus["one-a"].is_rendered(window),
+                "submenu rows unmount after the collapse settles"
             );
         });
     }

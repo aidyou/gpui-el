@@ -22,10 +22,21 @@ grid_responsive: Responsive layout
 grid_resize: Resize the window to see the columns change at the viewport breakpoints.
 vertical_menu: Collapsible sidebar
 horizontal_menu: Horizontal menu and overflow
+menu_nested: Nested submenus and groups
 menu_index_path: 'Selected index path: %{path}'
 menu_collapse: Collapse menu
 menu_expand: Expand menu
 menu_disabled: Unavailable
+menu_group_one: Group One
+menu_group_two: Group Two
+menu_navigator_one: Navigator One
+menu_navigator_two: Navigator Two
+menu_navigator_three: Navigator Three
+menu_navigator_four: Navigator Four
+menu_item_one: Item one
+menu_item_two: Item two
+menu_item_three: Item three
+menu_item_four: Item four
 window_minimize: Minimize window
 window_zoom: Maximize or restore window
 window_close: Close window

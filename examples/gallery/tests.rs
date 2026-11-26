@@ -73,6 +73,7 @@ fn all_pages_draw_at_wide_and_narrow_sizes_in_both_languages_and_themes(
                             "tag-rounded",
                             "tag-checkable",
                             "menu-vertical",
+                            "menu-nested",
                             "menu-horizontal",
                             "mask",
                         ]),
