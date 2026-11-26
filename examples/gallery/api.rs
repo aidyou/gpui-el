@@ -287,6 +287,64 @@ const LINK: &[Row] = &[
         "禁止触发、打开 URL 和悬停变色。",
     ),
 ];
+const SCROLLBAR: &[Row] = &[
+    (
+        "el_scrollbar(), Scrollbar::new, id",
+        "ElementId · call site",
+        "Create a scrollbar. Give each scrollbar a stable sibling-unique ID when several are made at one call site.",
+        "创建滚动条。同一调用位置创建多个滚动条时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "child, children",
+        "IntoElement · []",
+        "The scrolled content.",
+        "滚动的正文内容。",
+    ),
+    (
+        "height, max_height",
+        "f32 · 100% of parent / —",
+        "Fix the viewport height, or scroll only past a maximum height.",
+        "固定视口高度，或超过最大高度后才滚动。",
+    ),
+    (
+        "always, native, min_size",
+        "bool / bool / f32 · false / false / 20",
+        "Keep the thumbs visible, drop them for a plain overflow container, and set the minimum thumb length.",
+        "常显滑块、退化为无滑块容器，以及滑块的最小长度。",
+    ),
+    (
+        "handle",
+        "ScrollHandle · internal",
+        "Track this viewport: read offset and maximum, or set the offset for manual scrolling.",
+        "跟踪该视口：读取偏移与最大值，或设置偏移实现手动滚动。",
+    ),
+    (
+        "onscroll",
+        "ScrollbarEvent · —",
+        "Reports scroll_left and scroll_top in logical pixels on every scroll.",
+        "每次滚动时报告逻辑像素为单位的 scroll_left 与 scroll_top。",
+    ),
+    (
+        "on_end_reached",
+        "ScrollbarDirection, f32 · — / 0",
+        "Reports a newly reached edge; the distance argument widens it like the upstream attribute.",
+        "报告新触到的视口边缘；distance 参数与上游属性一样放宽触边判定。",
+    ),
+];
+const SCROLLBAR_EVENTS: &[Row] = &[
+    (
+        "onscroll",
+        "ScrollbarEvent { scroll_left, scroll_top }",
+        "The wheel, a drag, or a manual set_offset moved the viewport.",
+        "滚轮、拖拽滑块或手动 set_offset 改变视口位置时触发。",
+    ),
+    (
+        "on_end_reached",
+        "ScrollbarDirection",
+        "The viewport newly reached the top, bottom, left or right edge.",
+        "视口新触到上、下、左或右边缘时触发。",
+    ),
+];
 const TEXT: &[Row] = &[
     (
         "el_text(), Text::new",
@@ -754,6 +812,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Layout => (LAYOUT, &[]),
         Page::Link => (LINK, LINK_EVENTS),
         Page::Text => (TEXT, &[]),
+        Page::Scrollbar => (SCROLLBAR, SCROLLBAR_EVENTS),
         Page::Space => (SPACE, &[]),
         Page::Table => (TABLE, TABLE_EVENTS),
         Page::Tag => (TAG, TAG_EVENTS),

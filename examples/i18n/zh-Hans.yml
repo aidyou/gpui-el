@@ -167,3 +167,20 @@ text_mixed_brand: Element Plus
 text_mixed_middle: 风格的文本，以
 text_mixed_accent: 原生 GPUI 实现
 text_mixed_tail: ，并用 StyledText 分段着色。
+scrollbar_intro: 用 Element Plus 样式的滑块滚动任意内容，并查看滚动偏移与触边事件。
+scrollbar_page: Scrollbar 滚动条
+scrollbar_basic: 基础用法
+scrollbar_horizontal: 横向滚动
+scrollbar_max_height: 最大高度
+scrollbar_manual: 手动滚动
+scrollbar_infinite: 滚动到底
+scrollbar_row: 条目
+scrollbar_report: 'scrollTop：%{top} px'
+scrollbar_to_top: 滚动到顶部
+scrollbar_to_bottom: 滚动到底部
+scrollbar_reached: '共 %{count} 条 · 最近触边：%{direction}'
+scrollbar_top: 顶部
+scrollbar_bottom: 底部
+scrollbar_left: 左侧
+scrollbar_right: 右侧
+scrollbar_none: 尚未触发

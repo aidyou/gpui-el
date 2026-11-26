@@ -48,6 +48,7 @@ struct Gallery {
     link: pages::link::State,
     loading: pages::loading::State,
     menu: pages::menu::State,
+    scrollbar: pages::scrollbar::State,
     tag: pages::tag::State,
 }
 
@@ -89,6 +90,7 @@ enum Page {
     Layout,
     Link,
     Text,
+    Scrollbar,
     Space,
     Table,
     Tag,
@@ -97,7 +99,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 12] = [
+    const ALL: [Self; 13] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -105,6 +107,7 @@ impl Page {
         Self::Layout,
         Self::Link,
         Self::Text,
+        Self::Scrollbar,
         Self::Space,
         Self::Table,
         Self::Tag,
@@ -121,6 +124,7 @@ impl Page {
             Self::Layout => &s.layout_intro,
             Self::Link => &s.link_intro,
             Self::Text => &s.text_intro,
+            Self::Scrollbar => &s.scrollbar_intro,
             Self::Space => &s.space_intro,
             Self::Table => &s.table_intro,
             Self::Tag => &s.tag_intro,
@@ -138,6 +142,7 @@ impl Page {
             Self::Layout => "layout",
             Self::Link => "link",
             Self::Text => "text",
+            Self::Scrollbar => "scrollbar",
             Self::Space => "space",
             Self::Table => "table",
             Self::Tag => "tag",
@@ -155,6 +160,7 @@ impl Page {
             Self::Layout => &s.layout_page,
             Self::Link => &s.link_page,
             Self::Text => &s.text_page,
+            Self::Scrollbar => &s.scrollbar_page,
             Self::Space => &s.space_page,
             Self::Table => &s.table_page,
             Self::Tag => &s.tag_page,
@@ -178,6 +184,7 @@ impl Page {
             Self::Layout => &["el-row", "el-col"],
             Self::Link => &["el-link"],
             Self::Text => &["el-text"],
+            Self::Scrollbar => &["el-scrollbar"],
             Self::Space => &["el-space"],
             Self::Table => &["el-table", "el-table-column"],
             Self::Tag => &["el-tag", "el-check-tag"],
@@ -268,6 +275,7 @@ impl Render for Gallery {
                                                 Page::Layout,
                                                 Page::Link,
                                                 Page::Text,
+                                                Page::Scrollbar,
                                                 Page::Space,
                                             ]
                                             .map(item),
@@ -300,6 +308,7 @@ impl Render for Gallery {
             Page::Layout => self.grids(s, cx),
             Page::Link => self.links(s, cx),
             Page::Text => self.texts(s, cx),
+            Page::Scrollbar => self.scrollbars(s, cx),
             Page::Space => self.spaces(s, cx),
             Page::Table => self.tables(s, cx),
             Page::Tag => self.tags(s, cx),

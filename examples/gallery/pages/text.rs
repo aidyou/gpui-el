@@ -45,7 +45,7 @@ impl Gallery {
         // equivalent is a StyledText passed through `content`.
         let mut mixed_text = String::new();
         let mut highlights = Vec::new();
-        let mut segment =
+        let segment =
             |text: &str, style: Option<HighlightStyle>, buf: &mut String, out: &mut Vec<_>| {
                 let start = buf.len();
                 buf.push_str(text);

@@ -167,3 +167,20 @@ text_mixed_brand: Element Plus
 text_mixed_middle: ' design baseline, rendered as a '
 text_mixed_accent: native GPUI port
 text_mixed_tail: ' with StyledText runs.'
+scrollbar_intro: Scroll any content with Element Plus styled thumbs, and watch the offsets and reached edges.
+scrollbar_page: Scrollbar
+scrollbar_basic: Basic usage
+scrollbar_horizontal: Horizontal scroll
+scrollbar_max_height: Max height
+scrollbar_manual: Manual scroll
+scrollbar_infinite: End reached
+scrollbar_row: Item
+scrollbar_report: 'scrollTop: %{top} px'
+scrollbar_to_top: Scroll to top
+scrollbar_to_bottom: Scroll to bottom
+scrollbar_reached: '%{count} items · last reached edge: %{direction}'
+scrollbar_top: top
+scrollbar_bottom: bottom
+scrollbar_left: left
+scrollbar_right: right
+scrollbar_none: none yet

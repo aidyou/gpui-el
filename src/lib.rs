@@ -129,6 +129,16 @@
 //! `isTruncated` is a layout effect of `truncated` under a definite width
 //! rather than a watched ref, and decorations come from GPUI's underline and
 //! strikethrough instead of a CSS `text-decoration` shorthand.
+//!
+//! Scrollbar follows `scrollbar.md`, `components/scrollbar/src`, and Theme
+//! Chalk `scrollbar.scss`. GPUI overflow containers have no scrollbar chrome,
+//! so the component draws the 6 px thumbs itself and reports DOM-like
+//! positive scroll positions. Native differences: the gradient `mask`
+//! property, `wrap`/`view` class and style hooks, and `noresize` are not
+//! reproduced; `setScrollTop`, `setScrollLeft` and `scrollTo` become a
+//! [`gpui::ScrollHandle`] passed through `handle`; thumbs show on hover or
+//! with `always` without the upstream fade, and the wheel is stopped at the
+//! viewport like the other scroll containers.
 
 mod button;
 mod grid;
@@ -139,6 +149,7 @@ mod loading;
 mod locale;
 mod menu;
 pub mod motion;
+mod scrollbar;
 mod table;
 mod tag;
 mod text;
@@ -164,6 +175,7 @@ pub use menu::{
 };
 pub use motion::MotionSpeed;
 pub use table::{Column, Table, TableAlign, TableSize};
+pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
