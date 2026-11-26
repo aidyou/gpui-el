@@ -5,7 +5,7 @@ use gpui::{
     Point, RenderOnce, SharedString, StyledText, TextLayout, Window, actions, div, prelude::*, px,
     rgb, rgba,
 };
-use gpui_el::{Locale, el_button, el_icon, tokens};
+use gpui_el::{Locale, TransitionEffect, el_button, el_icon, el_transition, tokens};
 
 pub(crate) use crate::row::row;
 use crate::{Gallery, copy::strings, syntax};
@@ -142,6 +142,7 @@ impl RenderOnce for CodeBlock {
                     .flex_1()
                     .min_w_0()
                     .overflow_x_scroll()
+                    .on_scroll(|_, _, cx| cx.stop_propagation())
                     .child(styled),
             )
             .on_action(move |_: &CopySelection, _, cx| {
@@ -219,18 +220,21 @@ impl Gallery {
         controls: impl IntoElement,
     ) -> Div {
         let s = strings(Locale::current(cx));
-        let snippet: Option<SharedString> = self.expanded.contains(id).then(|| example().into());
-        let expanded = snippet.is_some();
+        let expanded = self.expanded.contains(id);
+        // The snippet stays available while collapsed so the height transition
+        // can animate it out instead of unmounting it immediately.
+        let snippet: SharedString = example().into();
         let border = rgb(if self.dark { 0x414243 } else { 0xe4e7ed });
         let fill = rgb(if self.dark { 0x262727 } else { 0xf5f7fa });
+        let muted = rgb(if self.dark { 0x8d9095 } else { 0x909399 });
         div()
             .flex()
             .flex_col()
             .gap(px(tokens::spacing::DEFAULT))
             .child(
                 div()
-                    .text_size(px(18.))
-                    .font_weight(gpui::FontWeight::MEDIUM)
+                    .text_size(px(15.))
+                    .font_weight(gpui::FontWeight::SEMIBOLD)
                     .child(title.to_owned()),
             )
             .child(
@@ -238,56 +242,77 @@ impl Gallery {
                     .border_1()
                     .border_color(border)
                     .rounded(px(tokens::radius::BASE))
-                    .child(div().p(px(20.)).child(controls))
-                    .when_some(snippet.clone(), |el, snippet| {
-                        el.child(div().border_t_1().border_color(border).bg(fill).child(
-                            CodeBlock {
-                                id,
-                                text: snippet,
-                                dark: self.dark,
-                            },
-                        ))
-                    })
+                    .child(div().p(px(24.)).child(controls))
+                    .child(
+                        el_transition((id, 3_u32), expanded, TransitionEffect::Collapse)
+                            .fast()
+                            .child(
+                                div()
+                                    .bg(fill)
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .items_center()
+                                            .justify_between()
+                                            .h(px(32.))
+                                            .px(px(12.))
+                                            .border_t_1()
+                                            .border_b_1()
+                                            .border_color(border)
+                                            .child(
+                                                div()
+                                                    .text_size(px(11.))
+                                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                                    .text_color(muted)
+                                                    .child("RUST"),
+                                            )
+                                            .child(
+                                                el_button()
+                                                    .id((id, 1_u32))
+                                                    .small()
+                                                    .text()
+                                                    .font_size(12.0)
+                                                    .label(s.copy.as_str())
+                                                    .icon(el_icon("document-copy"))
+                                                    .onclick({
+                                                        let snippet = snippet.clone();
+                                                        move |_, _, cx| {
+                                                            cx.write_to_clipboard(
+                                                                ClipboardItem::new_string(
+                                                                    snippet.to_string(),
+                                                                ),
+                                                            )
+                                                        }
+                                                    }),
+                                            ),
+                                    )
+                                    .child(CodeBlock {
+                                        id,
+                                        text: snippet,
+                                        dark: self.dark,
+                                    }),
+                            ),
+                    )
                     .child(
                         div().border_t_1().border_color(border).p(px(6.)).child(
-                            row()
-                                .child(
-                                    el_button()
-                                        .id((id, 0_u32))
-                                        .small()
-                                        .text()
-                                        .label(if expanded {
-                                            s.hide_code.as_str()
-                                        } else {
-                                            s.show_code.as_str()
-                                        })
-                                        .icon(el_icon(if expanded {
-                                            "arrow-up"
-                                        } else {
-                                            "arrow-down"
-                                        }))
-                                        .onclick(cx.listener(move |this, _, _, cx| {
-                                            if !this.expanded.insert(id) {
-                                                this.expanded.remove(id);
-                                            }
-                                            cx.notify();
-                                        })),
-                                )
-                                .when_some(snippet, |el, snippet| {
-                                    el.child(
-                                        el_button()
-                                            .id((id, 1_u32))
-                                            .small()
-                                            .text()
-                                            .label(s.copy.as_str())
-                                            .icon(el_icon("document-copy"))
-                                            .onclick(move |_, _, cx| {
-                                                cx.write_to_clipboard(ClipboardItem::new_string(
-                                                    snippet.to_string(),
-                                                ))
-                                            }),
-                                    )
-                                }),
+                            row().child(
+                                el_button()
+                                    .id((id, 0_u32))
+                                    .small()
+                                    .text()
+                                    .label(if expanded {
+                                        s.hide_code.as_str()
+                                    } else {
+                                        s.show_code.as_str()
+                                    })
+                                    .icon(el_icon(if expanded { "arrow-up" } else { "arrow-down" }))
+                                    .onclick(cx.listener(move |this, _, _, cx| {
+                                        if !this.expanded.insert(id) {
+                                            this.expanded.remove(id);
+                                        }
+                                        cx.notify();
+                                    })),
+                            ),
                         ),
                     ),
             )

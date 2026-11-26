@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use gpui::{
-    App, AppContext, Bounds, Context, IntoElement, Render, TitlebarOptions, Window, WindowBounds,
+    AnyElement, App, AppContext, Bounds, Context, Div, IntoElement, MouseButton, Render,
+    ResizeEdge, Stateful, TitlebarOptions, Window, WindowAppearance, WindowBounds,
     WindowDecorations, WindowOptions, div, prelude::*, px, rgb, size,
 };
 use gpui_el::{
@@ -194,34 +195,65 @@ impl Render for Gallery {
         } else {
             el_aside()
                 .id("catalog-scroll")
-                .width(196.)
-                .end_border(rgb(if self.dark { 0x414243 } else { 0xdcdfe6 }))
+                .width(208.)
+                .background(rgb(if self.dark { 0x191a1b } else { 0xf7f8fa }))
+                .end_border(rgb(if self.dark { 0x2a2b2c } else { 0xe4e7ed }))
                 .child(
-                    nav.border(false)
-                        .entry(item(Page::Init))
-                        .entry(
-                            el_sub_menu("basics", s.basics.as_str()).entries(
-                                [
-                                    Page::Button,
-                                    Page::Icon,
-                                    Page::Container,
-                                    Page::Layout,
-                                    Page::Link,
-                                    Page::Space,
-                                ]
-                                .map(item),
-                            ),
+                    div()
+                        .flex()
+                        .flex_col()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .h(px(44.))
+                                .px(px(16.))
+                                .child(
+                                    div()
+                                        .text_size(px(tokens::font_size::BASE))
+                                        .font_weight(gpui::FontWeight::SEMIBOLD)
+                                        .child("gpui-el"),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(tokens::font_size::EXTRA_SMALL))
+                                        .text_color(rgb(if self.dark {
+                                            0x8d9095
+                                        } else {
+                                            0x909399
+                                        }))
+                                        .child(env!("CARGO_PKG_VERSION")),
+                                ),
                         )
-                        .entry(
-                            el_sub_menu("data", s.data.as_str())
-                                .entries([Page::Table, Page::Tag].map(item)),
-                        )
-                        .entry(
-                            el_sub_menu("navigation", s.navigation.as_str())
-                                .entry(item(Page::Menu)),
-                        )
-                        .entry(
-                            el_sub_menu("feedback", s.feedback.as_str()).entry(item(Page::Loading)),
+                        .child(
+                            nav.border(false)
+                                .entry(item(Page::Init))
+                                .entry(
+                                    el_sub_menu("basics", s.basics.as_str()).entries(
+                                        [
+                                            Page::Button,
+                                            Page::Icon,
+                                            Page::Container,
+                                            Page::Layout,
+                                            Page::Link,
+                                            Page::Space,
+                                        ]
+                                        .map(item),
+                                    ),
+                                )
+                                .entry(
+                                    el_sub_menu("data", s.data.as_str())
+                                        .entries([Page::Table, Page::Tag].map(item)),
+                                )
+                                .entry(
+                                    el_sub_menu("navigation", s.navigation.as_str())
+                                        .entry(item(Page::Menu)),
+                                )
+                                .entry(
+                                    el_sub_menu("feedback", s.feedback.as_str())
+                                        .entry(item(Page::Loading)),
+                                ),
                         ),
                 )
                 .into_any_element()
@@ -240,36 +272,43 @@ impl Render for Gallery {
             Page::Loading => self.loading(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
+        let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });
         let heading = div()
             .flex()
             .flex_col()
-            .gap(px(tokens::spacing::SMALL))
+            .gap(px(10.))
             .child(
                 div()
-                    .text_size(px(34.))
-                    .font_weight(gpui::FontWeight::BOLD)
+                    .text_size(px(28.))
+                    .font_weight(gpui::FontWeight::SEMIBOLD)
                     .child(page.title(s)),
             )
             .when(!page.upstream_names().is_empty(), |heading| {
-                heading.child(
-                    div()
-                        .flex()
-                        .flex_wrap()
-                        .gap_x(px(tokens::spacing::DEFAULT))
-                        .text_size(px(tokens::font_size::SMALL))
-                        .text_color(secondary)
-                        .children(page.upstream_names().iter().copied()),
-                )
+                heading.child(div().flex().flex_wrap().gap(px(6.)).children(
+                    page.upstream_names().iter().map(|name| {
+                        div()
+                            .px(px(6.))
+                            .py(px(2.))
+                            .rounded(px(tokens::radius::SMALL))
+                            .bg(chip)
+                            .font_family("monospace")
+                            .text_size(px(tokens::font_size::EXTRA_SMALL))
+                            .text_color(secondary)
+                            .child(*name)
+                    }),
+                ))
             })
             .child(
                 div()
-                    .text_size(px(15.))
+                    .text_size(px(tokens::font_size::BASE + 1.))
+                    .line_height(px(21.))
                     .text_color(secondary)
                     .child(page.description(s)),
             );
         div()
             .id("gallery")
             .tab_group()
+            .relative()
             .size_full()
             .flex()
             .flex_col()
@@ -292,7 +331,7 @@ impl Render for Gallery {
                             .child(
                                 div()
                                     .w_full()
-                                    .max_w(px(820.))
+                                    .max_w(px(760.))
                                     .mx_auto()
                                     .flex()
                                     .flex_col()
@@ -303,7 +342,80 @@ impl Render for Gallery {
                             ),
                     ),
             )
+            .children(resize_handles(window))
     }
+}
+
+/// Edge and corner strips that give the client-decorated window native
+/// drag-to-resize behavior on every side.
+fn resize_handles(window: &Window) -> Vec<AnyElement> {
+    if window.is_maximized() || window.is_fullscreen() {
+        return Vec::new();
+    }
+    fn handle(
+        id: &'static str,
+        edge: ResizeEdge,
+        place: impl FnOnce(Stateful<Div>) -> Stateful<Div>,
+        cursor: impl FnOnce(Stateful<Div>) -> Stateful<Div>,
+    ) -> AnyElement {
+        cursor(place(div().id(id).absolute().on_mouse_down(
+            MouseButton::Left,
+            move |_, window, _| {
+                window.start_window_resize(edge);
+            },
+        )))
+        .into_any_element()
+    }
+    vec![
+        handle(
+            "resize-top",
+            ResizeEdge::Top,
+            |el| el.top_0().left(px(10.)).right(px(10.)).h(px(5.)),
+            |el| el.cursor_ns_resize(),
+        ),
+        handle(
+            "resize-bottom",
+            ResizeEdge::Bottom,
+            |el| el.bottom_0().left(px(10.)).right(px(10.)).h(px(5.)),
+            |el| el.cursor_ns_resize(),
+        ),
+        handle(
+            "resize-left",
+            ResizeEdge::Left,
+            |el| el.left_0().top(px(10.)).bottom(px(10.)).w(px(5.)),
+            |el| el.cursor_ew_resize(),
+        ),
+        handle(
+            "resize-right",
+            ResizeEdge::Right,
+            |el| el.right_0().top(px(10.)).bottom(px(10.)).w(px(5.)),
+            |el| el.cursor_ew_resize(),
+        ),
+        handle(
+            "resize-top-left",
+            ResizeEdge::TopLeft,
+            |el| el.top_0().left_0().size(px(12.)),
+            |el| el.cursor_nwse_resize(),
+        ),
+        handle(
+            "resize-top-right",
+            ResizeEdge::TopRight,
+            |el| el.top_0().right_0().size(px(12.)),
+            |el| el.cursor_nesw_resize(),
+        ),
+        handle(
+            "resize-bottom-right",
+            ResizeEdge::BottomRight,
+            |el| el.bottom_0().right_0().size(px(12.)),
+            |el| el.cursor_nwse_resize(),
+        ),
+        handle(
+            "resize-bottom-left",
+            ResizeEdge::BottomLeft,
+            |el| el.bottom_0().left_0().size(px(12.)),
+            |el| el.cursor_nesw_resize(),
+        ),
+    ]
 }
 
 fn main() {
@@ -315,12 +427,12 @@ fn main() {
         }
         search::bind(cx);
         demo::bind(cx);
-        Theme::light().set(cx);
         let bounds = Bounds::centered(None, size(px(1040.), px(760.)), cx);
         if let Err(error) = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
-                window_min_size: Some(size(px(360.), px(320.))),
+                window_min_size: Some(size(px(640.), px(480.))),
+                app_id: Some("gpui-el-gallery".into()),
                 titlebar: Some(TitlebarOptions {
                     title: Some("gpui-el component".into()),
                     appears_transparent: true,
@@ -334,7 +446,20 @@ fn main() {
                 app_owns_titlebar_drag: true,
                 ..Default::default()
             },
-            |_, cx| cx.new(|_| Gallery::default()),
+            |window, cx| {
+                // Start in the system appearance; the toolbar still offers an
+                // explicit light/dark switch for reviewing the component set.
+                let dark = matches!(
+                    window.appearance(),
+                    WindowAppearance::Dark | WindowAppearance::VibrantDark
+                );
+                let gallery = Gallery {
+                    dark,
+                    ..Gallery::default()
+                };
+                gallery.apply_theme(cx);
+                cx.new(|_| gallery)
+            },
         ) {
             eprintln!("Could not open the gallery window: {error}");
             cx.quit();

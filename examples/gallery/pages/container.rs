@@ -131,6 +131,7 @@ el_container().child(header())
                         div()
                             .id(label)
                             .overflow_x_scroll()
+                            .on_scroll(|_, _, cx| cx.stop_propagation())
                             .child(div().flex().min_w(px(480.)).h(px(height)).child(layout)),
                     )
                 },
