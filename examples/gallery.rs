@@ -7,7 +7,7 @@ use gpui::{
 };
 use gpui_el::{
     Direction, IconPack, Locale, MenuEvent, MenuMode, MenuTrigger, Theme, el_aside, el_container,
-    el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
+    el_icon, el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
 };
 
 #[path = "gallery/api.rs"]
@@ -61,6 +61,15 @@ impl Gallery {
         theme.reduced_motion = self.reduced_motion;
         theme.set(cx);
     }
+}
+
+/// Catalog icons, picked so both bundled packs have a glyph for each name.
+mod nav_icon {
+    pub const INIT: &str = "flag";
+    pub const BASICS: &str = "box";
+    pub const DATA: &str = "list";
+    pub const NAVIGATION: &str = "compass";
+    pub const FEEDBACK: &str = "bell";
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -234,30 +243,35 @@ impl Render for Gallery {
                         )
                         .child(
                             nav.border(false)
-                                .entry(item(Page::Init))
+                                .entry(item(Page::Init).icon(el_icon(nav_icon::INIT)))
                                 .entry(
-                                    el_sub_menu("basics", s.basics.as_str()).entries(
-                                        [
-                                            Page::Button,
-                                            Page::Icon,
-                                            Page::Container,
-                                            Page::Layout,
-                                            Page::Link,
-                                            Page::Space,
-                                        ]
-                                        .map(item),
-                                    ),
+                                    el_sub_menu("basics", s.basics.as_str())
+                                        .icon(el_icon(nav_icon::BASICS))
+                                        .entries(
+                                            [
+                                                Page::Button,
+                                                Page::Icon,
+                                                Page::Container,
+                                                Page::Layout,
+                                                Page::Link,
+                                                Page::Space,
+                                            ]
+                                            .map(item),
+                                        ),
                                 )
                                 .entry(
                                     el_sub_menu("data", s.data.as_str())
+                                        .icon(el_icon(nav_icon::DATA))
                                         .entries([Page::Table, Page::Tag].map(item)),
                                 )
                                 .entry(
                                     el_sub_menu("navigation", s.navigation.as_str())
+                                        .icon(el_icon(nav_icon::NAVIGATION))
                                         .entry(item(Page::Menu)),
                                 )
                                 .entry(
                                     el_sub_menu("feedback", s.feedback.as_str())
+                                        .icon(el_icon(nav_icon::FEEDBACK))
                                         .entry(item(Page::Loading)),
                                 ),
                         ),

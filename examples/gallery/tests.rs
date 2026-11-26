@@ -1,5 +1,25 @@
 use super::*;
 
+/// A missing name renders as a blank gutter instead of failing, so the catalog
+/// icons are checked against every bundled pack.
+#[test]
+fn catalog_icons_exist_in_both_packs() {
+    for name in [
+        nav_icon::INIT,
+        nav_icon::BASICS,
+        nav_icon::DATA,
+        nav_icon::NAVIGATION,
+        nav_icon::FEEDBACK,
+    ] {
+        for pack in [IconPack::ElementPlus, IconPack::Tabler] {
+            assert!(
+                pack.names().any(|candidate| candidate == name),
+                "{name} is missing from {pack:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn dynamic_tags_are_removed_by_stable_id_not_label() {
     let mut state = pages::tag::State::default();
