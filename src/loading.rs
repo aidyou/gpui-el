@@ -113,11 +113,32 @@ impl Loading {
         self.motion = motion;
         self
     }
-    /// Overrides the theme's [`MotionSpeed`] for the spinner rotation.
+    /// Explicitly sets the [`MotionSpeed`] of the spinner rotation;
+    /// [`Self::fast`] and [`Self::slow`] cover the common cases.
     pub fn speed(mut self, speed: MotionSpeed) -> Self {
         self.speed = Some(speed);
         self
     }
+    /// Runs this animation at jQuery's `fast` speed (0.6×); omit for the
+    /// theme's speed.
+    pub fn fast(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Fast);
+        self
+    }
+
+    /// Runs this animation at jQuery's `slow` speed (1.6×); omit for the
+    /// theme's speed.
+    pub fn slow(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Slow);
+        self
+    }
+
+    /// Restores the theme's speed after [`Self::fast`] or [`Self::slow`].
+    pub fn normal(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Normal);
+        self
+    }
+
     /// Sets the theme mask alpha; 0 keeps pointer blocking but draws no mask.
     /// Finite values are clamped to 0–1; an explicit `background` takes precedence.
     pub fn mask_opacity(mut self, opacity: f32) -> Self {
@@ -433,6 +454,17 @@ mod tests {
         let indicator = bounds.get().expect("indicator laid out");
         assert!(indicator.center().x < px(120.));
         assert_eq!(indicator.center().y, px(50.));
+    }
+
+    #[test]
+    fn speed_chainables_are_optional() {
+        assert_eq!(el_loading().speed, None);
+        assert_eq!(el_loading().fast().speed, Some(MotionSpeed::Fast));
+        assert_eq!(el_loading().slow().speed, Some(MotionSpeed::Slow));
+        assert_eq!(
+            el_loading().slow().normal().speed,
+            Some(MotionSpeed::Normal)
+        );
     }
 
     #[test]

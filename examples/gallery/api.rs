@@ -481,8 +481,8 @@ const MENU: &[Row] = &[
     (
         "speed",
         "MotionSpeed · theme",
-        "Scales the collapse, popup fade, and chevron rotation. Fast is 0.6×, Slow 1.6×, Custom multiplies the normal duration.",
-        "缩放展开、浮层淡入淡出与箭头旋转。Fast 为 0.6 倍，Slow 为 1.6 倍，Custom 为自定义倍数。",
+        "Scales the collapse, popup fade, and chevron rotation. `fast()` is 0.6×, `slow()` is 1.6×, and no call uses the theme speed; `speed(MotionSpeed::Custom(x))` multiplies the normal duration.",
+        "缩放展开、浮层淡入淡出与箭头旋转。`fast()` 为 0.6 倍，`slow()` 为 1.6 倍，不调用则使用主题速度；`speed(MotionSpeed::Custom(x))` 为自定义倍数。",
     ),
     (
         "MenuState::active_index, is_open, open, close, update_active_index",

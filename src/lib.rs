@@ -91,7 +91,8 @@
 //! variants of Theme Chalk's web values, and [`MotionSpeed`] presets
 //! (`Fast`, `Normal`, `Slow`, `Custom`) scale every animation: set it once on
 //! the theme's `motion_speed` field, or per component through
-//! `Transition::speed`, `Menu::speed`, and `Loading::speed`.
+//! ``fast()`/`slow()` on a component, or `Transition::speed`,
+//! `Menu::speed`, and `Loading::speed` for an explicit preset.
 //!
 //! Table follows `table.md`, `components/table/src`, and Theme Chalk
 //! `table.scss` for its basic subset: typed columns with fixed or distributed

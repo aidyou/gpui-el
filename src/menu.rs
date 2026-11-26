@@ -579,12 +579,33 @@ impl Menu {
         self.options.unique = value;
         self
     }
-    /// Overrides the theme's [`MotionSpeed`] for the collapse, popup fade,
-    /// and chevron rotation.
+    /// Explicitly sets the [`MotionSpeed`] for the collapse, popup fade, and
+    /// chevron rotation; [`Self::fast`] and [`Self::slow`] cover the common
+    /// cases.
     pub fn speed(mut self, speed: MotionSpeed) -> Self {
         self.options.speed = Some(speed);
         self
     }
+    /// Runs this animation at jQuery's `fast` speed (0.6×); omit for the
+    /// theme's speed.
+    pub fn fast(mut self) -> Self {
+        self.options.speed = Some(MotionSpeed::Fast);
+        self
+    }
+
+    /// Runs this animation at jQuery's `slow` speed (1.6×); omit for the
+    /// theme's speed.
+    pub fn slow(mut self) -> Self {
+        self.options.speed = Some(MotionSpeed::Slow);
+        self
+    }
+
+    /// Restores the theme's speed after [`Self::fast`] or [`Self::slow`].
+    pub fn normal(mut self) -> Self {
+        self.options.speed = Some(MotionSpeed::Normal);
+        self
+    }
+
     /// Chooses a desktop surface preset; individual knobs still override it.
     pub fn style(mut self, style: MenuStyle) -> Self {
         self.options.metrics = style.metrics();
@@ -2180,6 +2201,17 @@ mod tests {
                 ("open", vec!["settings".into()]),
                 ("close", vec!["settings".into()]),
             ]
+        );
+    }
+
+    #[test]
+    fn speed_chainables_are_optional() {
+        assert_eq!(el_menu().options.speed, None);
+        assert_eq!(el_menu().fast().options.speed, Some(MotionSpeed::Fast));
+        assert_eq!(el_menu().slow().options.speed, Some(MotionSpeed::Slow));
+        assert_eq!(
+            el_menu().slow().normal().options.speed,
+            Some(MotionSpeed::Normal)
         );
     }
 

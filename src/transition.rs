@@ -73,6 +73,8 @@ impl TransitionEffect {
 /// let open = true;
 /// let panel = el_transition("panel", open, TransitionEffect::Collapse)
 ///     .child("Contents");
+/// // jQuery-style speeds are optional; without one the theme speed applies.
+/// let quick = el_transition("quick", open, TransitionEffect::Fade).fast();
 /// ```
 #[derive(IntoElement)]
 #[must_use]
@@ -105,9 +107,29 @@ impl Transition {
         el_transition(id, visible, effect)
     }
 
-    /// Overrides the theme's [`MotionSpeed`] for this transition.
+    /// Explicitly sets the [`MotionSpeed`] for this transition;
+    /// [`Self::fast`] and [`Self::slow`] cover the common cases.
     pub fn speed(mut self, speed: MotionSpeed) -> Self {
         self.speed = Some(speed);
+        self
+    }
+    /// Runs this animation at jQuery's `fast` speed (0.6×); omit for the
+    /// theme's speed.
+    pub fn fast(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Fast);
+        self
+    }
+
+    /// Runs this animation at jQuery's `slow` speed (1.6×); omit for the
+    /// theme's speed.
+    pub fn slow(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Slow);
+        self
+    }
+
+    /// Restores the theme's speed after [`Self::fast`] or [`Self::slow`].
+    pub fn normal(mut self) -> Self {
+        self.speed = Some(MotionSpeed::Normal);
         self
     }
 
@@ -224,6 +246,24 @@ impl RenderOnce for Transition {
 mod tests {
     use super::*;
     use std::{cell::Cell, rc::Rc};
+
+    #[test]
+    fn speed_chainables_are_optional() {
+        let plain = el_transition("panel", true, TransitionEffect::Fade);
+        assert_eq!(plain.speed, None);
+        assert_eq!(
+            el_transition("panel", true, TransitionEffect::Fade)
+                .fast()
+                .speed,
+            Some(MotionSpeed::Fast)
+        );
+        assert_eq!(
+            el_transition("panel", true, TransitionEffect::Fade)
+                .slow()
+                .speed,
+            Some(MotionSpeed::Slow)
+        );
+    }
 
     #[test]
     fn effects_map_to_upstream_durations_and_channels() {
