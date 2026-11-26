@@ -184,3 +184,19 @@ scrollbar_bottom: bottom
 scrollbar_left: left
 scrollbar_right: right
 scrollbar_none: none yet
+splitter_intro: Split an area into draggable panels, with collapse arrows, limits, and keyboard resizing.
+splitter_page: Splitter
+splitter_basic: Basic usage
+splitter_vertical: Vertical
+splitter_collapsible: Collapsible panels
+splitter_disabled: Disable drag
+splitter_size: Panel size
+splitter_lazy: Lazy
+splitter_left: Left
+splitter_right: Right
+splitter_top: Top
+splitter_bottom: Bottom
+splitter_frozen: Frozen
+splitter_report: 'sizes: %{sizes} px'
+splitter_none: drag a divider
+splitter_keyboard: Dividers are keyboard-focusable: arrow keys resize by 10 px, Shift widens the step to 40 px.

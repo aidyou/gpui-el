@@ -9,5 +9,6 @@ pub(super) mod menu;
 pub(super) mod space;
 pub(super) mod table;
 pub(super) mod scrollbar;
+pub(super) mod splitter;
 pub(super) mod tag;
 pub(super) mod text;

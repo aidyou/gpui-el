@@ -287,6 +287,108 @@ const LINK: &[Row] = &[
         "禁止触发、打开 URL 和悬停变色。",
     ),
 ];
+const SPLITTER: &[Row] = &[
+    (
+        "el_splitter(), Splitter::new, id",
+        "ElementId · call site",
+        "Create a splitter. Give each splitter a stable sibling-unique ID when several are made at one call site.",
+        "创建分隔面板。同一调用位置创建多个时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "panel, panels",
+        "SplitterPanel · []",
+        "Add panels in order; at least two are needed for a divider.",
+        "按顺序添加面板；至少需要两个才会出现分隔条。",
+    ),
+    (
+        "layout, vertical, horizontal",
+        "SplitterLayout · Horizontal",
+        "Side by side or top to bottom.",
+        "横向并排或纵向上下排列。",
+    ),
+    (
+        "lazy",
+        "bool · false",
+        "Move only the divider line while dragging and apply the sizes at release.",
+        "拖动时只移动分隔线，松开后才应用尺寸。",
+    ),
+    (
+        "onresize_start, onresize, onresize_end",
+        "usize, SplitterSizes · —",
+        "Divider drag lifecycle with the divider index and the sizes in logical pixels.",
+        "分隔条拖动的开始、过程与结束事件，带分隔条索引与逻辑像素尺寸。",
+    ),
+    (
+        "oncollapse",
+        "usize, SplitterSide, SplitterSizes · —",
+        "A panel collapsed or expanded through a divider arrow.",
+        "通过分隔条箭头折叠或展开面板时触发。",
+    ),
+];
+const SPLITTER_PANEL: &[Row] = &[
+    (
+        "el_splitter_panel(), SplitterPanel::new",
+        "SplitterPanel",
+        "Create a panel that shares the leftover space and can be resized.",
+        "创建均分剩余空间且可调整大小的面板。",
+    ),
+    (
+        "size",
+        "f32 · shared",
+        "Initial size in logical pixels; panels without one share the leftover space.",
+        "初始尺寸（逻辑像素）；未设置的面板均分剩余空间。",
+    ),
+    (
+        "min, max",
+        "f32 · 0 / unlimited",
+        "Drag limits in logical pixels.",
+        "拖动的最小与最大尺寸限制（逻辑像素）。",
+    ),
+    (
+        "resizable",
+        "bool · true",
+        "A divider is draggable when both panels it separates are resizable.",
+        "相邻两个面板都可调整时，中间分隔条才能拖动。",
+    ),
+    (
+        "collapsible",
+        "bool · false",
+        "Show collapse arrows on the divider and let them shrink the panel to zero.",
+        "在分隔条上显示折叠箭头，并允许把面板折叠为零。",
+    ),
+    (
+        "child, children",
+        "IntoElement · []",
+        "Panel contents.",
+        "面板内容。",
+    ),
+];
+const SPLITTER_EVENTS: &[Row] = &[
+    (
+        "onresize_start",
+        "usize, SplitterSizes",
+        "A divider drag started.",
+        "分隔条拖动开始时触发。",
+    ),
+    (
+        "onresize",
+        "usize, SplitterSizes",
+        "While a divider moves, including keyboard steps.",
+        "分隔条移动时触发，键盘步进同样触发。",
+    ),
+    (
+        "onresize_end",
+        "usize, SplitterSizes",
+        "A divider drag ended; lazy drags apply their sizes here.",
+        "分隔条拖动结束时触发；懒更新在此时应用尺寸。",
+    ),
+    (
+        "oncollapse",
+        "usize, SplitterSide, SplitterSizes",
+        "A divider arrow collapsed a panel or expanded it back.",
+        "分隔条箭头折叠或恢复面板时触发。",
+    ),
+];
 const SCROLLBAR: &[Row] = &[
     (
         "el_scrollbar(), Scrollbar::new, id",
@@ -813,6 +915,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Link => (LINK, LINK_EVENTS),
         Page::Text => (TEXT, &[]),
         Page::Scrollbar => (SCROLLBAR, SCROLLBAR_EVENTS),
+        Page::Splitter => (SPLITTER, SPLITTER_EVENTS),
         Page::Space => (SPACE, &[]),
         Page::Table => (TABLE, TABLE_EVENTS),
         Page::Tag => (TAG, TAG_EVENTS),
@@ -860,6 +963,10 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Tag, |el| {
             el.child(heading("CheckTag API"))
                 .child(table("check-tag-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECK_TAG))
+        })
+        .when(page == Page::Splitter, |el| {
+            el.child(heading("SplitterPanel API"))
+                .child(table("splitter-panel-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, SPLITTER_PANEL))
         })
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))

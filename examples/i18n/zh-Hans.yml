@@ -184,3 +184,19 @@ scrollbar_bottom: 底部
 scrollbar_left: 左侧
 scrollbar_right: 右侧
 scrollbar_none: 尚未触发
+splitter_intro: 把区域拆分成可拖拽的面板，支持折叠箭头、尺寸限制与键盘调整。
+splitter_page: Splitter 分隔面板
+splitter_basic: 基础用法
+splitter_vertical: 纵向布局
+splitter_collapsible: 可折叠面板
+splitter_disabled: 禁用拖拽
+splitter_size: 面板尺寸
+splitter_lazy: 懒更新
+splitter_left: 左侧
+splitter_right: 右侧
+splitter_top: 上方
+splitter_bottom: 下方
+splitter_frozen: 固定
+splitter_report: '尺寸：%{sizes} px'
+splitter_none: 拖动分隔条
+splitter_keyboard: 分隔条可键盘聚焦：方向键按 10 px 调整，Shift 放大到 40 px。

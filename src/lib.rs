@@ -130,6 +130,14 @@
 //! rather than a watched ref, and decorations come from GPUI's underline and
 //! strikethrough instead of a CSS `text-decoration` shorthand.
 //!
+//! Splitter follows `splitter.md`, `components/splitter/src`, and Theme
+//! Chalk `splitter.scss`. Panel sizes are logical pixels in the component
+//! state, so a drag survives re-rendering, and the container is measured at
+//! paint time. Native differences: the upstream pixel/percentage mix is not
+//! reproduced, `lazy` moves only the divider line until release, the collapse
+//! arrows stay visible at low opacity instead of appearing on hover, and the
+//! dividers are keyboard-focusable, which the upstream `div` is not.
+//!
 //! Scrollbar follows `scrollbar.md`, `components/scrollbar/src`, and Theme
 //! Chalk `scrollbar.scss`. GPUI overflow containers have no scrollbar chrome,
 //! so the component draws the 6 px thumbs itself and reports DOM-like
@@ -150,6 +158,7 @@ mod locale;
 mod menu;
 pub mod motion;
 mod scrollbar;
+mod splitter;
 mod table;
 mod tag;
 mod text;
@@ -176,6 +185,10 @@ pub use menu::{
 pub use motion::MotionSpeed;
 pub use table::{Column, Table, TableAlign, TableSize};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
+pub use splitter::{
+    Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent, SplitterSide,
+    SplitterSizes, el_splitter, el_splitter_panel,
+};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
