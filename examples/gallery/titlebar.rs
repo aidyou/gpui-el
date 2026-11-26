@@ -1,4 +1,7 @@
-use gpui::{Context, Div, MouseButton, Window, WindowControlArea, div, prelude::*, px, rgb};
+use gpui::{
+    Context, Div, MouseButton, MouseDownEvent, MouseMoveEvent, Window, WindowControlArea, div,
+    prelude::*, px, rgb,
+};
 use gpui_el::{Icon, IconPack, Locale, el_button, el_space, tokens};
 
 use crate::{Gallery, copy::Copy};
@@ -35,14 +38,41 @@ impl Gallery {
             .items_center()
             .gap(px(8.))
             .window_control_area(WindowControlArea::Drag)
-            .on_mouse_down(MouseButton::Left, |event, window, _| {
-                if event.click_count == 2 {
-                    window.zoom_window();
-                } else {
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseDownEvent, window, _| {
+                    if event.click_count == 2 {
+                        this.caption_press = None;
+                        window.zoom_window();
+                    } else {
+                        this.caption_press = Some(event.position);
+                    }
+                }),
+            )
+            // A compositor move grabs the pointer, so it only starts once the
+            // pointer actually travels; otherwise the second click of a
+            // double-click would never reach the app.
+            .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, window, _| {
+                let Some(origin) = this.caption_press else {
+                    return;
+                };
+                if !event.dragging() {
+                    this.caption_press = None;
+                    return;
+                }
+                let delta = event.position - origin;
+                if f32::from(delta.x).abs() > 4. || f32::from(delta.y).abs() > 4. {
+                    this.caption_press = None;
                     #[cfg(not(target_os = "windows"))]
                     window.start_window_move();
                 }
-            })
+            }))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, _, _, _| {
+                    this.caption_press = None;
+                }),
+            )
             .on_mouse_down(MouseButton::Right, |event, window, _| {
                 #[cfg(not(target_os = "windows"))]
                 window.show_window_menu(event.position);

@@ -35,6 +35,9 @@ use copy::{Copy, strings};
 struct Gallery {
     dark: bool,
     reduced_motion: bool,
+    /// Press origin of a title-bar drag, used to tell a drag from a double
+    /// click before the compositor takes over the pointer.
+    caption_press: Option<gpui::Point<gpui::Pixels>>,
     page: Page,
     expanded: HashSet<&'static str>,
     button: pages::button::State,
