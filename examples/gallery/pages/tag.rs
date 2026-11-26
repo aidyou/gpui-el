@@ -3,11 +3,7 @@ use std::collections::HashSet;
 use gpui::{Context, Div, SharedString, div, prelude::*, px, rgb};
 use gpui_el::{TagEffect, TagType, el_button, el_check_tag, el_icon, el_tag, tokens::spacing};
 
-use crate::{
-    Gallery,
-    copy::Copy,
-    demo::{row, source},
-};
+use crate::{Gallery, copy::Copy, demo::row};
 
 pub(crate) struct State {
     toggle: bool,
@@ -160,7 +156,7 @@ impl Gallery {
         let sizes = row()
             .child(el_tag().id("tag-large").label(s.large.as_str()).large())
             .child(el_tag().id("tag-default-size").label(s.default.as_str()))
-            .child(el_tag().id("tag-small").label(s.compact.as_str()).small());
+            .child(el_tag().id("tag-small").label(s.tag_small.as_str()).small());
         let effects = [
             (s.tag_effect_dark.as_str(), TagEffect::Dark),
             (s.tag_effect_light.as_str(), TagEffect::Light),
@@ -182,6 +178,15 @@ impl Gallery {
         };
         let checked_count =
             self.tag.toggle as usize + self.tag.checked.iter().filter(|&&checked| checked).count();
+        // Upstream's sixth check tag is the disabled one and uses success.
+        let kinds = [
+            TagType::Primary,
+            TagType::Success,
+            TagType::Info,
+            TagType::Warning,
+            TagType::Danger,
+            TagType::Success,
+        ];
         let view = cx.entity();
         let checkable = div()
             .flex()
@@ -216,7 +221,7 @@ impl Gallery {
             )
             .child(
                 row().children(self.tag.checked.iter().enumerate().map(|(i, &checked)| {
-                    let kind = types.get(i).map_or(TagType::Danger, |(kind, _)| *kind);
+                    let kind = kinds[i];
                     let view = cx.entity();
                     el_check_tag()
                         .id(("tag-checked", i as u32))
@@ -238,29 +243,154 @@ impl Gallery {
                 s.tag_checked_count
                     .replace("%{count}", &checked_count.to_string()),
             );
-        let snippet = || source(include_str!("tag.rs"));
+        let section =
+            |id, title, code: &str, controls| self.section(cx, id, title, || code.into(), controls);
         div()
             .flex()
             .flex_col()
             .gap(px(24.))
-            .child(self.section(cx, "tag-basic", &s.tag_basic, snippet, basic))
-            .child(self.section(cx, "tag-removable", &s.tag_removable, snippet, removable))
-            .child(self.section(cx, "tag-editable", &s.tag_editable, snippet, editable))
-            .child(self.section(cx, "tag-sizes", &s.tag_sizes, snippet, sizes))
-            .child(self.section(
-                cx,
+            .child(section(
+                "tag-basic",
+                &s.tag_basic,
+                r#"el_tag().primary().label("Primary");
+el_tag().success().label("Success");
+el_tag().info().label("Info");
+el_tag().warning().label("Warning");
+el_tag().danger().label("Danger");
+el_tag().color(rgb(0x626aef)).label("Primary");
+el_tag().hit(true).label("Highlighted border");"#,
+                basic.into_any_element(),
+            ))
+            .child(section(
+                "tag-removable",
+                &s.tag_removable,
+                r#"let tag = |i: u32, kind: TagType, label: &str| {
+    el_tag().id(("tag-removable", i)).kind(kind).label(label).closable(true)
+        .onclose(cx.listener(move |this, _, _, cx| {
+            this.tag.closed.insert(i);
+            cx.notify();
+        }))
+};
+
+el_space()
+    .child(tag(0, TagType::Primary, "Primary"))
+    .child(tag(1, TagType::Success, "Success"))
+    .child(tag(2, TagType::Info, "Info"))
+    .child(tag(3, TagType::Warning, "Warning"))
+    .child(tag(4, TagType::Danger, "Danger"))
+    .child(el_button().id("tag-reset").small().label("Reset")
+        .onclick(cx.listener(|this, _, _, cx| {
+            this.tag.closed.clear();
+            cx.notify();
+        })));"#,
+                removable.into_any_element(),
+            ))
+            .child(section(
+                "tag-editable",
+                &s.tag_editable,
+                r#"// Each entry keeps a stable id; labels may repeat after deletions.
+el_space()
+    .children(self.tag.dynamic.iter().map(|tag| {
+        let id = tag.id;
+        el_tag().id(("tag-dynamic", id)).label(tag.label.clone()).closable(true)
+            .onclose(cx.listener(move |this, _, _, cx| {
+                this.tag.close_dynamic(id);
+                cx.notify();
+            }))
+    }))
+    .child(el_button().id("tag-new").small().label("New tag")
+        .icon(el_icon("plus"))
+        .onclick(cx.listener(|this, _, _, cx| {
+            let label = format!("Tag {}", this.tag.dynamic.len() + 1).into();
+            this.tag.add_dynamic(label);
+            cx.notify();
+        })));"#,
+                editable.into_any_element(),
+            ))
+            .child(section(
+                "tag-sizes",
+                &s.tag_sizes,
+                r#"el_tag().large().label("Large");
+el_tag().label("Default");
+el_tag().small().label("Small");"#,
+                sizes.into_any_element(),
+            ))
+            .child(section(
                 "tag-theme",
                 &s.tag_theme,
-                snippet,
-                effect_rows("tag-theme", false),
+                r#"let types = [
+    (TagType::Primary, "Primary"),
+    (TagType::Success, "Success"),
+    (TagType::Info, "Info"),
+    (TagType::Warning, "Warning"),
+    (TagType::Danger, "Danger"),
+];
+let row = |effect| el_space().children(types.map(|(kind, label)| {
+    el_tag().kind(kind).effect(effect).label(label)
+}));
+
+row(TagEffect::Dark);
+row(TagEffect::Light); // The default.
+row(TagEffect::Plain);"#,
+                effect_rows("tag-theme", false).into_any_element(),
             ))
-            .child(self.section(
-                cx,
+            .child(section(
                 "tag-rounded",
                 &s.tag_rounded,
-                snippet,
-                effect_rows("tag-rounded", true),
+                r#"let types = [
+    (TagType::Primary, "Primary"),
+    (TagType::Success, "Success"),
+    (TagType::Info, "Info"),
+    (TagType::Warning, "Warning"),
+    (TagType::Danger, "Danger"),
+];
+let row = |effect| el_space().children(types.map(|(kind, label)| {
+    el_tag().kind(kind).effect(effect).round(true).label(label)
+}));
+
+row(TagEffect::Dark);
+row(TagEffect::Light);
+row(TagEffect::Plain);"#,
+                effect_rows("tag-rounded", true).into_any_element(),
             ))
-            .child(self.section(cx, "tag-checkable", &s.tag_checkable, snippet, checkable))
+            .child(section(
+                "tag-checkable",
+                &s.tag_checkable,
+                r#"el_check_tag().label("Checked").checked(true);
+
+let view = cx.entity();
+el_check_tag().label("Toggle me").checked(self.tag.toggle)
+    .onchange(move |checked, _, cx| {
+        view.update(cx, |this, cx| {
+            this.tag.toggle = checked;
+            cx.notify();
+        });
+    });
+
+el_check_tag().label("Disabled").disabled(true);
+
+let kinds = [
+    TagType::Primary,
+    TagType::Success,
+    TagType::Info,
+    TagType::Warning,
+    TagType::Danger,
+    TagType::Success, // Disabled, like upstream's sixth check tag.
+];
+
+el_space().children((0..6).map(|i| {
+    let view = cx.entity();
+    el_check_tag().id(("tag-checked", i)).label(format!("Tag {}", i + 1))
+        .kind(kinds[i]).checked(self.tag.checked[i])
+        .when(i == 5, |tag| tag.disabled(true))
+        .onchange(move |checked, _, cx| {
+            view.update(cx, |this, cx| {
+                this.tag.checked[i] = checked;
+                cx.notify();
+            });
+        });
+}));"#,
+                checkable.into_any_element(),
+            ))
     }
 }

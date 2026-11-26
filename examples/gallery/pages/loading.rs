@@ -23,7 +23,33 @@ impl Gallery {
             cx,
             "mask",
             &s.loading_page,
-            || include_str!("loading.rs").into(),
+            || {
+                r#"el_button().id("toggle-mask").primary()
+    .label(if masked { "Hide loading mask" } else { "Show loading mask" })
+    .onclick(cx.listener(|this, _, _, cx| {
+        this.loading.masked = !this.loading.masked;
+        cx.notify();
+    }));
+
+el_loading().id("element-plus-mask").active(masked)
+    .spinner(LoadingSpinner::Spokes)
+    .v_text("Loading data")
+    .child("Element Plus Loading icon · text below");
+
+el_loading().id("dots-mask").active(masked)
+    .h_text("Loading data")
+    .spinner(LoadingSpinner::Dots)
+    .motion(LoadingMotion::EaseIn)
+    .mask_opacity(0.4)
+    .child("Graduated dots · accelerating rotation · text to the right");
+
+el_loading().id("custom-icon-mask").active(masked)
+    .h_text("Loading data")
+    .loading_icon(Icon::from_pack(IconPack::ElementPlus, "RefreshRight").size(28.))
+    .mask_opacity(0.)
+    .child("Custom rotating icon · transparent mask");"#
+                    .into()
+            },
             div()
                 .flex()
                 .flex_col()

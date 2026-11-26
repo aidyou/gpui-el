@@ -55,6 +55,8 @@ space_title: Spacing and wrapping
 space_presets: Spacing presets
 menu_first: Overview
 menu_second: Settings
+menu_language: Language
+menu_theme: Theme
 layout_header: Header
 layout_aside: Aside
 layout_main: Main
@@ -74,7 +76,6 @@ icon_title: Icon buttons
 activation_title: Activation, disabled, and loading
 button_group: Button group
 button_custom: Custom color and label spacing
-button_confirm: Confirm
 default: Default
 primary: Primary
 success: Success
@@ -108,5 +109,6 @@ tag_removed: 'Closed %{count} tags. The application removes the tag in the close
 tag_checked: Checked
 tag_toggle: Toggle me
 tag_label: Tag
+tag_small: Small
 tag_checked_count: 'Checked tags: %{count} of 7'
 tag_editable_help: The library has no text input yet, so the button adds the next tag.

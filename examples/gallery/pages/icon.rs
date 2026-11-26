@@ -4,12 +4,7 @@ use gpui::{
 };
 use gpui_el::{Icon, IconPack, Locale, el_button};
 
-use crate::{
-    Gallery, catalog,
-    copy::Copy,
-    demo::{row, source},
-    search,
-};
+use crate::{Gallery, catalog, copy::Copy, demo::row, search};
 
 #[derive(Default)]
 pub(crate) struct State {
@@ -183,19 +178,9 @@ impl Gallery {
             cx,
             "icon-catalog",
             &s.named_icons,
-            || {
-                format!(
-                    "{}\n\n// gallery/pages/explicit_icons.rs\n{}\n\n// gallery/catalog.rs\n{}\n\n// gallery/search.rs\n{}",
-                    source(
-                        include_str!("icon.rs")
-                            .split("\n#[cfg(test)]")
-                            .next()
-                            .unwrap_or_default()
-                    ),
-                    include_str!("explicit_icons.rs"),
-                    include_str!("../catalog.rs"),
-                    include_str!("../search.rs"),
-                )
+            || match pack {
+                IconPack::ElementPlus => catalog::snippet(pack, "Plus"),
+                _ => catalog::snippet(pack, "plus"),
             },
             div()
                 .flex()
@@ -242,7 +227,13 @@ impl Gallery {
             cx,
             "icon-explicit",
             &s.specific_icons,
-            || source(include_str!("explicit_icons.rs")),
+            || {
+                r#"el_space()
+    .child(el_icon("Plus").size(24.))
+    .child(Icon::from_pack(IconPack::ElementPlus, "Plus").size(24.))
+    .child(Icon::from_pack(IconPack::Tabler, "plus").size(24.));"#
+                    .into()
+            },
             explicit_icons(),
         ))
     }

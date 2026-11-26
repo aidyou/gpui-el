@@ -55,6 +55,8 @@ space_title: 间距与换行
 space_presets: 常用间距
 menu_first: 概览
 menu_second: 设置
+menu_language: 语言
+menu_theme: 主题
 layout_header: 顶栏
 layout_aside: 侧栏
 layout_main: 主内容
@@ -74,7 +76,6 @@ icon_title: 图标按钮
 activation_title: 激活、禁用与加载
 button_group: 按钮组
 button_custom: 自定义颜色与文字间距
-button_confirm: 确定
 default: 默认
 primary: 主要
 success: 成功
@@ -108,5 +109,6 @@ tag_removed: '已关闭 %{count} 个标签。标签在 close 回调中由应用�
 tag_checked: 已选中
 tag_toggle: 点击切换
 tag_label: 标签
+tag_small: 小号
 tag_checked_count: '已选中 %{count} / 7 个标签'
 tag_editable_help: 本库暂无文本输入组件，此处用按钮添加下一个标签。

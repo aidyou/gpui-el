@@ -25,12 +25,18 @@ impl Gallery {
         let submenu = || {
             el_sub_menu("settings", s.menu_second.as_str())
                 .icon(el_icon("Setting"))
-                .entry(el_menu_item("language", s.language.as_str()))
-                .entry(el_menu_item("theme", s.dark.as_str()))
+                .entry(el_menu_item("language", s.menu_language.as_str()))
+                .entry(el_menu_item("theme", s.menu_theme.as_str()))
                 .entry(el_menu_item("disabled", s.menu_disabled.as_str()).disabled(true))
         };
         let home = || el_menu_item("overview", s.menu_first.as_str()).icon(el_icon("Grid"));
-        let source = || include_str!("menu.rs").into();
+        let entries = r#"    .default_active("overview")
+    .entry(el_menu_item("overview", "Overview").icon(el_icon("Grid")))
+    .entry(el_sub_menu("settings", "Settings")
+        .icon(el_icon("Setting"))
+        .entry(el_menu_item("language", "Language"))
+        .entry(el_menu_item("theme", "Theme"))
+        .entry(el_menu_item("disabled", "Unavailable").disabled(true)))"#;
         div()
             .flex()
             .flex_col()
@@ -40,7 +46,19 @@ impl Gallery {
                     cx,
                     "menu-vertical",
                     &s.vertical_menu,
-                    source,
+                    || {
+                        format!(
+                            r#"el_button().id("collapse-menu").small()
+    .label(if collapsed {{ "Expand menu" }} else {{ "Collapse menu" }})
+    .onclick(cx.listener(|this, _, _, cx| {{
+        this.menu.collapsed = !this.menu.collapsed;
+        cx.notify();
+    }}));
+
+el_menu().id("vertical-demo").collapse(collapsed)
+{entries};"#
+                        )
+                    },
                     div()
                         .flex()
                         .flex_col()
@@ -77,7 +95,23 @@ impl Gallery {
                     cx,
                     "menu-horizontal",
                     &s.horizontal_menu,
-                    source,
+                    || {
+                        format!(
+                            r#"el_menu().id("horizontal-demo")
+    .mode(MenuMode::Horizontal)
+    .menu_trigger(MenuTrigger::Click)
+    .close_on_click_outside(true)
+{entries}
+    .entry(el_menu_item("motion", "Reduce motion"))
+    .onselect(cx.listener(|this, event: &MenuEvent, _, cx| {{
+        this.menu.selection = Some(
+            event.index_path.iter().map(|part| part.as_ref()).collect::<Vec<_>>().join(" / "),
+        );
+        cx.notify();
+    }}));
+// The line below mirrors the selected index path."#
+                        )
+                    },
                     div()
                         .flex()
                         .flex_col()

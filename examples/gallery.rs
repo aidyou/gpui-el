@@ -288,6 +288,7 @@ fn main() {
             return;
         }
         search::bind(cx);
+        demo::bind(cx);
         Theme::light().set(cx);
         let bounds = Bounds::centered(None, size(px(1040.), px(760.)), cx);
         if let Err(error) = cx.open_window(

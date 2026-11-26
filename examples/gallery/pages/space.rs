@@ -36,7 +36,19 @@ impl Gallery {
                 el_space().large(),
             ),
         ];
-        let source = || include_str!("space.rs").into();
+        let presets_code = || {
+            r#"let buttons = || [
+    el_button().label("Default"),
+    el_button().primary().label("Primary"),
+    el_button().label("Success"),
+];
+
+el_space().children(buttons());
+el_space().small().children(buttons());
+el_space().size(SpaceSize::Default).children(buttons());
+el_space().large().children(buttons());"#
+                .into()
+        };
         div()
             .flex()
             .flex_col()
@@ -46,7 +58,7 @@ impl Gallery {
                     cx,
                     "space-presets",
                     &s.space_presets,
-                    source,
+                    presets_code,
                     div()
                         .flex()
                         .flex_col()
@@ -66,7 +78,16 @@ impl Gallery {
                     cx,
                     "space-wrap",
                     &s.space_title,
-                    source,
+                    || {
+                        r#"div().w(px(220.)).child(
+    el_space().large().wrap(true).children([
+        el_button().label("Default"),
+        el_button().primary().label("Primary"),
+        el_button().label("Success"),
+    ]),
+);"#
+                        .into()
+                    },
                     div()
                         .w(px(220.))
                         .max_w_full()

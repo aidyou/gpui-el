@@ -101,7 +101,30 @@ impl Gallery {
             cx,
             "container",
             &s.container_title,
-            || include_str!("container.rs").into(),
+            || {
+                r#"let header = || el_header().child("Header");
+let main = || el_main().child("Main");
+let aside = |id| el_aside().id(id).width(200.).child("Aside");
+let footer = || el_footer().child("Footer");
+
+el_container().child(header()).child(main());
+el_container().child(header()).child(main()).child(footer());
+el_container().child(aside("left")).child(main()).child(aside("right"));
+el_container().child(header())
+    .child(el_container().child(aside("left")).child(main()));
+el_container().child(header()).child(
+    el_container().child(aside("left"))
+        .child(el_container().child(main()).child(footer())),
+);
+el_container().child(aside("left"))
+    .child(el_container().child(header()).child(main()));
+el_container().child(aside("left"))
+    .child(el_container().child(header()).child(main()).child(footer()));
+el_container().child(header())
+    .child(el_container().child(aside("left")).child(main()))
+    .child(footer());"#
+                    .into()
+            },
             div().flex().flex_col().gap(px(24.)).children(layouts.map(
                 |(label, height, layout)| {
                     div().flex().flex_col().gap(px(8.)).child(label).child(
