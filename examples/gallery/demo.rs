@@ -8,7 +8,7 @@ use gpui::{
 use gpui_el::{Locale, el_button, el_icon, tokens};
 
 pub(crate) use crate::row::row;
-use crate::{Gallery, copy::strings};
+use crate::{Gallery, copy::strings, syntax};
 
 actions!(gallery_code, [CopySelection, SelectAll]);
 
@@ -80,12 +80,35 @@ impl RenderOnce for CodeBlock {
         let selection = state.read(cx);
         let focus = selection.focus.clone();
         let range = selection.range();
-        let highlight = HighlightStyle {
+        let selection_highlight = HighlightStyle {
             background_color: Some(rgba(if self.dark { 0x409eff66 } else { 0x409eff40 }).into()),
             ..Default::default()
         };
-        let styled = StyledText::new(self.text.clone())
-            .with_highlights((!range.is_empty()).then_some((range, highlight)));
+        // Syntax colors come from the small dependency-free Rust lexer; the
+        // selection highlight is layered on top of them.
+        let mut highlights: Vec<(Range<usize>, HighlightStyle)> = syntax::tokenize(&self.text)
+            .into_iter()
+            .filter_map(|(range, kind)| {
+                syntax::color(kind, self.dark).map(|color| {
+                    (
+                        range,
+                        HighlightStyle {
+                            color: Some(rgb(color).into()),
+                            ..Default::default()
+                        },
+                    )
+                })
+            })
+            .collect();
+        if !range.is_empty() {
+            highlights.push((range, selection_highlight));
+        }
+        let styled = StyledText::new(self.text.clone()).with_highlights(highlights);
+        let line_count = self.text.matches('\n').count() + 1;
+        let gutter = (1..=line_count)
+            .map(|number| format!("{number:>2}"))
+            .collect::<Vec<_>>()
+            .join("\n");
         let layout = styled.layout().clone();
         let (down, move_to, up, outside, select_all, copy) = (
             state.clone(),
@@ -106,7 +129,9 @@ impl RenderOnce for CodeBlock {
             .role(gpui::Role::Label)
             .w_full()
             .min_w_0()
+            .flex()
             .p(px(11.))
+            .gap(px(12.))
             .border_1()
             .border_color(rgba(0))
             .focus_visible(|s| s.border_color(rgb(0x409eff)))
@@ -114,6 +139,24 @@ impl RenderOnce for CodeBlock {
             .text_size(px(13.))
             .line_height(px(20.))
             .cursor_text()
+            .child(
+                // Line numbers stay fixed while the code scrolls horizontally.
+                div()
+                    .flex_none()
+                    .w(px(22.))
+                    .text_color(rgb(if self.dark { 0x8b949e } else { 0x909399 }))
+                    .child(gutter),
+            )
+            .child(
+                // Horizontal scrolling keeps every line on a single row so the
+                // gutter stays aligned.
+                div()
+                    .id((self.id, 3_u32))
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_x_scroll()
+                    .child(styled),
+            )
             .on_action(move |_: &CopySelection, _, cx| {
                 let state = copy.read(cx);
                 if let Some(text) = state
@@ -176,7 +219,6 @@ impl RenderOnce for CodeBlock {
                     window.refresh();
                 }
             })
-            .child(styled)
     }
 }
 
@@ -296,7 +338,7 @@ mod tests {
             SnippetDemo
         });
         view.update(|window, cx| window.draw(cx).clear(cx));
-        let start = point(px(12.), px(22.));
+        let start = point(px(50.), px(22.));
         let end = point(px(250.), px(42.));
         view.simulate_event(MouseDownEvent {
             button: MouseButton::Left,
