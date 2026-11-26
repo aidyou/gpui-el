@@ -264,12 +264,7 @@ mod tests {
                     .child(el_text().label("Default"))
                     .child(el_text().primary().large().label("Primary large"))
                     .child(el_text().success().small().label("Success small"))
-                    .child(
-                        el_text()
-                            .warning()
-                            .truncated(true)
-                            .label(long),
-                    )
+                    .child(el_text().warning().truncated(true).label(long))
                     .child(el_text().info().line_clamp(2).label(long))
                     .child(
                         el_text()

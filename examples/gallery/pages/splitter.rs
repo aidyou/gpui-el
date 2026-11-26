@@ -26,9 +26,8 @@ impl Gallery {
                 .bg(rgb(color))
                 .child(label)
         };
-        let panel = |label: &'static str, color: u32| {
-            el_splitter_panel().child(content(label, color))
-        };
+        let panel =
+            |label: &'static str, color: u32| el_splitter_panel().child(content(label, color));
         let sized =
             |splitter: gpui_el::Splitter| div().h(px(HEIGHT)).child(splitter).into_any_element();
         let report = row().child(div().text_size(px(tokens::font_size::SMALL)).child(
@@ -143,12 +142,10 @@ impl Gallery {
                                     .child(content(s.splitter_left.as_str(), 0x409eff)),
                             )
                             .panel(panel(s.splitter_right.as_str(), 0x67c23a))
-                            .onresize(
-                                cx.listener(|this, event: &SplitterResizeEvent, _, cx| {
-                                    this.splitter.sizes = event.sizes.to_vec();
-                                    cx.notify();
-                                }),
-                            ),
+                            .onresize(cx.listener(|this, event: &SplitterResizeEvent, _, cx| {
+                                this.splitter.sizes = event.sizes.to_vec();
+                                cx.notify();
+                            })),
                     ))
                     .child(report)
                     .into_any_element(),

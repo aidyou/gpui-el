@@ -65,5 +65,9 @@ fn hover_updates_inside_the_pointer_event(cx: &mut gpui::TestAppContext) {
     // Leaving is symmetric: the event decides it, the frame only paints.
     log.borrow_mut().clear();
     view.simulate_mouse_move(point(px(190.), px(190.)), None, Modifiers::default());
-    assert_eq!(*log.borrow(), [false], "leaving was not decided by the event");
+    assert_eq!(
+        *log.borrow(),
+        [false],
+        "leaving was not decided by the event"
+    );
 }

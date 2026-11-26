@@ -18,9 +18,10 @@ impl Gallery {
             (TextType::Warning, s.warning.as_str()),
             (TextType::Danger, s.danger.as_str()),
         ];
-        let basic = row().children(types.into_iter().enumerate().map(|(i, (kind, label))| {
-            el_text().label(label).when(i > 0, |text| text.kind(kind))
-        }));
+        let basic =
+            row().children(types.into_iter().enumerate().map(|(i, (kind, label))| {
+                el_text().label(label).when(i > 0, |text| text.kind(kind))
+            }));
         let sizes = row().children(
             [
                 (TextSize::Large, s.large.as_str()),
@@ -39,7 +40,8 @@ impl Gallery {
                 .border_color(rgb(if self.dark { 0x414243 } else { 0xe4e7ed }))
                 .rounded(px(tokens::radius::BASE))
                 .p(px(12.))
-                .child(text).into_any_element()
+                .child(text)
+                .into_any_element()
         };
         // The upstream "mixed" demo styles runs inside one text; the native
         // equivalent is a StyledText passed through `content`.
@@ -95,8 +97,7 @@ impl Gallery {
             &mut mixed_text,
             &mut highlights,
         );
-        let mixed =
-            StyledText::new(SharedString::from(mixed_text)).with_highlights(highlights);
+        let mixed = StyledText::new(SharedString::from(mixed_text)).with_highlights(highlights);
         div()
             .flex()
             .flex_col()

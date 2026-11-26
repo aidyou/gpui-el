@@ -778,9 +778,7 @@ impl<T: 'static> RenderOnce for Table<T> {
             // Headers ask for the bold face, which only exists when the family
             // is resolved to an installed one; the platform default family can
             // silently land on a single-weight fallback.
-            .when_some(theme.resolved_font(cx), |el, family| {
-                el.font_family(family)
-            })
+            .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
             .bg(rgb(theme.background()))
             .when(bordered, |el| el.border_1().border_color(border))
             .when_some(height, |el, height| el.h(px(height)));

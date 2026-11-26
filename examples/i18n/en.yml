@@ -203,3 +203,18 @@ splitter_keyboard: 'Dividers are keyboard-focusable: arrow keys resize by 10 px,
 scrollbar_add_row: Add a row
 scrollbar_remove_row: Remove a row
 scrollbar_rows: '%{count} rows · max height 200 px'
+form: Form
+switch_intro: Toggle between two opposing states, with sizes, text, icons, and activation guards.
+switch_page: Switch
+switch_basic: Basic usage
+switch_sizes: Sizes
+switch_text: Text description
+switch_icons: Icons
+switch_colors: Colors
+switch_disabled: Disabled and loading
+switch_guard: Before change
+switch_on: On
+switch_off: Off
+switch_lock: Lock
+switch_unlock: Unlock
+switch_guard_help: 'The guard is consulted before every activation; while locked the switch keeps its state, like a rejected before-change promise.'

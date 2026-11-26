@@ -751,6 +751,92 @@ const LOADING: &[Row] = &[
         "添加被遮罩的内容。",
     ),
 ];
+const SWITCH: &[Row] = &[
+    (
+        "el_switch(), Switch::new, id",
+        "ElementId · call site",
+        "Create a switch. Supply a stable sibling-unique ID when creating repeated switches at the same call site.",
+        "创建开关。同一调用位置生成多个开关时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "checked",
+        "bool · false",
+        "The controlled state; the application updates it in onchange.",
+        "受控状态；由应用在 onchange 中更新。",
+    ),
+    (
+        "size, large, small",
+        "SwitchSize · Default (40 px core)",
+        "Large is 50 px, Small is 30 px; the outer height is 40 / 32 / 24 px.",
+        "Large 为 50 px，Small 为 30 px；外部高度为 40 / 32 / 24 px。",
+    ),
+    (
+        "width",
+        "f32 · by size",
+        "Core width in logical pixels, clamped so the knob stays visible.",
+        "轨道逻辑像素宽度；过窄时自动夹紧到滑块可见。",
+    ),
+    (
+        "active_text, inactive_text",
+        "SharedString · —",
+        "Labels beside the core; the current state's label is shown. With inline_prompt they move inside the core.",
+        "轨道两侧的文字；只显示当前状态一侧。inline_prompt 时改为显示在轨道内。",
+    ),
+    (
+        "active_icon, inactive_icon",
+        "IntoElement · —",
+        "Content beside the core, replacing the matching text.",
+        "轨道两侧的内容，替换对应的文字。",
+    ),
+    (
+        "active_action_icon, inactive_action_icon",
+        "IntoElement · —",
+        "Content inside the knob for each state.",
+        "滑块内部按状态显示的内容。",
+    ),
+    (
+        "active_color, inactive_color",
+        "Hsla · primary / border",
+        "Core colors for each state, like the upstream CSS variables.",
+        "两个状态的轨道颜色，对应上游的 CSS 变量。",
+    ),
+    (
+        "inline_prompt",
+        "bool · false",
+        "Draw the text inside the core instead of beside it.",
+        "把文字显示在轨道内部而不是两侧。",
+    ),
+    (
+        "disabled, loading",
+        "bool · false",
+        "Block activation; loading also shows a spinner in the knob. Disabled dims the control to 0.6.",
+        "禁止触发；加载态在滑块内显示指示器。禁用态整体透明度 0.6。",
+    ),
+    (
+        "speed, fast, slow, normal",
+        "MotionSpeed · theme",
+        "Scale the knob slide, which is 0.2 s by default.",
+        "缩放滑块滑动时长，默认 0.2 秒。",
+    ),
+    (
+        "before_change",
+        "Fn() -> bool · —",
+        "Consulted before every activation; returning false keeps the state.",
+        "每次触发前调用；返回 false 时状态不变。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · —",
+        "The accessible name; label icon-only switches.",
+        "无障碍名称；纯图标开关应提供。",
+    ),
+];
+const SWITCH_EVENTS: &[Row] = &[(
+    "onchange",
+    "bool, &mut Window, &mut App",
+    "Pointer or keyboard activation reports the next checked state; not emitted while disabled or loading, or when before_change returns false.",
+    "指针或键盘激活时报告下一个选中状态；禁用、加载或 before_change 返回 false 时不触发。",
+)];
 const TAG: &[Row] = &[
     (
         "el_tag(), Tag::new, id",
@@ -921,6 +1007,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
+        Page::Switch => (SWITCH, SWITCH_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         Table::new(rows.iter().copied())
@@ -976,4 +1063,5 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
         .when(page == Page::Table, |el| el.child(if zh { "原生差异：表头使用粗体字面配正文文字色；上游用 600 字重配次要文字色，缺少 semibold 字面的原生字体栈会把它画成普通字重且偏淡。排序、行选择、筛选、固定列、树形数据和合计行未移植。" } else { "Native differences: headers use the bold face with the body text color; upstream uses weight 600 on secondary text, which native font stacks without a semibold face paint as plain and washed out. Sorting, row selection, filtering, fixed columns, tree data, and summary rows are not reproduced." }))
+        .when(page == Page::Switch, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中状态用无障碍 toggle 属性与可见聚焦环表达；滑块滑动为 0.2 秒桌面版上游 300 ms 过渡；inline-prompt 显示完整文字并按宽度省略，而不是仅首个字符；active-value/inactive-value 属于应用状态，由 onchange 映射；before-change 为同步谓词，异步拦截由应用自行调度。" } else { "Native differences: there is no hidden checkbox; the checked state is conveyed with the accessibility toggle attribute and a visible focus ring. The knob slides for 0.2 s, the desktop variant of the upstream 300 ms transition. inline-prompt renders the full text with ellipsis instead of the first character. active-value/inactive-value are the application's state, mapped in onchange. before-change is a synchronous predicate; asynchronous gating is the caller's to schedule." }))
 }

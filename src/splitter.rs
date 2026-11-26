@@ -190,8 +190,7 @@ impl Handlers {
 /// Moves `offset` pixels between two adjacent panels, honoring their limits.
 /// Returns the offset that could actually be applied.
 fn drag_sizes(sizes: &mut [f32], index: usize, offset: f32, limits: &[(f32, f32)]) -> f32 {
-    let (Some(&(min_a, max_a)), Some(&(min_b, max_b))) =
-        (limits.get(index), limits.get(index + 1))
+    let (Some(&(min_a, max_a)), Some(&(min_b, max_b))) = (limits.get(index), limits.get(index + 1))
     else {
         return 0.;
     };
@@ -453,15 +452,17 @@ fn divider(info: Divider) -> impl IntoElement {
         .when(!info.horizontal, |el| {
             el.top(px(line_offset - 0.5)).left_0().right_0().h(px(1.))
         })
-        .group_hover(info.group.clone(), move |style| {
-            style.bg(info.active_color)
-        });
+        .group_hover(info.group.clone(), move |style| style.bg(info.active_color));
     let arrow = |side: SplitterSide, icon: &'static str| {
         let state = info.state.clone();
         let handlers = info.handlers.clone();
         let index = info.index;
         let owner = info.owner;
-        let suffix = if side == SplitterSide::Start { "s" } else { "e" };
+        let suffix = if side == SplitterSide::Start {
+            "s"
+        } else {
+            "e"
+        };
         div()
             .id((info.id.clone(), format!("arrow-{suffix}")))
             .absolute()
@@ -533,24 +534,26 @@ fn divider(info: Divider) -> impl IntoElement {
         .relative()
         .when(info.horizontal, |el| el.w(px(0.)))
         .when(!info.horizontal, |el| el.h(px(0.)))
-        .when(
-            info.start_collapsible,
-            |el| {
-                el.child(arrow(
-                    SplitterSide::Start,
-                    if info.horizontal { "arrow-left" } else { "arrow-up" },
-                ))
-            },
-        )
-        .when(
-            info.end_collapsible,
-            |el| {
-                el.child(arrow(
-                    SplitterSide::End,
-                    if info.horizontal { "arrow-right" } else { "arrow-down" },
-                ))
-            },
-        )
+        .when(info.start_collapsible, |el| {
+            el.child(arrow(
+                SplitterSide::Start,
+                if info.horizontal {
+                    "arrow-left"
+                } else {
+                    "arrow-up"
+                },
+            ))
+        })
+        .when(info.end_collapsible, |el| {
+            el.child(arrow(
+                SplitterSide::End,
+                if info.horizontal {
+                    "arrow-right"
+                } else {
+                    "arrow-down"
+                },
+            ))
+        })
         .child(line)
         .when(info.resizable, |el| {
             el.child(
@@ -597,7 +600,11 @@ fn divider(info: Divider) -> impl IntoElement {
                             (true, "left") | (false, "up") => false,
                             _ => return,
                         };
-                        let step = if event.keystroke.modifiers.shift { 40. } else { STEP };
+                        let step = if event.keystroke.modifiers.shift {
+                            40.
+                        } else {
+                            STEP
+                        };
                         let offset = if forward { step } else { -step };
                         let mut sizes = key_state.read(cx).sizes.clone().unwrap_or_default();
                         if sizes.len() <= key_index + 1 {
@@ -825,7 +832,10 @@ mod tests {
         assert_eq!(drag_sizes(&mut sizes, 0, 10., &[(0., 500.)]), 0.);
         assert_eq!(sizes, [100.]);
         let mut sizes = [100., 100.];
-        assert_eq!(drag_sizes(&mut sizes, 5, 10., &[(0., 500.), (0., 500.)]), 0.);
+        assert_eq!(
+            drag_sizes(&mut sizes, 5, 10., &[(0., 500.), (0., 500.)]),
+            0.
+        );
         assert_eq!(sizes, [100., 100.]);
         let mut collapsed = [None];
         collapse_sizes(&mut sizes, &mut collapsed, 4, SplitterSide::Start);
@@ -914,7 +924,9 @@ mod tests {
             view.run_until_parked();
         }
         // Two equal panels fill the window; the divider sits at the middle.
-        let width = view.update(|window, _| window.viewport_size().width).as_f32();
+        let width = view
+            .update(|window, _| window.viewport_size().width)
+            .as_f32();
         let half = width / 2.;
         view.simulate_mouse_down(
             gpui::point(px(half), px(10.)),

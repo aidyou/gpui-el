@@ -43,8 +43,8 @@ cargo run --example gallery
 
 | 证据级别 | 已知状态 |
 | --- | --- |
-| 自动化检查 | 统一令牌与事件命名、拆分展厅后，重新执行了全目标测试（含展厅页面与图标等宽网格）和文档测试。Table 的文字选择、拖动不触发行点击、滚轮不带动外层容器均有回归用例；这里不把测试视为桌面实测。 |
-| 源码对照 | Button 参考 Theme Chalk 的 `button.scss`、`mixins/_button.scss` 与明暗变量；Menu 参考上游 `packages/components/menu/src/`、`menu.scss` 和 `menu.md`；Tag/CheckTag 参考 `tag.scss`、`check-tag.scss`、`common/var.scss` 的 `$tag-*` 令牌与 `tag.md`。图标目录参考上游 `docs/.vitepress/vitepress/components/globals/icons.vue`：等宽 `7 / 6 / 4 / 3 / 2` 列，普通格高 90 px，窄窗口 80 px；这是展厅布局，不是 `Icon` 的默认尺寸。 |
+| 自动化检查 | 统一令牌与事件命名、拆分展厅后，重新执行了全目标测试（含展厅页面与图标等宽网格）和文档测试。Table 的文字选择、拖动不触发行点击、滚轮不带动外层容器均有回归用例；Switch 的指针/键盘单次触发、禁用与 `before_change` 拦截也有回归用例；这里不把测试视为桌面实测。 |
+| 源码对照 | Button 参考 Theme Chalk 的 `button.scss`、`mixins/_button.scss` 与明暗变量；Menu 参考上游 `packages/components/menu/src/`、`menu.scss` 和 `menu.md`；Tag/CheckTag 参考 `tag.scss`、`check-tag.scss`、`common/var.scss` 的 `$tag-*` 令牌与 `tag.md`；Switch 参考 `switch.scss`、`switch.vue`、`switch.md` 与 `common/var.scss` 的 `$switch-*` 令牌（core 宽 50/40/30 px、高 24/20/16 px，滑块 20/16/12 px，外高 40/32/24 px）。图标目录参考上游 `docs/.vitepress/vitepress/components/globals/icons.vue`：等宽 `7 / 6 / 4 / 3 / 2` 列，普通格高 90 px，窄窗口 80 px；这是展厅布局，不是 `Icon` 的默认尺寸。 |
 | 已知差异或缺项 | Button 的指针状态颜色即时切换，未复刻上游 100 ms 过渡，禁用／加载的原生无障碍状态待补；Menu 的展开收起走 `Transition::Collapse`，默认桌面快速度（0.6 倍 ⇒ 120 ms），浮层淡入淡出与箭头旋转同步缩放，`normal()` 可恢复 Element Plus 的 1 倍时长；Table 多出原生文字选择与滚轮拦截，但选择仅限同一个表格内，行列选中、排序、固定列、树形与汇总行仍未实现；Loading 是局部遮罩，不是全局模态服务；Tag/CheckTag 挂载与卸载立即完成，不重放上游 `el-zoom-in-center`（故无 `disable-transitions`），CheckTag 额外支持键盘聚焦、可见焦点环与选中语义（GPUI 0.3.14 无 `aria_pressed`／`aria_disabled`，选中态用 selection 属性传达，禁用态仅靠拦截与光标）；Splitter 以逻辑像素保存面板尺寸，不支持上流 px/百分比混写，lazy 只移动分隔线，折叠箭头常显（低透明度），分隔条可键盘聚焦；Scrollbar 自绘 6 px 滑块，高度/最大高度直接约束滚动盒，宽内容需显式宽度（GPUI 没有 inline-block 内容包裹层）并以 DOM 式正值报告滚动位置，mask 渐变与 wrap/view 样式钩子未移植，setScrollTop/setScrollLeft/scrollTo 改为传入 ScrollHandle；Text 的 tag 属性无 GPUI 对应物，isTruncated 是 truncated 在定宽容器下的排版结果而非可监听状态，修饰由原生下划线与删除线实现；完整的多组件组合演示未补齐。 |
 | 尚未验收 | 首提交准备环境缺少 `libxcb.so.1`，未完成干净桌面上的人工验收：自绘标题栏的双击缩放、八向拖拽改尺寸、右键窗口菜单、表格内滚轮归属与文字选择手感，都需在真实 X11/Wayland 会话复核；已切换到 `gpui-fast =0.1.19`（编译与测试通过），但尚未在真实图形会话验收动效推进、滚动缓存与窗口装饰手感，也没有在干净环境完成发布包验收。 |
 

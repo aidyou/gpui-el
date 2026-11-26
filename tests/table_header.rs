@@ -51,13 +51,11 @@ impl Render for View {
         let (header, cell) = (self.seen.clone(), self.seen.clone());
         let rows = ["a"];
         div().w(px(400.)).child(
-            Table::new(rows.iter().copied())
-                .id("header-style")
-                .column(
-                    Column::new("Header")
-                        .header(move || probe(header.clone()).into_any_element())
-                        .render(move |_: &&str, _| probe(cell.clone()).into_any_element()),
-                ),
+            Table::new(rows.iter().copied()).id("header-style").column(
+                Column::new("Header")
+                    .header(move || probe(header.clone()).into_any_element())
+                    .render(move |_: &&str, _| probe(cell.clone()).into_any_element()),
+            ),
         )
     }
 }
@@ -86,7 +84,11 @@ fn headers_are_bold_and_cells_follow_the_theme_font(cx: &mut TestAppContext) {
     let cell = seen.last().expect("the cell content never rendered");
     assert_eq!(header.weight, FontWeight::BOLD, "the header is not bold");
     assert_eq!(header.color, rgb(0x606266).into());
-    assert_eq!(cell.weight, FontWeight::default(), "the cell is not regular");
+    assert_eq!(
+        cell.weight,
+        FontWeight::default(),
+        "the cell is not regular"
+    );
     // The theme family reaches both paths, so a bold face can be selected.
     assert_eq!(header.family, "Test Sans");
     assert_eq!(cell.family, "Test Sans");

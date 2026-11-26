@@ -12,7 +12,9 @@ fn catalog_icons_exist_in_the_chrome_pack() {
         nav_icon::FEEDBACK,
     ] {
         assert!(
-            IconPack::ElementPlus.names().any(|candidate| candidate == name),
+            IconPack::ElementPlus
+                .names()
+                .any(|candidate| candidate == name),
             "{name} is missing from the Element Plus pack"
         );
     }

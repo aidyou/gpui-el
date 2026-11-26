@@ -137,14 +137,16 @@ impl Sink {
         if self.onreached.is_some() {
             let prev = state.read(cx).prev_position;
             let mut directions = Vec::new();
-            if let Some(reached) = newly_reached(prev.y, position.y, max.y.as_f32(), self.distance) {
+            if let Some(reached) = newly_reached(prev.y, position.y, max.y.as_f32(), self.distance)
+            {
                 directions.push(if reached {
                     ScrollbarDirection::Bottom
                 } else {
                     ScrollbarDirection::Top
                 });
             }
-            if let Some(reached) = newly_reached(prev.x, position.x, max.x.as_f32(), self.distance) {
+            if let Some(reached) = newly_reached(prev.x, position.x, max.x.as_f32(), self.distance)
+            {
                 directions.push(if reached {
                     ScrollbarDirection::Right
                 } else {
@@ -393,10 +395,20 @@ impl RenderOnce for Scrollbar {
                         cx.stop_propagation();
                     })
             };
-            if let Some(geometry) = thumb(viewport.height.as_f32(), max.y.as_f32(), position.y, min_size) {
+            if let Some(geometry) = thumb(
+                viewport.height.as_f32(),
+                max.y.as_f32(),
+                position.y,
+                min_size,
+            ) {
                 root = root.child(make_thumb(Axis::Vertical, geometry));
             }
-            if let Some(geometry) = thumb(viewport.width.as_f32(), max.x.as_f32(), position.x, min_size) {
+            if let Some(geometry) = thumb(
+                viewport.width.as_f32(),
+                max.x.as_f32(),
+                position.x,
+                min_size,
+            ) {
                 root = root.child(make_thumb(Axis::Horizontal, geometry));
             }
         }
@@ -465,7 +477,11 @@ impl RenderOnce for Scrollbar {
                 }
                 // One pixel of thumb movement is worth `max / travel` pixels of
                 // content, so the thumb stays under the pointer.
-                let ratio = if travel > 0. { max / travel } else { viewport + max };
+                let ratio = if travel > 0. {
+                    max / travel
+                } else {
+                    viewport + max
+                };
                 let scrolled = drag.position_component() + delta * ratio;
                 let clamped = scrolled.clamp(0., max);
                 let mut offset = handle.offset();
@@ -566,7 +582,11 @@ mod tests {
             let handle = handle.clone();
             let scrolled = scrolled.clone();
             let ends = ends.clone();
-            move |_, _| Harness { handle, scrolled, ends }
+            move |_, _| Harness {
+                handle,
+                scrolled,
+                ends,
+            }
         });
         view.update(|window, cx| window.draw(cx).clear(cx));
         view.run_until_parked();
@@ -601,29 +621,27 @@ mod tests {
         }
         impl gpui::Render for Harness {
             fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
-                div()
-                    .id("main")
-                    .size_full()
-                    .overflow_y_scroll()
-                    .child(
-                        div()
-                            .w_full()
-                            .max_w(px(760.))
-                            .mx_auto()
-                            .flex()
-                            .flex_col()
-                            .gap(px(28.))
-                            .child(
-                                div().border_1().child(div().p(px(24.)).child(
+                div().id("main").size_full().overflow_y_scroll().child(
+                    div()
+                        .w_full()
+                        .max_w(px(760.))
+                        .mx_auto()
+                        .flex()
+                        .flex_col()
+                        .gap(px(28.))
+                        .child(
+                            div().border_1().child(
+                                div().p(px(24.)).child(
                                     el_scrollbar()
                                         .id("scroller")
                                         .max_height(200.)
                                         .handle(self.handle.clone())
                                         .child(div().h(px(600.)).child("content")),
-                                )),
-                            )
-                            .child(div().h(px(40.)).child("next section")),
-                    )
+                                ),
+                            ),
+                        )
+                        .child(div().h(px(40.)).child("next section")),
+                )
             }
         }
         let handle = ScrollHandle::new();
@@ -700,7 +718,11 @@ mod tests {
         }
         let max = handle.max_offset();
         assert!(max.x > px(0.), "wide content should overflow horizontally");
-        assert_eq!(max.y, px(0.), "short content should not overflow vertically");
+        assert_eq!(
+            max.y,
+            px(0.),
+            "short content should not overflow vertically"
+        );
         // A horizontal wheel delta scrolls the viewport and reports it.
         view.simulate_event(gpui::ScrollEvent {
             position: gpui::point(px(10.), px(10.)),
@@ -748,7 +770,13 @@ mod tests {
         }
         let viewport = handle.bounds().size;
         let max = handle.max_offset();
-        let geometry = thumb(viewport.height.as_f32(), max.y.as_f32(), 0., DEFAULT_MIN_SIZE).unwrap();
+        let geometry = thumb(
+            viewport.height.as_f32(),
+            max.y.as_f32(),
+            0.,
+            DEFAULT_MIN_SIZE,
+        )
+        .unwrap();
         let thumb_center = gpui::point(
             px(viewport.width.as_f32() - INSET - BAR / 2.),
             px(geometry.position + geometry.length / 2.),
@@ -795,7 +823,13 @@ mod tests {
         }
         let viewport = handle.bounds().size;
         let max = handle.max_offset();
-        let geometry = thumb(viewport.height.as_f32(), max.y.as_f32(), 0., DEFAULT_MIN_SIZE).unwrap();
+        let geometry = thumb(
+            viewport.height.as_f32(),
+            max.y.as_f32(),
+            0.,
+            DEFAULT_MIN_SIZE,
+        )
+        .unwrap();
         let thumb_center = gpui::point(
             px(viewport.width.as_f32() - INSET - BAR / 2.),
             px(geometry.position + geometry.length / 2.),

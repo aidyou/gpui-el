@@ -185,6 +185,7 @@ mod menu;
 pub mod motion;
 mod scrollbar;
 mod splitter;
+mod switch;
 mod table;
 mod tag;
 mod text;
@@ -210,12 +211,13 @@ pub use menu::{
     MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
 pub use motion::MotionSpeed;
-pub use table::{Column, Table, TableAlign, TableSize};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
 pub use splitter::{
-    Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent, SplitterSide,
-    SplitterSizes, el_splitter, el_splitter_panel,
+    Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent,
+    SplitterSide, SplitterSizes, el_splitter, el_splitter_panel,
 };
+pub use switch::{Switch, SwitchSize, el_switch};
+pub use table::{Column, Table, TableAlign, TableSize};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};

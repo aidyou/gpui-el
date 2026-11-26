@@ -1569,10 +1569,7 @@ impl Frame {
     }
     fn key(&self, key: &SharedString, pressed: &str, window: &mut Window, cx: &mut App) -> bool {
         let rows = visible_rows(&self.roots, &self.state.read(cx).opened, None);
-        let Some(row) = rows
-            .iter()
-            .find(|row| !row.disabled && &row.index == key)
-        else {
+        let Some(row) = rows.iter().find(|row| !row.disabled && &row.index == key) else {
             return false;
         };
         let at_horizontal = self.options.horizontal() && row.parent.is_none();

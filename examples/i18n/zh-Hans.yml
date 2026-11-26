@@ -203,3 +203,18 @@ splitter_keyboard: 分隔条可键盘聚焦：方向键按 10 px 调整，Shift 
 scrollbar_add_row: 增加一行
 scrollbar_remove_row: 减少一行
 scrollbar_rows: '%{count} 行 · 最大高度 200 px'
+form: 表单
+switch_intro: 在两个互斥状态间切换，支持尺寸、文字、图标与切换前拦截。
+switch_page: Switch 开关
+switch_basic: 基础用法
+switch_sizes: 尺寸
+switch_text: 文字描述
+switch_icons: 图标
+switch_colors: 自定义颜色
+switch_disabled: 禁用与加载
+switch_guard: 切换前拦截
+switch_on: 打开
+switch_off: 关闭
+switch_lock: 锁定
+switch_unlock: 解锁
+switch_guard_help: 每次触发前都会询问拦截条件；锁定时开关保持原状态，相当于 before-change 被拒绝。

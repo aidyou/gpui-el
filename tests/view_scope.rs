@@ -45,11 +45,8 @@ fn notifications_rebuild_only_their_own_view(cx: &mut gpui::TestAppContext) {
     let a_renders = Rc::new(Cell::new(0));
     let b_renders = Rc::new(Cell::new(0));
     let handles: Rc<RefCell<Option<Entity<Leaf>>>> = Rc::new(RefCell::new(None));
-    let (parent_count, a_count, b_count) = (
-        parent_renders.clone(),
-        a_renders.clone(),
-        b_renders.clone(),
-    );
+    let (parent_count, a_count, b_count) =
+        (parent_renders.clone(), a_renders.clone(), b_renders.clone());
     let handles_for_window = handles.clone();
     let (_, view) = cx.add_window_view(move |_, cx| {
         let a = cx.new(|_| Leaf { renders: a_count });

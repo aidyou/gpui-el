@@ -51,6 +51,7 @@ struct Gallery {
     scrollbar: pages::scrollbar::State,
     splitter: pages::splitter::State,
     tag: pages::tag::State,
+    switch: pages::switch::State,
 }
 
 impl Gallery {
@@ -73,6 +74,7 @@ mod nav_icon {
     pub const DATA: &str = "pie-chart";
     pub const NAVIGATION: &str = "compass";
     pub const FEEDBACK: &str = "chat-line-round";
+    pub const FORM: &str = "edit-pen";
 }
 
 /// The catalog chrome stays on one pack even when the icon page switches the
@@ -98,10 +100,11 @@ enum Page {
     Tag,
     Menu,
     Loading,
+    Switch,
 }
 
 impl Page {
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 15] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -116,6 +119,7 @@ impl Page {
         Self::Tag,
         Self::Menu,
         Self::Loading,
+        Self::Switch,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -134,6 +138,7 @@ impl Page {
             Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
             Self::Loading => &s.loading_intro,
+            Self::Switch => &s.switch_intro,
         }
     }
 
@@ -153,6 +158,7 @@ impl Page {
             Self::Tag => "tag",
             Self::Menu => "menu",
             Self::Loading => "loading",
+            Self::Switch => "switch",
         }
     }
 
@@ -172,6 +178,7 @@ impl Page {
             Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
             Self::Loading => &s.loading_page,
+            Self::Switch => &s.switch_page,
         }
     }
 
@@ -202,6 +209,7 @@ impl Page {
                 "el-menu-item-group",
             ],
             Self::Loading => &["v-loading"],
+            Self::Switch => &["el-switch"],
         }
     }
 }
@@ -303,6 +311,11 @@ impl Render for Gallery {
                                     el_sub_menu("feedback", s.feedback.as_str())
                                         .icon(nav_glyph(nav_icon::FEEDBACK))
                                         .entry(item(Page::Loading)),
+                                )
+                                .entry(
+                                    el_sub_menu("form", s.form.as_str())
+                                        .icon(nav_glyph(nav_icon::FORM))
+                                        .entry(item(Page::Switch)),
                                 ),
                         ),
                 )
@@ -323,6 +336,7 @@ impl Render for Gallery {
             Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),
             Page::Loading => self.loading(s, cx),
+            Page::Switch => self.switches(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

@@ -1,5 +1,5 @@
+use gpui::ScrollHandle;
 use gpui::{Context, Div, Point, div, prelude::*, px, rgb};
-use gpui::{ScrollHandle};
 use gpui_el::{ScrollbarDirection, ScrollbarEvent, el_button, el_scrollbar, tokens};
 
 use crate::{Gallery, copy::Copy, demo::row};
@@ -56,29 +56,27 @@ impl Gallery {
                 .flex()
                 .gap(px(12.))
                 .children(labels.iter().enumerate().map(|(i, label)| {
-                div()
-                    .flex_none()
-                    .w(px(160.))
-                    .h(px(120.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .rounded(px(tokens::radius::BASE))
-                    .bg(if i % 2 == 0 { stripe } else { border })
-                    .child(*label)
-            }))
-        };
-        let list = |items: &[u32]| {
-            div().flex().flex_col().children(
-                items.iter().map(|item| {
                     div()
-                        .h(px(36.))
+                        .flex_none()
+                        .w(px(160.))
+                        .h(px(120.))
                         .flex()
                         .items_center()
-                        .px(px(12.))
-                        .child(format!("{item}. {}", s.scrollbar_row))
-                }),
-            )
+                        .justify_center()
+                        .rounded(px(tokens::radius::BASE))
+                        .bg(if i % 2 == 0 { stripe } else { border })
+                        .child(*label)
+                }))
+        };
+        let list = |items: &[u32]| {
+            div().flex().flex_col().children(items.iter().map(|item| {
+                div()
+                    .h(px(36.))
+                    .flex()
+                    .items_center()
+                    .px(px(12.))
+                    .child(format!("{item}. {}", s.scrollbar_row))
+            }))
         };
         let rows = |count: usize| {
             div().flex().flex_col().children((1..=count).map(|item| {
@@ -90,12 +88,10 @@ impl Gallery {
                     .child(format!("{item}. {}", s.scrollbar_row))
             }))
         };
-        let report = div()
-            .text_size(px(tokens::font_size::SMALL))
-            .child(s.scrollbar_report.replace(
-                "%{top}",
-                &format!("{:.0}", self.scrollbar.scroll_top),
-            ));
+        let report = div().text_size(px(tokens::font_size::SMALL)).child(
+            s.scrollbar_report
+                .replace("%{top}", &format!("{:.0}", self.scrollbar.scroll_top)),
+        );
 
         let handle = self.scrollbar.handle.clone();
         let manual = row()
@@ -206,18 +202,17 @@ cx.notify();"#,
                                     .small()
                                     .label(s.scrollbar_remove_row.as_str())
                                     .onclick(cx.listener(|this, _, window, cx| {
-                                        this.scrollbar.rows = this.scrollbar.rows.saturating_sub(1).max(1);
+                                        this.scrollbar.rows =
+                                            this.scrollbar.rows.saturating_sub(1).max(1);
                                         window.refresh();
                                         cx.notify();
                                     })),
                             )
                             .child(
-                                div()
-                                    .text_size(px(tokens::font_size::SMALL))
-                                    .child(
-                                        s.scrollbar_rows
-                                            .replace("%{count}", &self.scrollbar.rows.to_string()),
-                                    ),
+                                div().text_size(px(tokens::font_size::SMALL)).child(
+                                    s.scrollbar_rows
+                                        .replace("%{count}", &self.scrollbar.rows.to_string()),
+                                ),
                             ),
                     )
                     .into_any_element(),
@@ -266,11 +261,14 @@ window.refresh();"#,
                         el_scrollbar()
                             .id("infinite")
                             .height(200.)
-                            .onreached(0., cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
-                                this.scrollbar.reached = Some(*direction);
-                                this.scrollbar.more();
-                                cx.notify();
-                            }))
+                            .onreached(
+                                0.,
+                                cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
+                                    this.scrollbar.reached = Some(*direction);
+                                    this.scrollbar.more();
+                                    cx.notify();
+                                }),
+                            )
                             .child(list(&self.scrollbar.items)),
                     )
                     .child(
