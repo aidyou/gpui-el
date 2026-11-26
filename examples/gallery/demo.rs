@@ -1,9 +1,9 @@
 use std::ops::Range;
 
 use gpui::{
-    App, ClipboardItem, Context, Div, FocusHandle, HighlightStyle, IntoElement, KeyBinding,
-    MouseButton, Pixels, Point, RenderOnce, SharedString, StyledText, TextLayout, Window, actions,
-    div, prelude::*, px, rgb, rgba,
+    App, ClipboardItem, Context, Div, FocusHandle, IntoElement, KeyBinding, MouseButton, Pixels,
+    Point, RenderOnce, SharedString, StyledText, TextLayout, Window, actions, div, prelude::*, px,
+    rgb, rgba,
 };
 use gpui_el::{Locale, el_button, el_icon, tokens};
 
@@ -80,29 +80,16 @@ impl RenderOnce for CodeBlock {
         let selection = state.read(cx);
         let focus = selection.focus.clone();
         let range = selection.range();
-        let selection_highlight = HighlightStyle {
-            background_color: Some(rgba(if self.dark { 0x409eff66 } else { 0x409eff40 }).into()),
-            ..Default::default()
-        };
-        // Syntax colors come from the small dependency-free Rust lexer; the
-        // selection highlight is layered on top of them.
-        let mut highlights: Vec<(Range<usize>, HighlightStyle)> = syntax::tokenize(&self.text)
-            .into_iter()
-            .filter_map(|(range, kind)| {
-                syntax::color(kind, self.dark).map(|color| {
-                    (
-                        range,
-                        HighlightStyle {
-                            color: Some(rgb(color).into()),
-                            ..Default::default()
-                        },
-                    )
-                })
-            })
-            .collect();
-        if !range.is_empty() {
-            highlights.push((range, selection_highlight));
-        }
+        // Token colors and the selection background merge into one sorted,
+        // disjoint range list: StyledText computes one text run per range and
+        // requires them to be ordered and non-overlapping.
+        let selected = (!range.is_empty()).then(|| {
+            (
+                range,
+                rgba(if self.dark { 0x409eff66 } else { 0x409eff40 }).into(),
+            )
+        });
+        let highlights = syntax::highlights(&self.text, selected, self.dark);
         let styled = StyledText::new(self.text.clone()).with_highlights(highlights);
         let line_count = self.text.matches('\n').count() + 1;
         let gutter = (1..=line_count)

@@ -6,6 +6,8 @@
 
 use std::ops::Range;
 
+use gpui::{HighlightStyle, Hsla, rgb};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Token {
     Plain,
@@ -232,6 +234,57 @@ pub(crate) fn color(token: Token, dark: bool) -> Option<u32> {
     }
 }
 
+/// Builds the highlight ranges for a snippet: token colors merged with an
+/// optional selection background.
+///
+/// `StyledText` computes one text run per highlight range, assuming the ranges
+/// are sorted by start and non-overlapping, so the selection background must be
+/// combined with the token color of every segment it covers instead of being
+/// layered as a separate range.
+pub(crate) fn highlights(
+    source: &str,
+    selection: Option<(Range<usize>, Hsla)>,
+    dark: bool,
+) -> Vec<(Range<usize>, HighlightStyle)> {
+    let tokens: Vec<(Range<usize>, u32)> = tokenize(source)
+        .into_iter()
+        .filter_map(|(range, kind)| color(kind, dark).map(|color| (range, color)))
+        .collect();
+    let mut boundaries: Vec<usize> = tokens
+        .iter()
+        .flat_map(|(range, _)| [range.start, range.end])
+        .collect();
+    if let Some((selection, _)) = selection.as_ref() {
+        boundaries.push(selection.start);
+        boundaries.push(selection.end);
+    }
+    boundaries.sort_unstable();
+    boundaries.dedup();
+    let mut highlights = Vec::new();
+    for window in boundaries.windows(2) {
+        let (start, end) = (window[0], window[1]);
+        let color = tokens
+            .iter()
+            .find(|(token, _)| token.start <= start && end <= token.end)
+            .map(|(_, color)| rgb(*color).into());
+        let background = selection
+            .as_ref()
+            .filter(|(selection, _)| selection.start <= start && end <= selection.end)
+            .map(|(_, color)| *color);
+        if color.is_some() || background.is_some() {
+            highlights.push((
+                start..end,
+                HighlightStyle {
+                    color,
+                    background_color: background,
+                    ..Default::default()
+                },
+            ));
+        }
+    }
+    highlights
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -323,5 +376,49 @@ fn first<'a>(items: &'a [&'static str]) -> Option<&'a str> {
         assert_eq!(color(Token::Plain, true), None);
         assert_eq!(color(Token::Keyword, false), Some(0xa626a4));
         assert_eq!(color(Token::Keyword, true), Some(0xc678dd));
+    }
+
+    #[test]
+    fn highlight_ranges_are_sorted_disjoint_and_combine_layers() {
+        let source = "el_tag().label(\"Primary\");";
+        let selection = 3..25;
+        let highlights = highlights(source, Some((selection, Hsla::transparent_black())), false);
+        let mut cursor = 0;
+        for (range, style) in &highlights {
+            assert!(range.start >= cursor, "ranges must be sorted");
+            assert!(range.end > range.start);
+            cursor = range.end;
+            assert!(
+                style.color.is_some() || style.background_color.is_some(),
+                "every range must style something"
+            );
+        }
+        // The token color and the selection background share one range where
+        // they overlap instead of being layered as two ranges.
+        let overlapping = highlights
+            .iter()
+            .filter(|(_, style)| style.color.is_some() && style.background_color.is_some())
+            .count();
+        assert!(overlapping > 0);
+        assert!(highlights.first().unwrap().0.start <= 3);
+        assert!(highlights.last().unwrap().0.end >= 25);
+    }
+
+    #[test]
+    fn highlight_ranges_cover_the_selection_without_tokens() {
+        let source = "plain text only";
+        let highlights = highlights(source, Some((5..10, Hsla::transparent_black())), true);
+        assert_eq!(highlights.len(), 1);
+        assert_eq!(highlights[0].0, 5..10);
+        assert!(highlights[0].1.background_color.is_some());
+        assert!(highlights[0].1.color.is_none());
+    }
+
+    #[test]
+    fn highlight_ranges_are_empty_without_a_selection_or_tokens() {
+        let source = "plain text only";
+        assert!(highlights(source, None, false).is_empty());
+        let highlights = highlights(source, Some((0..15, Hsla::transparent_black())), false);
+        assert_eq!(highlights.len(), 1);
     }
 }

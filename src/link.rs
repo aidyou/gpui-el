@@ -5,8 +5,8 @@
 //! the layout, unlike the upstream out-of-flow `::after` pseudo-element.
 
 use gpui::{
-    AnyElement, App, ClickEvent, ElementId, IntoElement, RenderOnce, SharedString, Window, div,
-    prelude::*, px, rgb,
+    AnyElement, App, ClickEvent, ElementId, Hsla, IntoElement, RenderOnce, SharedString, Window,
+    div, prelude::*, px, rgb,
 };
 
 use crate::{
@@ -43,12 +43,12 @@ pub enum LinkUnderline {
 struct Paint {
     text: u32,
     /// Reserved 1 px bottom border; transparent hides the underline without
-    /// changing the outer size.
-    underline: u32,
+    /// changing the outer size. Upstream draws it with the current text color.
+    underline: Hsla,
 }
 
 fn paint(theme: &Theme, kind: LinkType) -> (Paint, Paint, Paint) {
-    let transparent = 0;
+    let transparent = Hsla::transparent_black();
     let base = match kind {
         LinkType::Default => None,
         LinkType::Primary => Some(PRIMARY),
@@ -240,15 +240,21 @@ impl RenderOnce for Link {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = Theme::current(cx);
         let (normal, hover, disabled) = paint(&theme, self.kind);
-        let underline = |paint: Paint, always: bool| Paint {
-            underline: if always { paint.text } else { 0 },
+        // The underline always uses the current text color, and is hidden with
+        // a transparent border so hovering never shifts the layout.
+        let shown = |paint: Paint, shown: bool| Paint {
+            underline: if shown {
+                rgb(paint.text).into()
+            } else {
+                Hsla::transparent_black()
+            },
             ..paint
         };
         let always = self.underline == LinkUnderline::Always;
         let never = self.underline == LinkUnderline::Never;
-        let normal = underline(normal, always);
-        let hover = underline(hover, !never);
-        let disabled = underline(disabled, always);
+        let normal = shown(normal, always);
+        let hover = shown(hover, !never);
+        let disabled = shown(disabled, always);
         let accessibility_label = self.accessibility_label.or_else(|| self.label.clone());
         let content = self
             .content
@@ -265,7 +271,7 @@ impl RenderOnce for Link {
             .whitespace_nowrap()
             // Reserve the underline space so hovering never moves the text.
             .border_b_1()
-            .border_color(rgb(normal.underline))
+            .border_color(normal.underline)
             .text_color(rgb(normal.text))
             .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
             .children(self.icon)
@@ -282,7 +288,7 @@ impl RenderOnce for Link {
             return root
                 .cursor_not_allowed()
                 .text_color(rgb(disabled.text))
-                .border_color(rgb(disabled.underline))
+                .border_color(disabled.underline)
                 .into_any_element();
         }
         let href = self.href;
@@ -295,7 +301,7 @@ impl RenderOnce for Link {
             .hover(move |style| {
                 style
                     .text_color(rgb(hover.text))
-                    .border_color(rgb(hover.underline))
+                    .border_color(hover.underline)
             })
             .focus_visible(move |style| {
                 style.shadow(vec![gpui::BoxShadow {
