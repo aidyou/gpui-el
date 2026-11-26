@@ -218,3 +218,25 @@ switch_off: 关闭
 switch_lock: 锁定
 switch_unlock: 解锁
 switch_guard_help: 每次触发前都会询问拦截条件；锁定时开关保持原状态，相当于 before-change 被拒绝。
+checkbox_intro: 切换单个或多个选项，支持尺寸、边框与半选状态。
+checkbox_page: Checkbox 多选框
+checkbox_basic: 基础用法
+checkbox_disabled: 禁用
+checkbox_indeterminate: 半选状态
+checkbox_sizes: 尺寸
+checkbox_bordered: 带边框
+checkbox_group: 多选框组
+checkbox_content: 自定义内容
+checkbox_all: 全选
+checkbox_option: 选项
+checkbox_custom: 自定义内容
+radio_intro: 在互斥选项组中选择一个。
+radio_page: Radio 单选框
+radio_basic: 基础用法
+radio_disabled: 禁用
+radio_sizes: 尺寸
+radio_bordered: 带边框
+radio_custom: 自定义内容
+radio_prepare: 备货
+radio_ship: 发货
+radio_pickup: 自提

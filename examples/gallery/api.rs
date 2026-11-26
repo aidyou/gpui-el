@@ -751,6 +751,164 @@ const LOADING: &[Row] = &[
         "添加被遮罩的内容。",
     ),
 ];
+const CHECKBOX: &[Row] = &[
+    (
+        "el_checkbox(), Checkbox::new, id",
+        "ElementId · call site",
+        "Create a checkbox. Supply a stable sibling-unique ID when creating repeated checkboxes at the same call site.",
+        "创建多选框。同一调用位置生成多个多选框时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "label, content",
+        "SharedString / IntoElement · —",
+        "Label or custom contents next to the box; custom contents take precedence.",
+        "复选框旁的文字或自定义内容；自定义内容优先。",
+    ),
+    (
+        "checked, indeterminate",
+        "bool · false",
+        "The controlled state, and the partial state of a check-all parent. Activating an indeterminate checkbox checks it.",
+        "受控状态与全选父级的半选状态。半选状态再次激活后变为选中。",
+    ),
+    (
+        "size, large, small",
+        "CheckboxSize · Default (32 px)",
+        "Large is 40 px, Small is 24 px; the box is 14 px, or 12 px with a border.",
+        "Large 为 40 px，Small 为 24 px；方框为 14 px，带边框时为 12 px。",
+    ),
+    (
+        "border",
+        "bool · false",
+        "Draw the surrounding border with the size's paddings and radius.",
+        "按尺寸的内边距与圆角绘制外边框。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Block activation and show the not-allowed cursor.",
+        "禁止触发并显示禁止光标。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · —",
+        "The accessible name; label icon-only checkboxes. The checked and indeterminate states use the toggle attribute.",
+        "无障碍名称；纯图标多选框应提供。选中与半选状态通过 toggle 属性表达。",
+    ),
+];
+const CHECKBOX_GROUP: &[Row] = &[
+    (
+        "el_checkbox_group(), CheckboxGroup::id",
+        "ElementId · call site",
+        "Create a group. The ID carries the accessibility group role.",
+        "创建分组；ID 承载无障碍 group 角色。",
+    ),
+    (
+        "checkbox, checkboxes",
+        "Checkbox / IntoIterator<Item = Checkbox> · []",
+        "Add checkboxes. Each one keeps its own events.",
+        "添加多选框；事件仍由各多选框提供。",
+    ),
+    (
+        "direction, horizontal, vertical",
+        "Direction · Horizontal",
+        "Lay the children out in a row or a column.",
+        "按行或列排列子项。",
+    ),
+    (
+        "gap",
+        "f32 · 30",
+        "The space between siblings, from upstream's margin-right.",
+        "子项间距，取自上游的 margin-right。",
+    ),
+    (
+        "size, disabled, border",
+        "CheckboxSize / bool · unset",
+        "Defaults for children that have not chosen their own.",
+        "未显式设置的子项使用这些默认值。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · —",
+        "Names the group for assistive technology.",
+        "为辅助技术命名分组。",
+    ),
+];
+const CHECKBOX_EVENTS: &[Row] = &[(
+    "Checkbox::onchange",
+    "bool, &mut Window, &mut App",
+    "Pointer or keyboard activation reports the next checked state; not emitted while disabled.",
+    "指针或键盘激活时报告下一个选中状态；禁用时不触发。",
+)];
+const RADIO: &[Row] = &[
+    (
+        "el_radio(), Radio::new, id",
+        "ElementId · call site",
+        "Create a radio. Supply a stable sibling-unique ID when creating repeated radios at the same call site.",
+        "创建单选框。同一调用位置生成多个单选框时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "label, content",
+        "SharedString / IntoElement · —",
+        "Label or custom contents next to the input; custom contents take precedence.",
+        "单选框旁的文字或自定义内容；自定义内容优先。",
+    ),
+    (
+        "checked",
+        "bool · false",
+        "Marks the current selection; the application moves it in onchange.",
+        "标记当前选中项；由应用在 onchange 中移动选择。",
+    ),
+    (
+        "size, large, small",
+        "RadioSize · Default (32 px)",
+        "Large is 40 px, Small is 24 px; the input is 14 px, or 12 px with a border.",
+        "Large 为 40 px，Small 为 24 px；圆点框为 14 px，带边框时为 12 px。",
+    ),
+    (
+        "border, disabled",
+        "bool · false",
+        "Draw the surrounding border, and block activation.",
+        "绘制外边框与禁止触发。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · —",
+        "The accessible name; label icon-only radios. The selected state uses the toggle attribute.",
+        "无障碍名称；纯图标单选框应提供。选中状态通过 toggle 属性表达。",
+    ),
+];
+const RADIO_GROUP: &[Row] = &[
+    (
+        "el_radio_group(), RadioGroup::id",
+        "ElementId · call site",
+        "Create a group. The ID carries the accessibility radio-group role.",
+        "创建分组；ID 承载无障碍 radio group 角色。",
+    ),
+    (
+        "radio, radios",
+        "Radio / IntoIterator<Item = Radio> · []",
+        "Add radios. Each one keeps its own events.",
+        "添加单选框；事件仍由各单选框提供。",
+    ),
+    (
+        "direction, horizontal, vertical, gap",
+        "Direction / f32 · Horizontal / 30",
+        "Lay the children out and space them.",
+        "排列子项并设置间距。",
+    ),
+    (
+        "size, disabled, border",
+        "RadioSize / bool · unset",
+        "Defaults for children that have not chosen their own.",
+        "未显式设置的子项使用这些默认值。",
+    ),
+];
+const RADIO_EVENTS: &[Row] = &[(
+    "Radio::onchange",
+    "bool, &mut Window, &mut App",
+    "The radio was activated by pointer or keyboard; not emitted while disabled or when the radio is already selected.",
+    "指针或键盘激活该单选框时触发；禁用或已选中时不触发。",
+)];
 const SWITCH: &[Row] = &[
     (
         "el_switch(), Switch::new, id",
@@ -1008,6 +1166,8 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
         Page::Switch => (SWITCH, SWITCH_EVENTS),
+        Page::Checkbox => (CHECKBOX, CHECKBOX_EVENTS),
+        Page::Radio => (RADIO, RADIO_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         Table::new(rows.iter().copied())
@@ -1051,6 +1211,14 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
             el.child(heading("CheckTag API"))
                 .child(table("check-tag-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECK_TAG))
         })
+        .when(page == Page::Checkbox, |el| {
+            el.child(heading("CheckboxGroup API"))
+                .child(table("checkbox-group-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECKBOX_GROUP))
+        })
+        .when(page == Page::Radio, |el| {
+            el.child(heading("RadioGroup API"))
+                .child(table("radio-group-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, RADIO_GROUP))
+        })
         .when(page == Page::Splitter, |el| {
             el.child(heading("SplitterPanel API"))
                 .child(table("splitter-panel-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, SPLITTER_PANEL))
@@ -1063,5 +1231,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
         .when(page == Page::Table, |el| el.child(if zh { "原生差异：表头使用粗体字面配正文文字色；上游用 600 字重配次要文字色，缺少 semibold 字面的原生字体栈会把它画成普通字重且偏淡。排序、行选择、筛选、固定列、树形数据和合计行未移植。" } else { "Native differences: headers use the bold face with the body text color; upstream uses weight 600 on secondary text, which native font stacks without a semibold face paint as plain and washed out. Sorting, row selection, filtering, fixed columns, tree data, and summary rows are not reproduced." }))
+        .when(page == Page::Checkbox, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中与半选状态用无障碍 toggle 属性（Mixed）与可见聚焦环表达；勾选标记使用内置 Element Plus Check 轮廓而非 CSS 边框旋转技巧；true-value/false-value 与分组的值集合收集属于应用状态，由各多选框的 onchange 处理；分组不提供上游的方向键导航，用原生 Tab 顺序。" } else { "Native differences: there is no hidden checkbox; the checked and indeterminate states use the accessibility toggle attribute (Mixed) and a visible focus ring. The check mark is the bundled Element Plus Check outline rather than a rotated CSS border trick. true-value/false-value and the group's value collection are the application's concern, handled in each checkbox's onchange. The group does not reproduce upstream's arrow-key navigation; native Tab order applies instead." }))
+        .when(page == Page::Radio, |el| el.child(if zh { "原生差异：没有隐藏 radio，选中状态用无障碍 toggle 属性与可见聚焦环表达；选中圆点为 4 px 实心圆而非 CSS 伪元素缩放；分组不收集选中值，由应用在各单选框的 onchange 中移动选择；分组不提供上游的方向键导航，用原生 Tab 顺序；重复点击已选中的单选框不触发事件，与上游一致。" } else { "Native differences: there is no hidden radio; the selected state uses the accessibility toggle attribute and a visible focus ring. The selection dot is a 4 px filled circle rather than a scaled CSS pseudo element. The group does not collect the picked value; the application moves the selection in each radio's onchange. Upstream's arrow-key navigation between group items is not reproduced; native Tab order applies instead. Activating the already selected radio fires nothing, like upstream." }))
         .when(page == Page::Switch, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中状态用无障碍 toggle 属性与可见聚焦环表达；滑块滑动为 0.2 秒桌面版上游 300 ms 过渡；inline-prompt 显示完整文字并按宽度省略，而不是仅首个字符；active-value/inactive-value 属于应用状态，由 onchange 映射；before-change 为同步谓词，异步拦截由应用自行调度。" } else { "Native differences: there is no hidden checkbox; the checked state is conveyed with the accessibility toggle attribute and a visible focus ring. The knob slides for 0.2 s, the desktop variant of the upstream 300 ms transition. inline-prompt renders the full text with ellipsis instead of the first character. active-value/inactive-value are the application's state, mapped in onchange. before-change is a synchronous predicate; asynchronous gating is the caller's to schedule." }))
 }

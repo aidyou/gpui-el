@@ -52,6 +52,8 @@ struct Gallery {
     splitter: pages::splitter::State,
     tag: pages::tag::State,
     switch: pages::switch::State,
+    checkbox: pages::checkbox::State,
+    radio: pages::radio::State,
 }
 
 impl Gallery {
@@ -101,10 +103,12 @@ enum Page {
     Menu,
     Loading,
     Switch,
+    Checkbox,
+    Radio,
 }
 
 impl Page {
-    const ALL: [Self; 15] = [
+    const ALL: [Self; 17] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -120,6 +124,8 @@ impl Page {
         Self::Menu,
         Self::Loading,
         Self::Switch,
+        Self::Checkbox,
+        Self::Radio,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -139,6 +145,8 @@ impl Page {
             Self::Menu => &s.menu_intro,
             Self::Loading => &s.loading_intro,
             Self::Switch => &s.switch_intro,
+            Self::Checkbox => &s.checkbox_intro,
+            Self::Radio => &s.radio_intro,
         }
     }
 
@@ -159,6 +167,8 @@ impl Page {
             Self::Menu => "menu",
             Self::Loading => "loading",
             Self::Switch => "switch",
+            Self::Checkbox => "checkbox",
+            Self::Radio => "radio",
         }
     }
 
@@ -179,6 +189,8 @@ impl Page {
             Self::Menu => &s.menu_page,
             Self::Loading => &s.loading_page,
             Self::Switch => &s.switch_page,
+            Self::Checkbox => &s.checkbox_page,
+            Self::Radio => &s.radio_page,
         }
     }
 
@@ -210,6 +222,8 @@ impl Page {
             ],
             Self::Loading => &["v-loading"],
             Self::Switch => &["el-switch"],
+            Self::Checkbox => &["el-checkbox", "el-checkbox-group"],
+            Self::Radio => &["el-radio", "el-radio-group"],
         }
     }
 }
@@ -315,7 +329,9 @@ impl Render for Gallery {
                                 .entry(
                                     el_sub_menu("form", s.form.as_str())
                                         .icon(nav_glyph(nav_icon::FORM))
-                                        .entry(item(Page::Switch)),
+                                        .entry(item(Page::Switch))
+                                        .entry(item(Page::Checkbox))
+                                        .entry(item(Page::Radio)),
                                 ),
                         ),
                 )
@@ -337,6 +353,8 @@ impl Render for Gallery {
             Page::Menu => self.menus(s, cx),
             Page::Loading => self.loading(s, cx),
             Page::Switch => self.switches(s, cx),
+            Page::Checkbox => self.checkboxes(s, cx),
+            Page::Radio => self.radios(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

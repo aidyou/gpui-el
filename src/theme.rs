@@ -184,6 +184,7 @@ impl Theme {
                 match shade {
                     Fill::Light => 8,
                     Fill::Lighter => 4,
+                    Fill::ExtraLight => 6,
                     Fill::Base => 12,
                     Fill::Dark => 16,
                 },
@@ -192,6 +193,7 @@ impl Theme {
             match shade {
                 Fill::Light => 0xf5f7fa,
                 Fill::Lighter => 0xfafafa,
+                Fill::ExtraLight => 0xfafcff,
                 Fill::Base => 0xf0f2f5,
                 Fill::Dark => 0xebedf0,
             }
@@ -239,6 +241,8 @@ pub(crate) enum Mask {
 pub(crate) enum Fill {
     Light,
     Lighter,
+    /// `--el-fill-color-extra-light` (#fafcff), used by checked disabled inputs.
+    ExtraLight,
     Base,
     Dark,
 }

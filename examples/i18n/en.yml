@@ -218,3 +218,25 @@ switch_off: Off
 switch_lock: Lock
 switch_unlock: Unlock
 switch_guard_help: 'The guard is consulted before every activation; while locked the switch keeps its state, like a rejected before-change promise.'
+checkbox_intro: Toggle one option or several, with sizes, borders, and a partial state.
+checkbox_page: Checkbox
+checkbox_basic: Basic usage
+checkbox_disabled: Disabled
+checkbox_indeterminate: Indeterminate
+checkbox_sizes: Sizes
+checkbox_bordered: Bordered
+checkbox_group: Checkbox group
+checkbox_content: Custom content
+checkbox_all: All
+checkbox_option: Option
+checkbox_custom: Custom content
+radio_intro: Pick one option from a mutually exclusive group.
+radio_page: Radio
+radio_basic: Basic usage
+radio_disabled: Disabled
+radio_sizes: Sizes
+radio_bordered: Bordered
+radio_custom: Custom content
+radio_prepare: Prepare
+radio_ship: Ship
+radio_pickup: Pickup

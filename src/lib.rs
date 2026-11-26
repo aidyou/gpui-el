@@ -174,6 +174,7 @@
 )]
 
 mod button;
+mod checkbox;
 mod error;
 mod grid;
 mod icon;
@@ -183,6 +184,7 @@ mod loading;
 mod locale;
 mod menu;
 pub mod motion;
+mod radio;
 mod scrollbar;
 mod splitter;
 mod switch;
@@ -196,6 +198,7 @@ pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
     el_button_group,
 };
+pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
 pub use error::{Error, Result};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};
@@ -211,6 +214,7 @@ pub use menu::{
     MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
 pub use motion::MotionSpeed;
+pub use radio::{Radio, RadioGroup, RadioSize, el_radio, el_radio_group};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
 pub use splitter::{
     Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent,
