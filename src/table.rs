@@ -6,8 +6,10 @@
 //! status row backgrounds, row clicks, and an empty state. Text selection and
 //! wheel containment are native additions: dragging inside text cells selects
 //! and copies plain text, and the scrolling body never forwards wheel deltas to
-//! an outer scroll container. Sorting, row selection, filtering, fixed columns,
-//! tree data, lazy loading, and summary rows are not reproduced.
+//! an outer scroll container. Headers use the bold face and the body text color
+//! instead of Theme Chalk's weight 600 on secondary text, which native font
+//! stacks render as plain, faded labels. Sorting, row selection, filtering,
+//! fixed columns, tree data, lazy loading, and summary rows are not reproduced.
 
 use std::{
     cell::{Cell as BoundsCell, RefCell},
@@ -474,13 +476,17 @@ fn header_cell<T: 'static>(
 ) -> Div {
     let line = rgb(theme.border_lighter());
     let align = column.header_align.unwrap_or(column.align);
+    // Theme Chalk uses weight 600 in `--el-text-color-secondary`; native font
+    // stacks often have no semibold face, so 600 snapped to the regular face
+    // and the header read as plain, washed-out text. BOLD maps to the real bold
+    // face and the regular text color keeps the header above body text.
     let inner = div()
         .flex_1()
         .min_w_0()
         .px(px(tokens::spacing::DEFAULT))
         .line_height(px(23.))
-        .font_weight(gpui::FontWeight::SEMIBOLD)
-        .text_color(rgb(theme.secondary_text()));
+        .font_weight(gpui::FontWeight::BOLD)
+        .text_color(rgb(theme.regular_text()));
     let inner = match &column.header {
         Some(header) => justified(
             align,
