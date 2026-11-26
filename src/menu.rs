@@ -1,7 +1,8 @@
 use std::{
     collections::{HashMap, HashSet},
     rc::Rc,
-    time::Duration,
+    sync::OnceLock,
+    time::{Duration, Instant},
 };
 
 use gpui::{
@@ -18,11 +19,30 @@ use crate::{
 
 const MORE: &str = "\0gpui-el:more";
 const ITEM_HEIGHT: f32 = 56.;
-const HORIZONTAL_HEIGHT: f32 = 60.;
 const POPUP_ITEM_HEIGHT: f32 = 36.;
 const ITEM_PADDING: f32 = 20.;
 const COLLAPSED_WIDTH: f32 = 64.;
 const POPUP_MIN_WIDTH: f32 = 200.;
+/// Submenu expand/collapse duration, like Theme Chalk's `el-zoom-in-center`.
+const EXPAND_SECS: f64 = 0.3;
+
+static EPOCH: OnceLock<Instant> = OnceLock::new();
+
+fn epoch_secs() -> f64 {
+    EPOCH.get_or_init(Instant::now).elapsed().as_secs_f64()
+}
+
+fn ease_out_cubic(t: f32) -> f32 {
+    1. - (1. - t).powi(3)
+}
+
+/// One in-flight submenu expand or collapse animation in a vertical menu.
+#[derive(Clone, Copy)]
+struct Expand {
+    started: f64,
+    opening: bool,
+}
+const HORIZONTAL_HEIGHT: f32 = 60.;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum MenuMode {
@@ -213,8 +233,24 @@ pub struct MenuState {
     width: Option<Pixels>,
     pending: HashMap<SharedString, Task<()>>,
     unique_opened: bool,
+    /// Last measured natural heights of vertical submenu content, for animation.
+    bodies: HashMap<SharedString, f32>,
+    /// In-flight expand/collapse animations for vertical submenus.
+    animating: HashMap<SharedString, Expand>,
 }
 impl MenuState {
+    /// Records an expand/collapse animation for a vertical submenu branch.
+    fn animate(&mut self, key: &SharedString, opening: bool) {
+        if !self.popup {
+            self.animating.insert(
+                key.clone(),
+                Expand {
+                    started: epoch_secs(),
+                    opening,
+                },
+            );
+        }
+    }
     pub fn active_index(&self) -> Option<&str> {
         self.active.as_deref()
     }
@@ -228,18 +264,21 @@ impl MenuState {
                 self.opened.retain(|key| path.contains(key));
             }
             self.opened.extend(path);
+            self.animate(&index.into(), true);
             self.focus_request = None;
             window.refresh();
         }
     }
     pub fn close(&mut self, index: &str, window: &mut Window) {
-        self.opened.remove(index);
+        let index: SharedString = index.into();
+        self.opened.remove(&index);
+        self.animate(&index, false);
         if self.popup {
             self.opened.retain(|key| {
                 !self
                     .branches
                     .get(key)
-                    .is_some_and(|path| path.iter().any(|part| part.as_ref() == index))
+                    .is_some_and(|path| path.iter().any(|part| part == &index))
             });
         }
         self.pending.clear();
@@ -1052,14 +1091,26 @@ impl Frame {
                     return false;
                 }
                 s.focus_request = None;
-                if self.options.unique || self.options.popup() {
+                if self.options.unique || s.popup {
+                    // Animate the branches that exclusivity closes.
+                    let closed: Vec<_> = s
+                        .opened
+                        .iter()
+                        .filter(|other| !path.contains(other))
+                        .cloned()
+                        .collect();
+                    for other in &closed {
+                        s.animate(other, false);
+                    }
                     s.opened.retain(|other| path.contains(other));
                     s.pending.retain(|other, _| path.contains(other));
                 }
+                s.animate(key, true);
                 s.opened.insert(key.clone())
             } else if s.opened.remove(key) {
                 s.focus_request = None;
-                if self.options.popup() {
+                s.animate(key, false);
+                if s.popup {
                     s.opened.retain(|other| !s.branches[other].contains(key));
                     s.pending
                         .retain(|other, _| !s.branches.get(other).is_some_and(|p| p.contains(key)));
@@ -1092,6 +1143,9 @@ impl Frame {
         });
         let events: Vec<_> = list.iter().filter_map(|key| self.event(key, cx)).collect();
         self.state.update(cx, |s, _| {
+            for key in &list {
+                s.animate(key, false);
+            }
             s.pending.clear();
             s.opened.clear();
             s.focus_request = None;
@@ -1505,18 +1559,72 @@ impl Frame {
             });
         }
         if !self.options.popup() {
-            return div()
-                .flex()
-                .flex_col()
-                .child(row)
-                .when(open, |el| {
-                    el.children(
-                        node.children
-                            .iter()
-                            .map(|n| self.draw(n, depth + 1, false, cx)),
-                    )
-                })
-                .into_any_element();
+            let mut container = div().flex().flex_col().child(row);
+            let anim = self.state.read(cx).animating.get(key).copied();
+            if open || anim.is_some() {
+                let key = key.clone();
+                let state = self.state.clone();
+                let reduced = Theme::motion_reduced(cx);
+                let progress = match anim {
+                    Some(anim) if !reduced => {
+                        let t = ((epoch_secs() - anim.started) / EXPAND_SECS).clamp(0., 1.) as f32;
+                        if anim.opening {
+                            ease_out_cubic(t)
+                        } else {
+                            1. - ease_out_cubic(t)
+                        }
+                    }
+                    _ => 1.,
+                };
+                let natural = self.state.read(cx).bodies.get(&key).copied();
+                // Until the body is measured it renders closed, so the first
+                // frame measures its natural height without flashing open.
+                let shown = natural.map(|natural| natural * progress).unwrap_or(0.);
+                container = container.child(
+                    div().flex_none().overflow_hidden().h(px(shown)).child(
+                        div()
+                            .relative()
+                            .children(
+                                node.children
+                                    .iter()
+                                    .map(|n| self.draw(n, depth + 1, false, cx)),
+                            )
+                            .child(
+                                gpui::canvas(
+                                    move |bounds, window, cx| {
+                                        let height = f32::from(bounds.size.height);
+                                        let reduced = Theme::motion_reduced(cx);
+                                        let mut finished = false;
+                                        state.update(cx, |s, _| {
+                                            if s.bodies.get(&key) != Some(&height) {
+                                                s.bodies.insert(key.clone(), height);
+                                            }
+                                            let done =
+                                                s.animating.get(&key).is_some_and(|expand| {
+                                                    reduced
+                                                        || (epoch_secs() - expand.started)
+                                                            >= EXPAND_SECS
+                                                });
+                                            if done {
+                                                s.animating.remove(&key);
+                                                finished = true;
+                                            }
+                                        });
+                                        if finished {
+                                            window.refresh();
+                                        } else if state.read(cx).animating.contains_key(&key) {
+                                            window.request_animation_frame();
+                                        }
+                                    },
+                                    |_, _, _, _| {},
+                                )
+                                .absolute()
+                                .inset_0(),
+                            ),
+                    ),
+                );
+            }
+            return container.into_any_element();
         }
         let prior = state.bounds.get(key).copied();
         let wrapper = div().relative().flex().flex_shrink_0().child(row).child(
@@ -1941,5 +2049,96 @@ mod tests {
         assert_eq!(overflow_at(&widths, px(200.), px(40.)), 3);
         assert_eq!(overflow_at(&widths, px(139.), px(40.)), 1);
         assert_eq!(overflow_at(&widths, px(60.), px(40.)), 0);
+    }
+
+    #[gpui::test]
+    fn clipped_container_still_measures_natural_height(cx: &mut gpui::TestAppContext) {
+        use std::{cell::Cell, rc::Rc};
+
+        struct Probe(Rc<Cell<f32>>);
+        impl gpui::Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let height = self.0.clone();
+                div().h(px(0.)).overflow_hidden().child(
+                    div()
+                        .relative()
+                        .child(div().h(px(46.)).child("content"))
+                        .child(
+                            gpui::canvas(
+                                move |bounds, _, _| height.set(f32::from(bounds.size.height)),
+                                |_, _, _, _| {},
+                            )
+                            .absolute()
+                            .inset_0(),
+                        ),
+                )
+            }
+        }
+        let height = Rc::new(Cell::new(0.));
+        let (_, view) = cx.add_window_view({
+            let height = height.clone();
+            move |_, _| Probe(height)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(height.get(), 46., "inner block keeps its natural height");
+    }
+
+    #[gpui::test]
+    fn vertical_submenu_expand_measures_body_and_settles(cx: &mut gpui::TestAppContext) {
+        struct Vertical {
+            state: Entity<MenuState>,
+        }
+        impl gpui::Render for Vertical {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div().id("menu-test").tab_group().size_full().child(
+                    el_menu()
+                        .state(&self.state)
+                        .entry(el_menu_item("home", "Home"))
+                        .entry(
+                            el_sub_menu("one", "One")
+                                .entry(el_menu_item("one-a", "Item A"))
+                                .entry(el_menu_item("one-b", "Item B")),
+                        ),
+                )
+            }
+        }
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        let (_, view) = cx.add_window_view({
+            let state = state.clone();
+            move |_, cx| {
+                cx.set_reduce_motion(true);
+                Vertical { state }
+            }
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // The submenu title is the second 56 px row.
+        view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.update(|_, cx| {
+            assert!(state.read(cx).is_open("one"));
+            let measured = state
+                .read(cx)
+                .bodies
+                .get(&SharedString::from("one"))
+                .copied();
+            assert!(
+                measured.is_some_and(|height| height > 0.),
+                "submenu body is measured while expanded"
+            );
+            assert!(
+                state.read(cx).animating.is_empty(),
+                "the expand animation settles"
+            );
+        });
+        // Collapsing keeps the body mounted until the animation finishes.
+        view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
+        view.update(|_, cx| assert!(!state.read(cx).is_open("one")));
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.update(|_, cx| {
+            assert!(
+                state.read(cx).animating.is_empty(),
+                "the collapse animation settles"
+            );
+        });
     }
 }

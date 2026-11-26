@@ -68,9 +68,10 @@
 //! Menu follows the Element Plus `menu.md`, `components/menu/src`, and
 //! Theme Chalk `menu.scss` baseline. Native differences: there is no Vue
 //! router, DOM teleport, CSS class, or persistent DOM. `popup_style` overrides
-//! submenu surfaces via GPUI; collapse and popup visibility change immediately
-//! rather than reproducing CSS enter/exit transitions. Horizontal width is
-//! measured from the menu itself and overflow is updated after layout.
+//! submenu surfaces via GPUI; vertical submenu expand and collapse animate
+//! their measured height over 300 ms like `el-zoom-in-center`, while popup
+//! visibility still changes immediately. Horizontal width is measured from the
+//! menu itself and overflow is updated after layout.
 //!
 //! Button styles were checked against Element Plus Theme Chalk's `button.scss`,
 //! `mixins/_button.scss`, and light/dark variables. The native sample switches
