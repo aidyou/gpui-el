@@ -1,8 +1,9 @@
 //! Frame-cost probe for the gallery example.
 //!
-//! GPUI 0.3.14 renders the whole view tree on every draw, no matter which
-//! entity notified (`tests/view_scope.rs` pins that behaviour), so this probe
-//! measures the cost of a whole-page rebuild rather than of a single widget.
+//! A full draw still lays out and paints the page. gpui-fast keeps the rendered
+//! tree between frames, so this probe measures a dirty-view rebuild plus the
+//! frame's layout/paint rather than the whole tree rebuild gpui 0.3.14 did
+//! (`tests/view_scope.rs` pins the notification scope).
 //!
 //! Run it with:
 //!

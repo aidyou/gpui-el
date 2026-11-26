@@ -1210,7 +1210,12 @@ impl RenderOnce for Menu {
                     move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
                         if state.read(cx).width != Some(bounds.size.width) {
                             state.update(cx, |s, _| s.width = Some(bounds.size.width));
-                            window.on_next_frame(|window, _| window.refresh());
+                            // Repainting alone is not enough: the overflow split
+                            // runs in render, so the owning view has to rebuild
+                            // its element tree before the new width is visible.
+                            let owner = window.current_view();
+                            cx.notify(owner);
+                            window.refresh();
                         }
                     },
                     |_, _, _, _| {},

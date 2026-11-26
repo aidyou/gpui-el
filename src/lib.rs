@@ -7,10 +7,10 @@
 //! let compact = el_button().label("Save").primary().round().small().font_size(13.0);
 //! ```
 //!
-//! This crate uses the crates.io `gpui-pre` package (`0.3.14`, library name
+//! This crate uses the crates.io `gpui-fast` package (`0.1.19`, library name
 //! `gpui`). Host applications must use the same GPUI package and version for
 //! shared types such as `Window` and `App`. The gallery uses the matching
-//! `gpui-pre-platform` desktop backend.
+//! `gpui-fast-platform` desktop backend.
 //!
 //! From the package source, run `cargo run --example gallery`. The example
 //! needs a graphical desktop session and GPUI's native libraries. On Linux,

@@ -9,10 +9,10 @@
 ```toml
 [dependencies]
 gpui-el = { path = "../gpui-el" }
-gpui = { package = "gpui-pre", version = "=0.3.14" }
+gpui = { package = "gpui-fast", version = "=0.1.19" }
 ```
 
-宿主应使用相同来源和版本的 GPUI，避免 `App`、`Window` 等类型不兼容。展厅使用匹配的 `gpui-pre-platform`，在 Linux 构建中启用了 X11 和 Wayland。展厅需要可用的图形桌面会话和 GPUI 原生依赖；Linux 需要对应的图形、字体（如 FreeType）及窗口系统库（X11 路径包括 `libxcb.so.1`）。下面的命令在本仓库根目录执行：
+宿主应使用相同来源和版本的 GPUI，避免 `App`、`Window` 等类型不兼容。展厅使用匹配的 `gpui-fast-platform`，在 Linux 构建中启用了 X11 和 Wayland。展厅需要可用的图形桌面会话和 GPUI 原生依赖；Linux 需要对应的图形、字体（如 FreeType）及窗口系统库（X11 路径包括 `libxcb.so.1`）。下面的命令在本仓库根目录执行：
 
 ```bash
 cargo run --example gallery
@@ -42,12 +42,12 @@ cargo run --example gallery
 | 自动化检查 | 统一令牌与事件命名、拆分展厅后，重新执行了全目标测试（含展厅页面与图标等宽网格）和文档测试。Table 的文字选择、拖动不触发行点击、滚轮不带动外层容器均有回归用例；这里不把测试视为桌面实测。 |
 | 源码对照 | Button 参考 Theme Chalk 的 `button.scss`、`mixins/_button.scss` 与明暗变量；Menu 参考上游 `packages/components/menu/src/`、`menu.scss` 和 `menu.md`；Tag/CheckTag 参考 `tag.scss`、`check-tag.scss`、`common/var.scss` 的 `$tag-*` 令牌与 `tag.md`。图标目录参考上游 `docs/.vitepress/vitepress/components/globals/icons.vue`：等宽 `7 / 6 / 4 / 3 / 2` 列，普通格高 90 px，窄窗口 80 px；这是展厅布局，不是 `Icon` 的默认尺寸。 |
 | 已知差异或缺项 | Button 的指针状态颜色即时切换，未复刻上游 100 ms 过渡，禁用／加载的原生无障碍状态待补；Menu 的展开收起走 `Transition::Collapse`，默认桌面快速度（0.6 倍 ⇒ 120 ms），浮层淡入淡出与箭头旋转同步缩放，`normal()` 可恢复 Element Plus 的 1 倍时长；Table 多出原生文字选择与滚轮拦截，但选择仅限同一个表格内，行列选中、排序、固定列、树形与汇总行仍未实现；Loading 是局部遮罩，不是全局模态服务；Tag/CheckTag 挂载与卸载立即完成，不重放上游 `el-zoom-in-center`（故无 `disable-transitions`），CheckTag 额外支持键盘聚焦、可见焦点环与选中语义（GPUI 0.3.14 无 `aria_pressed`／`aria_disabled`，选中态用 selection 属性传达，禁用态仅靠拦截与光标）；完整的多组件组合演示未补齐。 |
-| 尚未验收 | 首提交准备环境缺少 `libxcb.so.1`，未完成干净桌面上的人工验收：自绘标题栏的双击缩放、八向拖拽改尺寸、右键窗口菜单、表格内滚轮归属与文字选择手感，都需在真实 X11/Wayland 会话复核；没有 `gpui-fast` 兼容结论，也没有在干净环境完成发布包验收。 |
+| 尚未验收 | 首提交准备环境缺少 `libxcb.so.1`，未完成干净桌面上的人工验收：自绘标题栏的双击缩放、八向拖拽改尺寸、右键窗口菜单、表格内滚轮归属与文字选择手感，都需在真实 X11/Wayland 会话复核；已切换到 `gpui-fast =0.1.19`（编译与测试通过），但尚未在真实图形会话验收动效推进、滚动缓存与窗口装饰手感，也没有在干净环境完成发布包验收。 |
 
 建议按以下顺序接手，可分批提交：
 
 1. **先建立回归基线。** 在具备原生依赖的环境运行下列开发检查。对 Button 核对鼠标／键盘状态和无障碍语义；Menu 已有关闭后清理焦点请求及横向溢出变化的回归用例，从现有用例出发补层间 hover、键盘进入与隐藏计时器竞争、浮层遮挡等边界，不重复实现现有行为。
-2. **补桌面对照。** 记录操作系统、后端、缩放、字体和语言；检查标题栏、剪贴板、高 DPI、长中文、减少动态效果，以及图标搜索的输入法、键盘、拖动选区和复制。对照上游时保存相同主题、内容和逻辑视口的结果。`gpui-fast` 是独立兼容目标，须在实际 Linux 宿主确认 GPUI 类型兼容与滚动缓存中的 Loading 动效推进，不以默认展厅的结果代替。
+2. **补桌面对照。** 记录操作系统、后端、缩放、字体和语言；检查标题栏、剪贴板、高 DPI、长中文、减少动态效果，以及图标搜索的输入法、键盘、拖动选区和复制。对照上游时保存相同主题、内容和逻辑视口的结果。本库现在默认使用 `gpui-fast =0.1.19`，仍须在实际 Linux 宿主确认滚动缓存中的 Loading 动效推进、离场动画和减少动态效果的停止续帧，不以无界面测试的结果代替。
 3. **发布前补齐发布验收。** 补组合演示并核对双语表格和可复制源码；在干净的支持环境运行 `cargo package --list` 核对展厅源码、双语资源、文档和许可证，再运行 `cargo publish --dry-run`。不要把发布预演当成正式发布。
 
 ```bash

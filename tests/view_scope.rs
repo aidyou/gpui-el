@@ -1,16 +1,12 @@
 //! Pins how much work a GPUI frame rebuilds.
 //!
-//! GPUI 0.3.14 re-renders the whole view tree on every draw: it walks the root
-//! view down through `ChildView` elements and calls `Render::render` on every
-//! view, and `Window::mark_view_dirty` additionally marks *ancestors* of a
-//! notified entity, so a notification from a deeply nested view still dirties
-//! the root. Splitting a page into child views therefore does not shrink the
-//! per-frame work of this crate's gallery; only `Entity::cached` (which needs a
-//! definite size and freezes the subtree) skips a rebuild.
-//!
-//! Keep this test as the reason the gallery stays a single view. If a GPUI
-//! upgrade makes child views lazy, this test fails and the trade-off can be
-//! revisited.
+//! gpui-fast keeps the rendered tree between frames: an idle draw rebuilds
+//! nothing, and notifying a view rebuilds that view only, not its siblings or
+//! ancestors. The gpui 0.3.14 engine this crate started on did the opposite, so
+//! the gallery was built as a single view where splitting it up bought nothing.
+//! With this engine a page split would shrink per-frame work, but the gallery
+//! has not been restructured yet. Keep this test so the cost model stays
+//! visible when the engine changes again.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -44,7 +40,7 @@ impl Render for Parent {
 }
 
 #[gpui::test]
-fn notify_scope_does_not_shrink_a_frame(cx: &mut gpui::TestAppContext) {
+fn notifications_rebuild_only_their_own_view(cx: &mut gpui::TestAppContext) {
     let parent_renders = Rc::new(Cell::new(0));
     let a_renders = Rc::new(Cell::new(0));
     let b_renders = Rc::new(Cell::new(0));
@@ -72,22 +68,30 @@ fn notify_scope_does_not_shrink_a_frame(cx: &mut gpui::TestAppContext) {
     let b_before = b_renders.get();
     assert!(parent_before > 0 && a_before > 0 && b_before > 0);
 
-    // A draw with no state change still rebuilds every view.
-    view.update(|window, cx| window.draw(cx).clear(cx));
-    let idle_step = parent_renders.get() - parent_before;
-    assert!(idle_step > 0, "an idle draw rebuilt nothing");
-    assert_eq!(a_renders.get() - a_before, idle_step);
-    assert_eq!(b_renders.get() - b_before, idle_step);
+    // A draw with no state change reuses the retained tree.
+    for _ in 0..2 {
+        view.update(|window, cx| window.draw(cx).clear(cx));
+    }
+    assert_eq!(
+        parent_renders.get(),
+        parent_before,
+        "an idle draw rebuilt the parent"
+    );
+    assert_eq!(a_renders.get(), a_before, "an idle draw rebuilt a leaf");
+    assert_eq!(b_renders.get(), b_before, "an idle draw rebuilt a leaf");
 
-    // Notifying one leaf rebuilds everything as well: the leaf, its sibling and
-    // the parent view that owns both.
+    // Notifying one leaf rebuilds that view only: not the sibling, not the
+    // parent that rendered both of them.
     let a = handles.borrow().clone().unwrap();
     view.update(|_, cx| a.update(cx, |_, cx| cx.notify()));
-    view.update(|window, cx| window.draw(cx).clear(cx));
-    let a_after = a_renders.get();
-    let b_after = b_renders.get();
-    let parent_after = parent_renders.get();
-    assert!(a_after - a_before > idle_step);
-    assert_eq!(b_after - b_before, a_after - a_before);
-    assert_eq!(parent_after - parent_before, a_after - a_before);
+    for _ in 0..2 {
+        view.update(|window, cx| window.draw(cx).clear(cx));
+    }
+    assert_eq!(
+        a_renders.get(),
+        a_before + 1,
+        "the notified view should rebuild once"
+    );
+    assert_eq!(b_renders.get(), b_before, "the sibling rebuilt");
+    assert_eq!(parent_renders.get(), parent_before, "the parent rebuilt");
 }

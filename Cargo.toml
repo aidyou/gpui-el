@@ -10,13 +10,13 @@ categories = ["gui"]
 include = ["/src/**", "/examples/**", "/i18n/**", "/README.md", "/CONSTITUTION.md", "/COMPONENT_EXCLUSIONS.md", "/LICENSE", "/Cargo.toml", "/build.rs"]
 
 [dependencies]
-gpui = { package = "gpui-pre", version = "=0.3.14" }
+gpui = { package = "gpui-fast", version = "=0.1.19" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 
 [dev-dependencies]
-gpui = { package = "gpui-pre", version = "=0.3.14", features = ["test-support"] }
-gpui_platform = { package = "gpui-pre-platform", version = "=0.3.14", features = ["x11", "wayland"] }
+gpui = { package = "gpui-fast", version = "=0.1.19", features = ["test-support"] }
+gpui_platform = { package = "gpui-fast-platform", version = "=0.1.19", features = ["x11", "wayland"] }
 unicode-segmentation = "1"
 
 [profile.dev.package."*"]
