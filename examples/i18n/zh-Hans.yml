@@ -1,4 +1,5 @@
 basics: 基础
+data: 数据展示
 navigation: 导航
 feedback: 反馈
 button_intro: 用按钮触发操作。试用不同样式、尺寸、图标与键盘操作。
@@ -10,6 +11,7 @@ container_intro: 嵌套容器来组织顶栏、侧栏、主内容和底栏。
 layout_intro: 用响应式的 24 列栅格组织内容。
 link_intro: 用不同语义颜色的文字链接触发操作或打开 URL。
 space_intro: 为相邻元素设置间距和对齐方式。
+table_intro: 用条纹、边框、固定表头和状态色展示类型化的行列数据。
 tag_intro: 用标签标记内容，或用可选择标签切换选中状态。
 menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
 loading_intro: 在指定区域显示加载提示，不影响窗口内其他区域的操作。
@@ -54,6 +56,7 @@ container_page: Container 布局容器
 layout_page: Layout 布局
 link_page: Link 文字链接
 space_page: Space 间距
+table_page: Table 表格
 tag_page: Tag 标签
 menu_page: Menu 菜单
 loading_page: Loading 加载
@@ -66,6 +69,15 @@ specific_icons: 为单个图标指定图标库或字体
 container_title: 容器区域
 space_title: 间距与换行
 space_presets: 常用间距
+table_basic: 基础表格
+table_stripe: 条纹与边框
+table_fixed: 固定表头
+table_status: 状态行
+table_empty_section: 空状态
+table_date: 日期
+table_name: 姓名
+table_address: 地址
+table_empty: 暂无数据
 link_basic: 基础用法
 link_disabled: 禁用状态
 link_underline: 下划线

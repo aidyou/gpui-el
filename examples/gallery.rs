@@ -6,7 +6,7 @@ use gpui::{
 };
 use gpui_el::{
     Direction, IconPack, Locale, MenuEvent, MenuMode, MenuTrigger, Theme, el_aside, el_container,
-    el_init, el_main, el_menu, el_menu_item, el_menu_item_group, tokens,
+    el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
 };
 
 #[path = "gallery/api.rs"]
@@ -66,13 +66,14 @@ enum Page {
     Layout,
     Link,
     Space,
+    Table,
     Tag,
     Menu,
     Loading,
 }
 
 impl Page {
-    const ALL: [Self; 10] = [
+    const ALL: [Self; 11] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -80,6 +81,7 @@ impl Page {
         Self::Layout,
         Self::Link,
         Self::Space,
+        Self::Table,
         Self::Tag,
         Self::Menu,
         Self::Loading,
@@ -94,6 +96,7 @@ impl Page {
             Self::Layout => &s.layout_intro,
             Self::Link => &s.link_intro,
             Self::Space => &s.space_intro,
+            Self::Table => &s.table_intro,
             Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
             Self::Loading => &s.loading_intro,
@@ -109,6 +112,7 @@ impl Page {
             Self::Layout => "layout",
             Self::Link => "link",
             Self::Space => "space",
+            Self::Table => "table",
             Self::Tag => "tag",
             Self::Menu => "menu",
             Self::Loading => "loading",
@@ -124,6 +128,7 @@ impl Page {
             Self::Layout => &s.layout_page,
             Self::Link => &s.link_page,
             Self::Space => &s.space_page,
+            Self::Table => &s.table_page,
             Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
             Self::Loading => &s.loading_page,
@@ -145,6 +150,7 @@ impl Page {
             Self::Layout => &["el-row", "el-col"],
             Self::Link => &["el-link"],
             Self::Space => &["el-space"],
+            Self::Table => &["el-table", "el-table-column"],
             Self::Tag => &["el-tag", "el-check-tag"],
             Self::Menu => &[
                 "el-menu",
@@ -194,7 +200,7 @@ impl Render for Gallery {
                     nav.border(false)
                         .entry(item(Page::Init))
                         .entry(
-                            el_menu_item_group(s.basics.as_str()).items(
+                            el_sub_menu("basics", s.basics.as_str()).entries(
                                 [
                                     Page::Button,
                                     Page::Icon,
@@ -202,13 +208,21 @@ impl Render for Gallery {
                                     Page::Layout,
                                     Page::Link,
                                     Page::Space,
-                                    Page::Tag,
                                 ]
                                 .map(item),
                             ),
                         )
-                        .entry(el_menu_item_group(s.navigation.as_str()).item(item(Page::Menu)))
-                        .entry(el_menu_item_group(s.feedback.as_str()).item(item(Page::Loading))),
+                        .entry(
+                            el_sub_menu("data", s.data.as_str())
+                                .entries([Page::Table, Page::Tag].map(item)),
+                        )
+                        .entry(
+                            el_sub_menu("navigation", s.navigation.as_str())
+                                .entry(item(Page::Menu)),
+                        )
+                        .entry(
+                            el_sub_menu("feedback", s.feedback.as_str()).entry(item(Page::Loading)),
+                        ),
                 )
                 .into_any_element()
         };
@@ -220,6 +234,7 @@ impl Render for Gallery {
             Page::Layout => self.grids(s, cx),
             Page::Link => self.links(s, cx),
             Page::Space => self.spaces(s, cx),
+            Page::Table => self.tables(s, cx),
             Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),
             Page::Loading => self.loading(s, cx),

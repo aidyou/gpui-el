@@ -287,6 +287,68 @@ const LINK: &[Row] = &[
         "禁止触发、打开 URL 和悬停变色。",
     ),
 ];
+const TABLE: &[Row] = &[
+    (
+        "Table::new(rows)",
+        "IntoIterator<Item = T>",
+        "Creates a table over typed rows; columns describe how each row renders.",
+        "用类型化行数据创建表格；列决定每一行的渲染方式。",
+    ),
+    (
+        "Table::column, Column::new",
+        "Column<T> · []",
+        "Adds a column. Columns share leftover space equally unless given a width or min_width.",
+        "添加列。未设置宽度或最小宽度的列均分剩余空间。",
+    ),
+    (
+        "Column::width, min_width",
+        "f32 · —",
+        "Fixes a column width, or sets a minimum so leftover space is distributed proportionally.",
+        "固定列宽，或设置最小宽度并按其比例分配剩余空间。",
+    ),
+    (
+        "Column::text, render, header",
+        "Fn(&T, usize) / Fn(&T, usize) → Element / Fn() → Element",
+        "Cell text, custom cell content, and custom header content. Text wraps with the column alignment.",
+        "单元格文字、自定义单元格内容和自定义表头内容；文字按列对齐方式换行。",
+    ),
+    (
+        "Column::align, header_align",
+        "TableAlign · Left",
+        "Aligns cells, and the header separately when given.",
+        "设置单元格对齐；表头可单独设置。",
+    ),
+    (
+        "Table::stripe, border, size, show_header",
+        "bool / bool / TableSize / bool · false / false / Default / true",
+        "Row stripes, vertical borders, cell density, and header visibility.",
+        "行条纹、竖向边框、密度与表头显隐。",
+    ),
+    (
+        "Table::height, max_height",
+        "f32 · —",
+        "Fixes or caps the table height; the header stays while the body scrolls.",
+        "固定或限制表格高度；表头保持可见，主体滚动。",
+    ),
+    (
+        "Table::empty_text, empty",
+        "SharedString / IntoElement · No Data",
+        "Sets the empty state shown when there are no rows.",
+        "无数据时显示的空状态。",
+    ),
+    (
+        "Table::row_background",
+        "Fn(&T, usize) → Option<Hsla> · —",
+        "Paints a status background for chosen rows, replacing upstream row-class-name.",
+        "为指定行绘制状态底色，替代上游的 row-class-name。",
+    ),
+];
+const TABLE_EVENTS: &[Row] = &[(
+    "Table::onrowclick",
+    "&T, usize, &ClickEvent, &mut Window, &mut App",
+    "Activates a row; reports the row data and its index.",
+    "点击某行时触发；上报行数据与索引。",
+)];
 const SPACE: &[Row] = &[
     (
         "el_space(), Space::new, child, children",
@@ -624,6 +686,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Layout => (LAYOUT, &[]),
         Page::Link => (LINK, LINK_EVENTS),
         Page::Space => (SPACE, &[]),
+        Page::Table => (TABLE, TABLE_EVENTS),
         Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
