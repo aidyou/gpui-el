@@ -7,6 +7,15 @@
 //! let compact = el_button().label("Save").primary().round().small().font_size(13.0);
 //! ```
 //!
+//! # Errors
+//!
+//! Component code never panics on widget input: an unknown icon name draws
+//! nothing, malformed sizes fall back to defaults, and a locale that fails to
+//! parse uses the embedded English messages. Setup calls return
+//! [`Result`] with the library's own [`Error`]; whether a failure is fatal is
+//! the application's decision. Library sources are compiled with `unwrap`,
+//! `expect`, `panic!` and index slicing denied outside tests.
+//!
 //! This crate uses the crates.io `gpui-fast` package (`0.1.19`, library name
 //! `gpui`). Host applications must use the same GPUI package and version for
 //! shared types such as `Window` and `App`. The gallery uses the matching
@@ -151,7 +160,21 @@
 //! or with `always` without the upstream fade. The wheel is stopped at the
 //! viewport like the other scroll containers.
 
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::unreachable,
+        clippy::todo,
+        clippy::unimplemented,
+        clippy::indexing_slicing,
+    )
+)]
+
 mod button;
+mod error;
 mod grid;
 mod icon;
 mod layout;
@@ -172,6 +195,7 @@ pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
     el_button_group,
 };
+pub use error::{Error, Result};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};
 pub use layout::{
@@ -204,15 +228,17 @@ pub fn init(
     locale: Locale,
     icons: IconPack,
     fonts: &[&'static [u8]],
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<()> {
     if !fonts.is_empty() {
-        cx.text_system().add_fonts(
-            fonts
-                .iter()
-                .copied()
-                .map(std::borrow::Cow::Borrowed)
-                .collect(),
-        )?;
+        cx.text_system()
+            .add_fonts(
+                fonts
+                    .iter()
+                    .copied()
+                    .map(std::borrow::Cow::Borrowed)
+                    .collect(),
+            )
+            .map_err(Error::font)?;
     }
     icons.set(cx)?;
     locale.set(cx);
@@ -220,7 +246,7 @@ pub fn init(
 }
 
 /// Configures the locale, default icon pack, and optional custom font bytes.
-/// Call from `Application::run` and handle the returned `Result`.
+/// Call from `Application::run` and handle the returned [`Result`].
 #[macro_export]
 macro_rules! el_init {
     ($cx:expr, locale: $locale:expr, icons: $icons:expr $(, fonts: [$($font:expr),* $(,)?])? $(,)?) => {

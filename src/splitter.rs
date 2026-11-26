@@ -190,23 +190,33 @@ impl Handlers {
 /// Moves `offset` pixels between two adjacent panels, honoring their limits.
 /// Returns the offset that could actually be applied.
 fn drag_sizes(sizes: &mut [f32], index: usize, offset: f32, limits: &[(f32, f32)]) -> f32 {
-    let (min_a, max_a) = limits[index];
-    let (min_b, max_b) = limits[index + 1];
+    let (Some(&(min_a, max_a)), Some(&(min_b, max_b))) =
+        (limits.get(index), limits.get(index + 1))
+    else {
+        return 0.;
+    };
+    let Some(mid) = index.checked_add(1).filter(|mid| *mid < sizes.len()) else {
+        return 0.;
+    };
+    let (head, tail) = sizes.split_at_mut(mid);
+    let (Some(a), Some(b)) = (head.get_mut(index), tail.first_mut()) else {
+        return 0.;
+    };
     let mut applied = offset;
-    if sizes[index] + applied < min_a {
-        applied = min_a - sizes[index];
+    if *a + applied < min_a {
+        applied = min_a - *a;
     }
-    if sizes[index + 1] - applied < min_b {
-        applied = sizes[index + 1] - min_b;
+    if *b - applied < min_b {
+        applied = *b - min_b;
     }
-    if sizes[index] + applied > max_a {
-        applied = max_a - sizes[index];
+    if *a + applied > max_a {
+        applied = max_a - *a;
     }
-    if sizes[index + 1] - applied > max_b {
-        applied = sizes[index + 1] - max_b;
+    if *b - applied > max_b {
+        applied = *b - max_b;
     }
-    sizes[index] += applied;
-    sizes[index + 1] -= applied;
+    *a += applied;
+    *b -= applied;
     applied
 }
 
@@ -228,17 +238,35 @@ fn collapse_sizes(
     } else {
         index
     };
-    let current_size = sizes[current];
-    let target_size = sizes[target];
+    let (Some(current_size), Some(target_size)) =
+        (sizes.get(current).copied(), sizes.get(target).copied())
+    else {
+        return;
+    };
     if current_size != 0. && target_size != 0. {
-        sizes[current] = 0.;
-        sizes[target] += current_size;
-        collapsed[index] = Some(current_size);
+        if let Some(size) = sizes.get_mut(current) {
+            *size = 0.;
+        }
+        if let Some(size) = sizes.get_mut(target) {
+            *size += current_size;
+        }
+        if let Some(slot) = collapsed.get_mut(index) {
+            *slot = Some(current_size);
+        }
     } else {
         let total = current_size + target_size;
-        let restored = collapsed[index].unwrap_or(total / 2.).clamp(0., total);
-        sizes[target] = restored;
-        sizes[current] = total - restored;
+        let restored = collapsed
+            .get(index)
+            .copied()
+            .flatten()
+            .unwrap_or(total / 2.)
+            .clamp(0., total);
+        if let Some(size) = sizes.get_mut(target) {
+            *size = restored;
+        }
+        if let Some(size) = sizes.get_mut(current) {
+            *size = total - restored;
+        }
     }
 }
 
@@ -269,7 +297,10 @@ fn initial_sizes(explicit: &[Option<f32>], container: f32, limits: &[(f32, f32)]
     let mut sizes: Vec<f32> = explicit
         .iter()
         .enumerate()
-        .map(|(index, size)| size.unwrap_or(shared).clamp(limits[index].0, limits[index].1))
+        .map(|(index, size)| {
+            let (min, max) = limits.get(index).copied().unwrap_or((0., f32::MAX));
+            size.unwrap_or(shared).clamp(min, max)
+        })
         .collect();
     let sum: f32 = sizes.iter().copied().sum();
     if sum > container {
@@ -632,7 +663,7 @@ impl RenderOnce for Splitter {
             .min_h_0();
 
         for (index, panel) in self.panels.into_iter().enumerate() {
-            let sized = sizes.as_ref().map(|sizes| sizes[index]);
+            let sized = sizes.as_ref().and_then(|sizes| sizes.get(index)).copied();
             root = root.child(
                 div()
                     .flex_none()
@@ -655,9 +686,10 @@ impl RenderOnce for Splitter {
                     group: group.clone(),
                     index,
                     horizontal,
-                    resizable: resizable[index] && resizable[index + 1],
-                    start_collapsible: collapsible[index],
-                    end_collapsible: collapsible[index + 1],
+                    resizable: resizable.get(index).copied().unwrap_or(false)
+                        && resizable.get(index + 1).copied().unwrap_or(false),
+                    start_collapsible: collapsible.get(index).copied().unwrap_or(false),
+                    end_collapsible: collapsible.get(index + 1).copied().unwrap_or(false),
                     lazy_offset,
                     line_color,
                     active_color,
@@ -783,6 +815,22 @@ mod tests {
         // Dragging back the other way.
         assert_eq!(drag_sizes(&mut sizes, 0, -400., &limits), -400.);
         assert_eq!(sizes, [100., 500.]);
+    }
+
+    #[test]
+    fn out_of_range_drags_and_collapses_are_ignored() {
+        // Widget input can disagree with the panel count; a bad index must
+        // leave the layout untouched instead of panicking.
+        let mut sizes = [100.];
+        assert_eq!(drag_sizes(&mut sizes, 0, 10., &[(0., 500.)]), 0.);
+        assert_eq!(sizes, [100.]);
+        let mut sizes = [100., 100.];
+        assert_eq!(drag_sizes(&mut sizes, 5, 10., &[(0., 500.), (0., 500.)]), 0.);
+        assert_eq!(sizes, [100., 100.]);
+        let mut collapsed = [None];
+        collapse_sizes(&mut sizes, &mut collapsed, 4, SplitterSide::Start);
+        assert_eq!(sizes, [100., 100.]);
+        assert_eq!(collapsed, [None]);
     }
 
     #[test]

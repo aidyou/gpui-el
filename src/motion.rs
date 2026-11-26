@@ -109,7 +109,12 @@ pub(crate) fn linear(x: f32) -> f32 {
 }
 
 /// Position within each revolution of a continuous animation, 0 up to 1.
+/// A non-positive period has no phase, so the animation rests at its start
+/// instead of producing NaN.
 pub(crate) fn turn_phase(elapsed: f64, period: f64) -> f32 {
+    if !period.is_finite() || period <= 0. {
+        return 0.;
+    }
     (elapsed % period / period) as f32
 }
 

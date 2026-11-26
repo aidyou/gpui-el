@@ -1088,8 +1088,11 @@ impl RenderOnce for Menu {
             s.branches = branches;
             if popup {
                 let opened = s.opened.clone();
-                s.opened
-                    .retain(|key| s.branches[key].iter().all(|part| opened.contains(part)));
+                s.opened.retain(|key| {
+                    s.branches
+                        .get(key)
+                        .is_some_and(|parts| parts.iter().all(|part| opened.contains(part)))
+                });
             }
             s.popup_bounds.clear();
             s.focus.retain(|key, _| s.paths.contains_key(key));
@@ -1336,11 +1339,10 @@ impl Frame {
         };
         let changed = self.state.update(cx, |s, _| {
             if open {
-                if s.opened.contains(key)
-                    || !path[..path.len() - 1]
-                        .iter()
-                        .all(|part| s.opened.contains(part))
-                {
+                let parents_open = path
+                    .split_last()
+                    .is_none_or(|(_, parents)| parents.iter().all(|part| s.opened.contains(part)));
+                if s.opened.contains(key) || !parents_open {
                     return false;
                 }
                 s.focus_request = None;
@@ -1364,7 +1366,11 @@ impl Frame {
                 s.focus_request = None;
                 s.animate(key, false);
                 if s.popup {
-                    s.opened.retain(|other| !s.branches[other].contains(key));
+                    s.opened.retain(|other| {
+                        !s.branches
+                            .get(other)
+                            .is_some_and(|parts| parts.contains(key))
+                    });
                     s.pending
                         .retain(|other, _| !s.branches.get(other).is_some_and(|p| p.contains(key)));
                 }
@@ -1563,13 +1569,12 @@ impl Frame {
     }
     fn key(&self, key: &SharedString, pressed: &str, window: &mut Window, cx: &mut App) -> bool {
         let rows = visible_rows(&self.roots, &self.state.read(cx).opened, None);
-        let Some(index) = rows
+        let Some(row) = rows
             .iter()
-            .position(|row| !row.disabled && &row.index == key)
+            .find(|row| !row.disabled && &row.index == key)
         else {
             return false;
         };
-        let row = &rows[index];
         let at_horizontal = self.options.horizontal() && row.parent.is_none();
         let neighbors: Vec<_> = rows
             .iter()
@@ -1930,7 +1935,10 @@ impl Frame {
     ) -> AnyElement {
         let key = node.index.clone();
         let popup_id: SharedString = format!("\u{1}{key}").into();
-        let branch = node.branch.as_ref().expect("popup branch");
+        // Only branch nodes float a popup; a leaf reached here has none to draw.
+        let Some(branch) = node.branch.as_ref() else {
+            return div().into_any_element();
+        };
         let offset = px(branch.offset.unwrap_or(self.options.offset));
         let metrics = self.options.metrics;
         let fade_secs = self

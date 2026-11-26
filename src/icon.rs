@@ -13,20 +13,21 @@ fn element_plus(name: &str) -> Option<&'static [u8]> {
     ELEMENT_PLUS
         .binary_search_by_key(&name, |(key, _)| *key)
         .ok()
-        .map(|i| ELEMENT_PLUS[i].1)
+        .and_then(|i| ELEMENT_PLUS.get(i))
+        .map(|(_, bytes)| *bytes)
 }
 
 fn tabler_glyphs() -> &'static BTreeMap<&'static str, char> {
     static GLYPHS: OnceLock<BTreeMap<&str, char>> = OnceLock::new();
+    // A malformed line in the embedded table is skipped rather than aborting
+    // the application; the tests pin that the shipped table parses cleanly.
     GLYPHS.get_or_init(|| {
         include_str!("icons/tabler/codepoints.tsv")
             .lines()
-            .map(|line| {
-                let (name, code) = line.split_once('\t').expect("embedded Tabler mapping");
-                let glyph =
-                    char::from_u32(u32::from_str_radix(code, 16).expect("Tabler codepoint"))
-                        .expect("valid Tabler codepoint");
-                (name, glyph)
+            .filter_map(|line| {
+                let (name, code) = line.split_once('\t')?;
+                let glyph = char::from_u32(u32::from_str_radix(code.trim(), 16).ok()?)?;
+                Some((name, glyph))
             })
             .collect()
     })
@@ -44,17 +45,19 @@ fn normalized_name(name: SharedString) -> SharedString {
     }
     let mut key = String::with_capacity(name.len());
     let chars: Vec<_> = name.chars().collect();
+    let mut previous = None;
     for (i, &c) in chars.iter().enumerate() {
-        if c.is_ascii_uppercase()
-            && i > 0
-            && (chars[i - 1].is_ascii_lowercase()
-                || chars[i - 1].is_ascii_digit()
-                || (chars[i - 1].is_ascii_uppercase()
-                    && chars.get(i + 1).is_some_and(char::is_ascii_lowercase)))
-        {
+        let boundary = previous.is_some_and(|p: char| {
+            p.is_ascii_lowercase()
+                || p.is_ascii_digit()
+                || (p.is_ascii_uppercase()
+                    && chars.get(i + 1).is_some_and(char::is_ascii_lowercase))
+        });
+        if c.is_ascii_uppercase() && boundary {
             key.push('-');
         }
         key.push(c.to_ascii_lowercase());
+        previous = Some(c);
     }
     key.into()
 }
@@ -76,7 +79,7 @@ impl Global for TablerRegistered {}
 impl IconPack {
     /// Sets the application-wide preference and refreshes existing windows.
     /// Tabler is registered once per application. On error the preference is unchanged.
-    pub fn set(self, cx: &mut App) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn set(self, cx: &mut App) -> crate::Result<()> {
         if self == Self::Tabler {
             register_tabler(cx)?;
         }
@@ -99,7 +102,7 @@ impl IconPack {
     }
 }
 
-fn register_tabler(cx: &mut App) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+fn register_tabler(cx: &mut App) -> crate::Result<()> {
     if cx.try_global::<TablerRegistered>().is_none() {
         register_icon_font(cx, include_bytes!("icons/tabler/tabler-icons.ttf"))?;
         cx.set_global(TablerRegistered);
@@ -124,11 +127,11 @@ fn tabler_equivalent(name: &str) -> &str {
 
 /// Registers an application-supplied icon font once during GPUI startup.
 /// The family passed to [`Icon::from_font`] must match the font's internal name.
-pub fn register_icon_font(
-    cx: &App,
-    bytes: &'static [u8],
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    cx.text_system().add_fonts(vec![Cow::Borrowed(bytes)])?;
+/// A rejected font is reported as [`crate::Error::Font`].
+pub fn register_icon_font(cx: &App, bytes: &'static [u8]) -> crate::Result<()> {
+    cx.text_system()
+        .add_fonts(vec![Cow::Borrowed(bytes)])
+        .map_err(crate::Error::font)?;
     Ok(())
 }
 
@@ -349,6 +352,18 @@ mod tests {
             ));
             assert!(resolve_named("not-an-icon", None, cx).is_none());
         });
+    }
+
+    #[test]
+    fn embedded_tabler_table_maps_every_line() {
+        // The runtime parser skips malformed rows so a bad table can never
+        // abort a host application; this pins that the shipped table is whole.
+        let lines = include_str!("icons/tabler/codepoints.tsv")
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count();
+        assert!(lines > 5000, "unexpected table size: {lines}");
+        assert_eq!(tabler_glyphs().len(), lines);
     }
 
     #[test]

@@ -729,7 +729,11 @@ impl<T: 'static> RenderOnce for Table<T> {
                                 {
                                     return;
                                 }
-                                handler(&rows[row_index], row_index, event, window, cx);
+                                // Rows can change between render and click; a
+                                // vanished row has nothing left to activate.
+                                if let Some(row) = rows.get(row_index) {
+                                    handler(row, row_index, event, window, cx);
+                                }
                                 cx.stop_propagation();
                             })
                             .into_any_element()
