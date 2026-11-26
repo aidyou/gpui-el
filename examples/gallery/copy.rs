@@ -105,6 +105,8 @@ copy_fields!(
     menu_second,
     menu_language,
     menu_theme,
+    menu_light,
+    menu_dark,
     layout_header,
     layout_aside,
     layout_main,

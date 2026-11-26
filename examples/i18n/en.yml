@@ -91,6 +91,8 @@ menu_first: Overview
 menu_second: Settings
 menu_language: Language
 menu_theme: Theme
+menu_light: Light
+menu_dark: Dark
 layout_header: Header
 layout_aside: Aside
 layout_main: Main

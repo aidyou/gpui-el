@@ -91,6 +91,8 @@ menu_first: 概览
 menu_second: 设置
 menu_language: 语言
 menu_theme: 主题
+menu_light: 浅色
+menu_dark: 深色
 layout_header: 顶栏
 layout_aside: 侧栏
 layout_main: 主内容

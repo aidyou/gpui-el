@@ -66,12 +66,18 @@
 //! ```
 //!
 //! Menu follows the Element Plus `menu.md`, `components/menu/src`, and
-//! Theme Chalk `menu.scss` baseline. Native differences: there is no Vue
-//! router, DOM teleport, CSS class, or persistent DOM. `popup_style` overrides
-//! submenu surfaces via GPUI; vertical submenu expand and collapse animate
-//! through [`Transition`] like upstream's `ElCollapseTransition`, and popups
-//! fade like `el-zoom-in-center`. Horizontal width is measured from the menu
-//! itself and overflow is updated after layout.
+//! Theme Chalk `menu.scss` baseline, with desktop-native presets:
+//! [`MenuStyle::Element`] keeps the web metrics, while `Mac` (24 px rows, an
+//! inset rounded accent fill, white hover text) and `Kde` (28 px flush gray
+//! rows) are the compact defaults chosen per platform. `style`, `item_height`,
+//! `item_radius`, `item_inset`, `hover_color`, and `popup_padding` tune
+//! between them. Native differences: there is no Vue router, DOM teleport, CSS
+//! class, or persistent DOM. `popup_style` overrides submenu surfaces via
+//! GPUI; vertical submenu expand and collapse animate through [`Transition`]
+//! like upstream's `ElCollapseTransition`, popups fade like
+//! `el-zoom-in-center`, and floating submenus nest beside their parents to any
+//! depth, flipping at the window edge. Horizontal width is measured from the
+//! menu itself and overflow is updated after layout.
 //!
 //! [`Transition`] collects Theme Chalk's `el-fade-in`, `el-fade-in-linear`,
 //! `el-zoom-in-center`, `el-collapse-transition`, and
@@ -140,7 +146,7 @@ pub use loading::{Loading, LoadingMotion, LoadingSpinner, el_loading};
 pub use locale::Locale;
 pub use menu::{
     Menu, MenuEntry, MenuEvent, MenuItem, MenuItemGroup, MenuMode, MenuPopupTheme, MenuState,
-    MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
+    MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
 pub use table::{Column, Table, TableAlign, TableSize};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};

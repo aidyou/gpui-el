@@ -17,12 +17,122 @@ use crate::{
 };
 
 const MORE: &str = "\0gpui-el:more";
-const ITEM_HEIGHT: f32 = 56.;
-const HORIZONTAL_HEIGHT: f32 = 60.;
-const POPUP_ITEM_HEIGHT: f32 = 36.;
-const ITEM_PADDING: f32 = 20.;
 const COLLAPSED_WIDTH: f32 = 64.;
-const POPUP_MIN_WIDTH: f32 = 200.;
+
+/// Desktop menu surface presets.
+///
+/// Element keeps Theme Chalk's web metrics. Mac and Kde follow native desktop
+/// conventions with compact rows; macOS draws an inset rounded accent fill and
+/// KDE a flush square gray fill. The default follows the platform. Individual
+/// knobs on [`Menu`] (`item_height`, `item_radius`, `item_inset`,
+/// `hover_color`, `popup_padding`) override any preset.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MenuStyle {
+    /// Theme Chalk web metrics: 56 px rows, full-bleed hover fill.
+    Element,
+    /// macOS-like: 24 px rows, inset rounded accent-blue fill, white text.
+    Mac,
+    /// KDE/GNOME-like: 28 px rows, flush square gray fill.
+    Kde,
+}
+
+impl Default for MenuStyle {
+    fn default() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::Mac
+        } else {
+            Self::Kde
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum HoverFill {
+    /// `--el-color-primary-light-9`, used by the web preset.
+    PrimaryLight,
+    /// `--el-fill-color-light`, the native gray row fill.
+    FillLight,
+    Custom(Hsla),
+}
+
+#[derive(Clone, Copy)]
+struct Metrics {
+    item_height: f32,
+    /// Inline nested rows, one level down.
+    sub_item_height: f32,
+    /// Rows inside floating popups.
+    popup_item_height: f32,
+    horizontal_height: f32,
+    padding_x: f32,
+    popup_padding_x: f32,
+    /// Horizontal margin between the hover fill and the menu edge.
+    item_inset: f32,
+    item_radius: f32,
+    popup_padding: f32,
+    popup_radius: f32,
+    popup_min_width: f32,
+    hover: HoverFill,
+    hover_text: Option<Hsla>,
+    font_size: f32,
+}
+
+impl MenuStyle {
+    fn metrics(self) -> Metrics {
+        match self {
+            MenuStyle::Element => Metrics {
+                item_height: 56.,
+                sub_item_height: 50.,
+                popup_item_height: 36.,
+                horizontal_height: 60.,
+                padding_x: 20.,
+                popup_padding_x: 10.,
+                item_inset: 0.,
+                item_radius: 0.,
+                popup_padding: 5.,
+                popup_radius: tokens::radius::SMALL,
+                popup_min_width: 200.,
+                hover: HoverFill::PrimaryLight,
+                hover_text: None,
+                font_size: tokens::font_size::BASE,
+            },
+            // 24 px rows at 13 px with a 20 px minimum hit target, like the
+            // macOS menu bar menus.
+            MenuStyle::Mac => Metrics {
+                item_height: 24.,
+                sub_item_height: 24.,
+                popup_item_height: 24.,
+                horizontal_height: 28.,
+                padding_x: 10.,
+                popup_padding_x: 10.,
+                item_inset: 5.,
+                item_radius: 4.,
+                popup_padding: 5.,
+                popup_radius: 6.,
+                popup_min_width: 200.,
+                hover: HoverFill::Custom(rgb(0x0a84ff).into()),
+                hover_text: Some(rgb(0xffffff).into()),
+                font_size: tokens::font_size::SMALL,
+            },
+            // 28 px rows at 13 px, flush square highlight, like Breeze menus.
+            MenuStyle::Kde => Metrics {
+                item_height: 28.,
+                sub_item_height: 28.,
+                popup_item_height: 28.,
+                horizontal_height: 28.,
+                padding_x: 10.,
+                popup_padding_x: 10.,
+                item_inset: 0.,
+                item_radius: 0.,
+                popup_padding: 4.,
+                popup_radius: 3.,
+                popup_min_width: 200.,
+                hover: HoverFill::FillLight,
+                hover_text: None,
+                font_size: tokens::font_size::SMALL,
+            },
+        }
+    }
+}
 /// Popup fade duration, like Theme Chalk's `el-zoom-in-center` transition.
 const FADE_SECS: f64 = 0.3;
 
@@ -326,6 +436,7 @@ struct Options {
     onselect: Option<Listener>,
     onopen: Option<Listener>,
     onclose: Option<Listener>,
+    metrics: Metrics,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -349,6 +460,7 @@ impl Default for Options {
             onselect: None,
             onopen: None,
             onclose: None,
+            metrics: MenuStyle::default().metrics(),
         }
     }
 }
@@ -417,6 +529,47 @@ impl Menu {
     }
     pub fn unique_opened(mut self, value: bool) -> Self {
         self.options.unique = value;
+        self
+    }
+    /// Chooses a desktop surface preset; individual knobs still override it.
+    pub fn style(mut self, style: MenuStyle) -> Self {
+        self.options.metrics = style.metrics();
+        self
+    }
+    /// Sets the vertical row height for top-level and inline nested rows.
+    pub fn item_height(mut self, height: f32) -> Self {
+        self.options.metrics.item_height = height;
+        self.options.metrics.sub_item_height = height;
+        self
+    }
+    /// Rounds the inset hover fill.
+    pub fn item_radius(mut self, radius: f32) -> Self {
+        self.options.metrics.item_radius = radius;
+        self
+    }
+    /// Sets the horizontal margin between hover fills and the menu edge.
+    pub fn item_inset(mut self, inset: f32) -> Self {
+        self.options.metrics.item_inset = inset;
+        self
+    }
+    /// Overrides the hover fill color.
+    pub fn hover_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.options.metrics.hover = HoverFill::Custom(color.into());
+        self
+    }
+    /// Sets the text color while a row is hovered, like macOS white on accent.
+    pub fn hover_text_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.options.metrics.hover_text = Some(color.into());
+        self
+    }
+    /// Sets the vertical padding inside floating popups.
+    pub fn popup_padding(mut self, padding: f32) -> Self {
+        self.options.metrics.popup_padding = padding;
+        self
+    }
+    /// Sets the menu font size.
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.options.metrics.font_size = size;
         self
     }
     pub fn menu_trigger(mut self, value: MenuTrigger) -> Self {
@@ -575,17 +728,20 @@ impl MenuItem {
 impl RenderOnce for MenuItem {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = Theme::current(cx);
+        let metrics = MenuStyle::default().metrics();
         let mut el = div()
             .id(self.id)
             .role(gpui::Role::MenuItem)
             .aria_label(self.label.clone())
             .aria_selected(self.selected)
-            .h(px(ITEM_HEIGHT))
+            .h(px(metrics.item_height))
             .flex()
             .items_center()
-            .px(px(ITEM_PADDING))
+            .mx(px(metrics.item_inset))
+            .rounded(px(metrics.item_radius))
+            .px(px(metrics.padding_x))
             .gap(px(5.))
-            .text_size(px(tokens::font_size::BASE))
+            .text_size(px(metrics.font_size))
             .text_color(rgb(if self.selected {
                 PRIMARY
             } else {
@@ -756,8 +912,8 @@ impl RenderOnce for Menu {
                     .flex()
                     .items_center()
                     .gap(px(5.))
-                    .px(px(ITEM_PADDING))
-                    .text_size(px(tokens::font_size::BASE))
+                    .px(px(options.metrics.padding_x))
+                    .text_size(px(options.metrics.font_size))
                     .whitespace_nowrap()
                     .when_some(font.clone(), |el, font| el.font_family(font));
                 if node.icon.is_some() {
@@ -836,9 +992,7 @@ impl RenderOnce for Menu {
                     && branches.contains_key(key)
                     && s.branches.get(key) == branches.get(key)
             });
-            s.bounds.retain(|key, _| {
-                s.branches.get(key) == branches.get(key) && branches.contains_key(key)
-            });
+            s.bounds.retain(|key, _| s.paths.contains_key(key));
             s.branches = branches;
             if popup {
                 let opened = s.opened.clone();
@@ -960,7 +1114,7 @@ impl RenderOnce for Menu {
             .border_color(rgb(shared.theme.border(false)))
             .when(shared.options.horizontal(), |el| {
                 el.w_full()
-                    .h(px(HORIZONTAL_HEIGHT))
+                    .h(px(shared.options.metrics.horizontal_height))
                     .when(shared.options.border, |el| el.border_b_1())
                     .items_center()
             })
@@ -1397,7 +1551,8 @@ impl Frame {
                 .child(
                     div()
                         .pt(px(7.))
-                        .px(px(ITEM_PADDING * (depth + 1) as f32))
+                        .mx(px(self.options.metrics.item_inset))
+                        .px(px(self.options.metrics.padding_x * (depth + 1) as f32))
                         .text_size(px(12.))
                         .text_color(rgb(self.theme.secondary_text()))
                         .child(title(&node.label, &node.slot)),
@@ -1426,14 +1581,15 @@ impl Frame {
         let top = depth == 0 && self.options.horizontal();
         let collapsed = depth == 0 && self.options.collapsed();
         let compact = floating && self.options.horizontal();
+        let metrics = self.options.metrics;
         let row_height = if top {
-            HORIZONTAL_HEIGHT
+            metrics.horizontal_height
         } else if compact {
-            POPUP_ITEM_HEIGHT
+            metrics.popup_item_height
         } else if depth > 0 && !floating {
-            50.
+            metrics.sub_item_height
         } else {
-            ITEM_HEIGHT
+            metrics.item_height
         };
         let mut row = div()
             .id(key.clone())
@@ -1445,14 +1601,18 @@ impl Frame {
             .items_center()
             .flex_shrink_0()
             .gap(px(5.))
-            .text_size(px(tokens::font_size::BASE))
+            .text_size(px(metrics.font_size))
             .whitespace_nowrap()
+            // Native desktop menus inset the hover fill; the web preset keeps
+            // it full-bleed with square corners.
+            .rounded(px(metrics.item_radius))
+            .when(!collapsed, |el| el.mx(px(metrics.item_inset)))
             .px(px(if compact {
-                10.
+                metrics.popup_padding_x
             } else if floating || top {
-                ITEM_PADDING
+                metrics.padding_x
             } else {
-                ITEM_PADDING * (depth + 1) as f32
+                metrics.padding_x * (depth + 1) as f32
             }))
             .when(collapsed, |el| {
                 el.w(px(COLLAPSED_WIDTH)).px_0().justify_center()
@@ -1521,10 +1681,21 @@ impl Frame {
         if node.disabled {
             return row.opacity(0.25).cursor_not_allowed().into_any_element();
         }
-        let hover = self.theme.tint(PRIMARY, 9);
+        let hover: Hsla = match metrics.hover {
+            HoverFill::PrimaryLight => rgb(self.theme.tint(PRIMARY, 9)).into(),
+            HoverFill::FillLight => rgb(self.theme.fill(crate::theme::Fill::Light)).into(),
+            HoverFill::Custom(color) => color,
+        };
+        let hover_text = metrics.hover_text;
         row = row
             .cursor_pointer()
-            .hover(move |s| s.bg(rgb(hover)))
+            .hover(move |s| {
+                let s = s.bg(hover);
+                match hover_text {
+                    Some(color) => s.text_color(color),
+                    None => s,
+                }
+            })
             .focus_visible(|s| s.bg(rgb(0x409eff)).text_color(rgb(0xffffff)))
             .when_some(state.focus.get(key), |el, handle| {
                 el.track_focus(handle)
@@ -1555,6 +1726,26 @@ impl Frame {
                 .into()
             });
         }
+        // Record the row bounds for popup placement and hover hit-testing.
+        let owner = self.state.clone();
+        let row_key = key.clone();
+        row = row.relative().child(
+            gpui::canvas(
+                move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                    if owner.read(cx).bounds.get(&row_key) != Some(&bounds) {
+                        owner.update(cx, |s, _| {
+                            s.bounds.insert(row_key.clone(), bounds);
+                        });
+                        if owner.read(cx).is_open(&row_key) {
+                            window.on_next_frame(|window, _| window.refresh());
+                        }
+                    }
+                },
+                |_, _, _, _| {},
+            )
+            .absolute()
+            .inset_0(),
+        );
         if node.branch.is_none() {
             return row.into_any_element();
         }
@@ -1584,27 +1775,7 @@ impl Frame {
         let prior = state.bounds.get(key).copied();
         let fade = self.state.read(cx).fading.get(key).copied();
         let progress = fade_progress(fade, Theme::motion_reduced(cx));
-        let wrapper = div().relative().flex().flex_shrink_0().child(row).child(
-            gpui::canvas(
-                {
-                    let owner = self.state.clone();
-                    let key = key.clone();
-                    move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
-                        if owner.read(cx).bounds.get(&key) != Some(&bounds) {
-                            owner.update(cx, |s, _| {
-                                s.bounds.insert(key.clone(), bounds);
-                            });
-                            if owner.read(cx).is_open(&key) {
-                                window.on_next_frame(|window, _| window.refresh());
-                            }
-                        }
-                    }
-                },
-                |_, _, _, _| {},
-            )
-            .absolute()
-            .inset_0(),
-        );
+        let wrapper = div().relative().flex().flex_shrink_0().child(row);
         wrapper
             .children(
                 prior
@@ -1626,13 +1797,14 @@ impl Frame {
         let popup_id: SharedString = format!("\u{1}{key}").into();
         let branch = node.branch.as_ref().expect("popup branch");
         let offset = px(branch.offset.unwrap_or(self.options.offset));
+        let metrics = self.options.metrics;
         let base = div()
             .flex()
             .flex_col()
-            .py(px(5.))
-            .min_w(px(POPUP_MIN_WIDTH))
+            .py(px(metrics.popup_padding))
+            .min_w(px(metrics.popup_min_width))
             .max_h(self.max_popup_height)
-            .rounded(px(tokens::radius::SMALL))
+            .rounded(px(metrics.popup_radius))
             .shadow(vec![self.theme.light_shadow()])
             .bg(rgb(self.theme.overlay_background()));
         let styled = if let Some(style) = branch
@@ -1850,14 +2022,8 @@ mod tests {
         let trigger = view.update(|_, cx| state.read(cx).bounds["settings"].center());
         view.simulate_click(trigger, gpui::Modifiers::default());
         draw(view);
-        let popup = view.update(|_, cx| state.read(cx).popup_bounds["settings"]);
-        view.simulate_click(
-            point(
-                popup.left() + px(25.),
-                popup.top() + px(5. + POPUP_ITEM_HEIGHT * 1.5),
-            ),
-            gpui::Modifiers::default(),
-        );
+        let theme_row = view.update(|_, cx| state.read(cx).bounds["theme"].center());
+        view.simulate_click(theme_row, gpui::Modifiers::default());
         view.update(|_, cx| assert_eq!(state.read(cx).active_index(), Some("theme")));
         assert_eq!(
             *events.borrow(),
@@ -1894,14 +2060,8 @@ mod tests {
         let settings = view.update(|_, cx| state.read(cx).bounds["settings"].center());
         view.simulate_click(settings, gpui::Modifiers::default());
         view.update(|w, cx| w.draw(cx).clear(cx));
-        let popup = view.update(|_, cx| state.read(cx).popup_bounds["settings"]);
-        view.simulate_click(
-            point(
-                popup.left() + px(25.),
-                popup.top() + px(5. + POPUP_ITEM_HEIGHT * 1.5),
-            ),
-            gpui::Modifiers::default(),
-        );
+        let theme_row = view.update(|_, cx| state.read(cx).bounds["theme"].center());
+        view.simulate_click(theme_row, gpui::Modifiers::default());
         view.update(|w, cx| {
             assert_eq!(state.read(cx).active_index(), Some("theme"));
             assert!(state.read(cx).focus[MORE].is_focused(w));
@@ -1922,6 +2082,78 @@ mod tests {
                 ("open", vec!["settings".into()]),
                 ("close", vec!["settings".into()]),
             ]
+        );
+    }
+
+    #[gpui::test]
+    fn nested_popups_open_a_third_level_and_report_the_full_path(cx: &mut gpui::TestAppContext) {
+        let events: EventLog = Rc::new(std::cell::RefCell::new(Vec::new()));
+        let state = cx.update(|cx| cx.new(|_| MenuState::default()));
+        struct Nested {
+            state: Entity<MenuState>,
+            events: EventLog,
+        }
+        impl gpui::Render for Nested {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let events = self.events.clone();
+                div().id("menu-test").tab_group().size_full().child(
+                    el_menu()
+                        .state(&self.state)
+                        .mode(MenuMode::Horizontal)
+                        .menu_trigger(MenuTrigger::Click)
+                        .entry(el_menu_item("home", "Home"))
+                        .entry(
+                            el_sub_menu("settings", "Settings")
+                                .entry(el_menu_item("language", "Language"))
+                                .entry(
+                                    el_sub_menu("theme", "Theme")
+                                        .entry(el_menu_item("light", "Light"))
+                                        .entry(el_menu_item("dark", "Dark")),
+                                ),
+                        )
+                        .onselect(move |event: &MenuEvent, _, _| {
+                            events
+                                .borrow_mut()
+                                .push(("select", event.index_path.clone()));
+                        }),
+                )
+            }
+        }
+        let (_, view) = cx.add_window_view({
+            let state = state.clone();
+            let events = events.clone();
+            move |_, cx| {
+                cx.set_reduce_motion(true);
+                Nested { state, events }
+            }
+        });
+        let draw = |view: &mut gpui::VisualTestContext| {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+        };
+        draw(view);
+        let settings = view.update(|_, cx| state.read(cx).bounds["settings"].center());
+        view.simulate_click(settings, gpui::Modifiers::default());
+        draw(view);
+        let theme = view.update(|_, cx| state.read(cx).bounds["theme"].center());
+        view.simulate_click(theme, gpui::Modifiers::default());
+        draw(view);
+        view.update(|_, cx| {
+            let s = state.read(cx);
+            assert!(s.is_open("settings"), "the first popup stays open");
+            assert!(s.is_open("theme"), "a grandchild popup opens beside it");
+            assert!(s.popup_bounds.contains_key("settings"));
+            assert!(s.popup_bounds.contains_key("theme"));
+        });
+        let dark = view.update(|_, cx| state.read(cx).bounds["dark"].center());
+        view.simulate_click(dark, gpui::Modifiers::default());
+        draw(view);
+        view.update(|_, cx| assert_eq!(state.read(cx).active_index(), Some("dark")));
+        assert_eq!(
+            *events.borrow(),
+            vec![(
+                "select",
+                vec!["settings".into(), "theme".into(), "dark".into()]
+            )]
         );
     }
 
@@ -2092,8 +2324,8 @@ mod tests {
             }
         });
         view.update(|window, cx| window.draw(cx).clear(cx));
-        // The submenu title is the second 56 px row.
-        view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
+        let title = view.update(|_, cx| state.read(cx).bounds["one"].center());
+        view.simulate_click(title, gpui::Modifiers::default());
         view.update(|window, cx| window.draw(cx).clear(cx));
         view.update(|window, cx| {
             assert!(state.read(cx).is_open("one"));
@@ -2104,7 +2336,7 @@ mod tests {
         });
         // Collapsing removes the submenu from the open set right away; the
         // transition unmounts the content once the collapse settles.
-        view.simulate_click(point(px(10.), px(84.)), gpui::Modifiers::default());
+        view.simulate_click(title, gpui::Modifiers::default());
         view.update(|window, cx| {
             assert!(!state.read(cx).is_open("one"));
             window.draw(cx).clear(cx);

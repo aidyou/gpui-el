@@ -27,7 +27,11 @@ impl Gallery {
             el_sub_menu("settings", s.menu_second.as_str())
                 .icon(el_icon("Setting"))
                 .entry(el_menu_item("language", s.menu_language.as_str()))
-                .entry(el_menu_item("theme", s.menu_theme.as_str()))
+                .entry(
+                    el_sub_menu("theme", s.menu_theme.as_str())
+                        .entry(el_menu_item("light", s.menu_light.as_str()))
+                        .entry(el_menu_item("dark", s.menu_dark.as_str())),
+                )
                 .entry(el_menu_item("disabled", s.menu_disabled.as_str()).disabled(true))
         };
         let home = || el_menu_item("overview", s.menu_first.as_str()).icon(el_icon("Grid"));
@@ -36,7 +40,9 @@ impl Gallery {
     .entry(el_sub_menu("settings", "Settings")
         .icon(el_icon("Setting"))
         .entry(el_menu_item("language", "Language"))
-        .entry(el_menu_item("theme", "Theme"))
+        .entry(el_sub_menu("theme", "Theme")
+            .entry(el_menu_item("light", "Light"))
+            .entry(el_menu_item("dark", "Dark")))
         .entry(el_menu_item("disabled", "Unavailable").disabled(true)))"#;
         let nested = || {
             el_menu()
@@ -56,7 +62,11 @@ impl Gallery {
                         )
                         .entry(
                             el_sub_menu("1-4", s.menu_item_four.as_str())
-                                .entry(el_menu_item("1-4-1", s.menu_item_one.as_str())),
+                                .entry(el_menu_item("1-4-1", s.menu_item_one.as_str()))
+                                .entry(
+                                    el_sub_menu("1-4-2", s.menu_item_two.as_str())
+                                        .entry(el_menu_item("1-4-2-1", s.menu_item_three.as_str())),
+                                ),
                         ),
                 )
                 .entry(el_menu_item("2", s.menu_navigator_two.as_str()).icon(el_icon("Menu")))
@@ -76,7 +86,9 @@ impl Gallery {
         .entry(el_menu_item_group("Group Two")
             .item(el_menu_item("1-3", "Item three")))
         .entry(el_sub_menu("1-4", "Item four")
-            .entry(el_menu_item("1-4-1", "Item one"))))
+            .entry(el_menu_item("1-4-1", "Item one"))
+            .entry(el_sub_menu("1-4-2", "Item two")
+                .entry(el_menu_item("1-4-2-1", "Item three")))))
     .entry(el_menu_item("2", "Navigator Two").icon(el_icon("Menu")))
     .entry(el_menu_item("3", "Navigator Three").disabled(true).icon(el_icon("Document")))
     .entry(el_menu_item("4", "Navigator Four").icon(el_icon("Setting")))"#;

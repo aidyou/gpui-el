@@ -467,6 +467,18 @@ const MENU: &[Row] = &[
         "使用文字或自定义标题对菜单项分组。",
     ),
     (
+        "style, item_height, item_radius, item_inset",
+        "MenuStyle / f32 · platform preset",
+        "Desktop density presets: Element keeps the web 56 px rows; Mac and Kde use compact native rows. The knobs override any preset: row height, hover-fill radius, and the margin between the fill and the menu edge.",
+        "桌面密度预设：Element 保持网页的 56 px 行高，Mac 与 Kde 使用原生紧凑行高。这些参数可覆盖任意预设：行高、悬停底色圆角，以及底色与菜单边缘的间距。",
+    ),
+    (
+        "hover_color, hover_text_color, popup_padding, font_size",
+        "Hsla / Hsla / f32 / f32 · by preset",
+        "Hover fill and text colors, the vertical padding inside popups, and the menu font size.",
+        "悬停底色与文字颜色、浮层纵向内边距与菜单字号。",
+    ),
+    (
         "MenuState::active_index, is_open, open, close, update_active_index",
         "Option<&str> / bool / index, Window",
         "Inspect or update menu state from your view.",
