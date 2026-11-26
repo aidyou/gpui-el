@@ -1033,4 +1033,39 @@ mod tests {
             "outside the table the outer container scrolls"
         );
     }
+
+    #[gpui::test]
+    fn hover_requests_a_repaint_on_pointer_entry(cx: &mut gpui::TestAppContext) {
+        use std::cell::Cell as StdCell;
+        struct Harness(Rc<StdCell<usize>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                self.0.set(self.0.get() + 1);
+                Table::new(["alpha", "beta"])
+                    .id("hover-table")
+                    .onrowclick(|_, _, _, _, _| {})
+                    .column(Column::new("Name").text(|row: &&str, _| (*row).into()))
+            }
+        }
+        let renders = Rc::new(StdCell::new(0));
+        let (_, view) = cx.add_window_view({
+            let renders = renders.clone();
+            move |_, _| Harness(renders)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        let idle = renders.get();
+        // GPUI styles `hover` from the hitbox at paint time, and a transition
+        // asks the owning view for one repaint; the row highlight therefore
+        // lands on the next frame rather than inside the move event.
+        view.simulate_mouse_move(
+            gpui::point(px(20.), px(60.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        assert!(
+            renders.get() > idle,
+            "entering a row must schedule a repaint"
+        );
+    }
 }
