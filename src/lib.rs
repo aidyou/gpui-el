@@ -123,6 +123,12 @@
 //! target, and the deprecated boolean form of `underline` is not reproduced.
 //! The upstream anchor's `outline: none` is replaced by a visible focus ring
 //! because the native link is keyboard-focusable.
+//!
+//! Text follows `text.md`, `components/text/src`, and Theme Chalk
+//! `text.scss`. Native differences: the `tag` property has no GPUI equivalent,
+//! `isTruncated` is a layout effect of `truncated` under a definite width
+//! rather than a watched ref, and decorations come from GPUI's underline and
+//! strikethrough instead of a CSS `text-decoration` shorthand.
 
 mod button;
 mod grid;
@@ -135,6 +141,7 @@ mod menu;
 pub mod motion;
 mod table;
 mod tag;
+mod text;
 mod theme;
 mod transition;
 
@@ -158,6 +165,7 @@ pub use menu::{
 pub use motion::MotionSpeed;
 pub use table::{Column, Table, TableAlign, TableSize};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
+pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
 pub use transition::{Transition, TransitionEffect, el_transition};
 

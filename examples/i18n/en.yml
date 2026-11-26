@@ -122,6 +122,7 @@ text: Text button
 text_bg: With background
 link: View details
 large: Large
+small: Small
 compact: Small and round
 add: Add
 count_increment: Count +1
@@ -148,3 +149,21 @@ tag_label: Tag
 tag_small: Small
 tag_checked_count: 'Checked tags: %{count} of 7'
 tag_editable_help: The library has no text input yet, so the button adds the next tag.
+text_intro: Render labels in semantic colors and sizes, with single-line or multi-line ellipsis.
+text_page: Text
+text_basic: Basic usage
+text_sizes: Sizes
+text_truncated: Ellipsis
+text_clamp: Line clamp
+text_decorations: Decorations
+text_mixed: Mixed runs
+text_long: Element Plus is a Vue 3 component library. This paragraph is long enough to overflow the fixed-width box next to it, which is what makes the ellipsis visible.
+text_bold: Bold
+text_italic: Italic
+text_underline: Underline
+text_strikethrough: Strikethrough
+text_mixed_plain: 'The '
+text_mixed_brand: Element Plus
+text_mixed_middle: ' design baseline, rendered as a '
+text_mixed_accent: native GPUI port
+text_mixed_tail: ' with StyledText runs.'

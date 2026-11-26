@@ -287,6 +287,50 @@ const LINK: &[Row] = &[
         "禁止触发、打开 URL 和悬停变色。",
     ),
 ];
+const TEXT: &[Row] = &[
+    (
+        "el_text(), Text::new",
+        "Text",
+        "Create a text in the default type and size.",
+        "创建默认类型与尺寸的文本。",
+    ),
+    (
+        "label, content",
+        "SharedString / IntoElement · —",
+        "Label or custom contents; custom contents take precedence and allow a StyledText with mixed runs.",
+        "文字或自定义内容；自定义内容优先，可传入分段的 StyledText。",
+    ),
+    (
+        "kind, primary, success, info, warning, danger",
+        "TextType · Default",
+        "Semantic color; default uses the regular text color.",
+        "语义颜色；default 使用常规文字色。",
+    ),
+    (
+        "size, large, small",
+        "TextSize · Default",
+        "Large, default and small map to the 15 / 13 / 12 px token sizes.",
+        "large、default、small 对应 15 / 13 / 12 px 的字号令牌。",
+    ),
+    (
+        "truncated",
+        "bool · false",
+        "Render an ellipsis past the container width; needs a definite width to clip against.",
+        "超出容器宽度时显示省略号；需要容器提供确定宽度。",
+    ),
+    (
+        "line_clamp",
+        "usize · —",
+        "Render an ellipsis after the given number of lines; zero is unset.",
+        "超过指定行数后显示省略号；0 视为未设置。",
+    ),
+    (
+        "bold, italic, underline, strikethrough",
+        "bool · false",
+        "Native font weight and text decorations, applied independently.",
+        "原生字重与文本修饰，可独立组合。",
+    ),
+];
 const TABLE: &[Row] = &[
     (
         "Table::new(rows)",
@@ -709,6 +753,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Container => (CONTAINER, &[]),
         Page::Layout => (LAYOUT, &[]),
         Page::Link => (LINK, LINK_EVENTS),
+        Page::Text => (TEXT, &[]),
         Page::Space => (SPACE, &[]),
         Page::Table => (TABLE, TABLE_EVENTS),
         Page::Tag => (TAG, TAG_EVENTS),
@@ -762,6 +807,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
+        .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
         .when(page == Page::Table, |el| el.child(if zh { "原生差异：表头使用粗体字面配正文文字色；上游用 600 字重配次要文字色，缺少 semibold 字面的原生字体栈会把它画成普通字重且偏淡。排序、行选择、筛选、固定列、树形数据和合计行未移植。" } else { "Native differences: headers use the bold face with the body text color; upstream uses weight 600 on secondary text, which native font stacks without a semibold face paint as plain and washed out. Sorting, row selection, filtering, fixed columns, tree data, and summary rows are not reproduced." }))
 }

@@ -88,6 +88,7 @@ enum Page {
     Container,
     Layout,
     Link,
+    Text,
     Space,
     Table,
     Tag,
@@ -96,13 +97,14 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 11] = [
+    const ALL: [Self; 12] = [
         Self::Init,
         Self::Button,
         Self::Icon,
         Self::Container,
         Self::Layout,
         Self::Link,
+        Self::Text,
         Self::Space,
         Self::Table,
         Self::Tag,
@@ -118,6 +120,7 @@ impl Page {
             Self::Container => &s.container_intro,
             Self::Layout => &s.layout_intro,
             Self::Link => &s.link_intro,
+            Self::Text => &s.text_intro,
             Self::Space => &s.space_intro,
             Self::Table => &s.table_intro,
             Self::Tag => &s.tag_intro,
@@ -134,6 +137,7 @@ impl Page {
             Self::Container => "container",
             Self::Layout => "layout",
             Self::Link => "link",
+            Self::Text => "text",
             Self::Space => "space",
             Self::Table => "table",
             Self::Tag => "tag",
@@ -150,6 +154,7 @@ impl Page {
             Self::Container => &s.container_page,
             Self::Layout => &s.layout_page,
             Self::Link => &s.link_page,
+            Self::Text => &s.text_page,
             Self::Space => &s.space_page,
             Self::Table => &s.table_page,
             Self::Tag => &s.tag_page,
@@ -172,6 +177,7 @@ impl Page {
             ],
             Self::Layout => &["el-row", "el-col"],
             Self::Link => &["el-link"],
+            Self::Text => &["el-text"],
             Self::Space => &["el-space"],
             Self::Table => &["el-table", "el-table-column"],
             Self::Tag => &["el-tag", "el-check-tag"],
@@ -261,6 +267,7 @@ impl Render for Gallery {
                                                 Page::Container,
                                                 Page::Layout,
                                                 Page::Link,
+                                                Page::Text,
                                                 Page::Space,
                                             ]
                                             .map(item),
@@ -292,6 +299,7 @@ impl Render for Gallery {
             Page::Container => self.containers(s, cx),
             Page::Layout => self.grids(s, cx),
             Page::Link => self.links(s, cx),
+            Page::Text => self.texts(s, cx),
             Page::Space => self.spaces(s, cx),
             Page::Table => self.tables(s, cx),
             Page::Tag => self.tags(s, cx),

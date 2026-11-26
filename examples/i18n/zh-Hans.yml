@@ -122,6 +122,7 @@ text: 文字按钮
 text_bg: 带底色
 link: 查看详情
 large: 大号
+small: 小号
 compact: 小号圆角
 add: 新增
 count_increment: 计数 +1
@@ -148,3 +149,21 @@ tag_label: 标签
 tag_small: 小号
 tag_checked_count: '已选中 %{count} / 7 个标签'
 tag_editable_help: 本库暂无文本输入组件，此处用按钮添加下一个标签。
+text_intro: 用语义颜色和尺寸展示文本，并支持单行或多行省略。
+text_page: Text 文本
+text_basic: 基础用法
+text_sizes: 尺寸
+text_truncated: 文本省略
+text_clamp: 多行省略
+text_decorations: 修饰
+text_mixed: 混合样式
+text_long: Element Plus 是基于 Vue 3 的组件库。这段文字足够长，会溢出旁边的定宽容器，这样才能看到省略号。
+text_bold: 粗体
+text_italic: 斜体
+text_underline: 下划线
+text_strikethrough: 删除线
+text_mixed_plain: 这是一段
+text_mixed_brand: Element Plus
+text_mixed_middle: 风格的文本，以
+text_mixed_accent: 原生 GPUI 实现
+text_mixed_tail: ，并用 StyledText 分段着色。
