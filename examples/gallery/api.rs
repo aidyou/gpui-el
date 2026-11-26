@@ -327,8 +327,14 @@ const TABLE: &[Row] = &[
     (
         "Table::height, max_height",
         "f32 · —",
-        "Fixes or caps the table height; the header stays while the body scrolls.",
-        "固定或限制表格高度；表头保持可见，主体滚动。",
+        "Fixes or caps the table height; the header stays while the body scrolls. The body consumes wheel deltas, so the page or window never scrolls with it.",
+        "固定或限制表格高度；表头保持可见，主体滚动。主体吞掉滚轮事件，页面与窗口不会随之滚动。",
+    ),
+    (
+        "Table::id, selectable",
+        "ElementId / bool · call site / true",
+        "Separates per-table hover and selection state; give one when several tables share a call site. selectable allows dragging text and Ctrl+C/Cmd+C to copy it.",
+        "隔离各表格的悬停与选中状态；同一调用点创建多个表格时需显式指定。selectable 允许拖动选择文字并用 Ctrl+C／Cmd+C 复制。",
     ),
     (
         "Table::empty_text, empty",
@@ -480,9 +486,9 @@ const MENU: &[Row] = &[
     ),
     (
         "speed",
-        "MotionSpeed · theme",
-        "Scales the collapse, popup fade, and chevron rotation. `fast()` is 0.6×, `slow()` is 1.6×, and no call uses the theme speed; `speed(MotionSpeed::Custom(x))` multiplies the normal duration.",
-        "缩放展开、浮层淡入淡出与箭头旋转。`fast()` 为 0.6 倍，`slow()` 为 1.6 倍，不调用则使用主题速度；`speed(MotionSpeed::Custom(x))` 为自定义倍数。",
+        "MotionSpeed · Fast",
+        "Scales the collapse, popup fade, and chevron rotation. Menus default to desktop-fast 0.6×; `normal()` restores the Element Plus 1× timings, `slow()` is 1.6×, and `speed(MotionSpeed::Custom(x))` multiplies the normal duration.",
+        "缩放展开、浮层淡入淡出与箭头旋转。菜单默认使用桌面快速度 0.6 倍；`normal()` 恢复 Element Plus 的 1 倍时长，`slow()` 为 1.6 倍，`speed(MotionSpeed::Custom(x))` 为自定义倍数。",
     ),
     (
         "MenuState::active_index, is_open, open, close, update_active_index",
@@ -709,8 +715,9 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
     };
-    let table = |headers: [&'static str; 3], rows: &[Row]| {
+    let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         Table::new(rows.iter().copied())
+            .id(key)
             .border(true)
             .column(
                 Column::new(headers[0])
@@ -745,14 +752,14 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
     };
     div().flex().flex_col().gap(px(12.))
         .child(heading("API"))
-        .child(table(if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, api))
+        .child(table("api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, api))
         .when(page == Page::Tag, |el| {
             el.child(heading("CheckTag API"))
-                .child(table(if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECK_TAG))
+                .child(table("check-tag-api", if zh { ["名称", "类型 · 默认值", "说明"] } else { ["Name", "Type · Default", "Description"] }, CHECK_TAG))
         })
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
-        .when(!events.is_empty(), |el| el.child(table(if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))

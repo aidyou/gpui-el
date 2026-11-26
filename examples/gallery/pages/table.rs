@@ -19,8 +19,9 @@ impl Gallery {
     pub(crate) fn tables(&self, s: &'static Copy, cx: &Context<Self>) -> Div {
         let section =
             |id, title, code: &str, controls| self.section(cx, id, title, || code.into(), controls);
-        let columns = |size_rows: &[Row]| {
+        let columns = |key: &'static str, size_rows: &[Row]| {
             Table::new(size_rows.iter().copied())
+                .id(key)
                 .column(
                     Column::new(s.table_date.as_str())
                         .width(120.)
@@ -33,16 +34,16 @@ impl Gallery {
                 )
                 .column(Column::new(s.table_address.as_str()).text(|row: &Row, _| row.2.into()))
         };
-        let basic = columns(ROWS);
-        let striped = columns(ROWS).stripe(true).border(true);
-        let fixed = columns(ROWS).height(220.);
-        let status = columns(ROWS).row_background(|_, index| match index {
+        let basic = columns("table-basic", ROWS);
+        let striped = columns("table-stripe", ROWS).stripe(true).border(true);
+        let fixed = columns("table-fixed", ROWS).height(220.);
+        let status = columns("table-status", ROWS).row_background(|_, index| match index {
             1 => Some(rgba(0xf56c6c1a).into()),
             2 => Some(rgba(0xe6a23c1a).into()),
             3 => Some(rgba(0x67c23a1a).into()),
             _ => None,
         });
-        let empty = columns(&[]).empty_text(s.table_empty.as_str());
+        let empty = columns("table-empty", &[]).empty_text(s.table_empty.as_str());
         div()
             .flex()
             .flex_col()
@@ -51,6 +52,7 @@ impl Gallery {
                 "table-basic",
                 &s.table_basic,
                 r#"Table::new(rows)
+    .id("table-basic")
     .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
     .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
     .column(Column::new("Address").text(|row, _| row.2.into()));"#,
@@ -59,7 +61,7 @@ impl Gallery {
             .child(section(
                 "table-stripe",
                 &s.table_stripe,
-                r#"Table::new(rows).stripe(true).border(true)
+                r#"Table::new(rows).id("table-stripe").stripe(true).border(true)
     .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
     .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
     .column(Column::new("Address").text(|row, _| row.2.into()));"#,
@@ -68,8 +70,9 @@ impl Gallery {
             .child(section(
                 "table-fixed",
                 &s.table_fixed,
-                r#"// A fixed height keeps the header visible while the body scrolls.
-Table::new(rows).height(220.)
+                r#"// A fixed height keeps the header visible while the body scrolls; the
+// body also consumes wheel deltas so the page never scrolls with it.
+Table::new(rows).id("table-fixed").height(220.)
     .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
     .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
     .column(Column::new("Address").text(|row, _| row.2.into()));"#,
@@ -79,7 +82,7 @@ Table::new(rows).height(220.)
                 "table-status",
                 &s.table_status,
                 r#"// row_background replaces the upstream row-class-name status classes.
-Table::new(rows)
+Table::new(rows).id("table-status")
     .row_background(|_, index| match index {
         1 => Some(rgba(0xf56c6c1a).into()),
         2 => Some(rgba(0xe6a23c1a).into()),
@@ -95,6 +98,7 @@ Table::new(rows)
                 "table-empty",
                 &s.table_empty_section,
                 r#"Table::new(Vec::new())
+    .id("table-empty")
     .empty_text("No Data")
     .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
     .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
