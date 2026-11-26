@@ -18,6 +18,8 @@ gpui = { package = "gpui-pre", version = "=0.3.14" }
 cargo run --example gallery
 ```
 
+展厅按 dev 构建运行，`Cargo.toml` 中 `[profile.dev.package."*"] opt-level = 2` 只优化依赖（GPUI 的布局、排版和绘制），本仓库自身的增量编译仍然很快。未优化依赖时同一页面的每帧耗时约为优化后的 9 倍，hover 高亮会明显落后于指针；调整渲染性能前先用 `cargo test --release --example gallery perf_draw -- --ignored --nocapture` 记录基线，不要凭未经测量的猜测改结构。
+
 展厅入口是 [`examples/gallery.rs`](examples/gallery.rs)，组件页面位于 [`examples/gallery/pages/`](examples/gallery/pages/)；库入口是 [`src/lib.rs`](src/lib.rs)。例如 `el_button().label("确定")` 即可构造默认按钮，`.onclick(...)` 注册点击回调。组件事件统一使用 `on` 加事件名（如 `onselect`、`onclose`），旧的下划线方法名不再保留；GPUI 原生方法名不变。共用尺寸、间距和圆角见 `gpui_el::tokens`。循环中从同一调用位置创建多个 Button、Aside、Main、Loading 或 Table 时，应显式提供稳定且在同级唯一的 `.id(...)`。
 
 ## 上游参考快照

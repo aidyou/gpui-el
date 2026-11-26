@@ -18,3 +18,6 @@ serde_yaml_ng = "0.10"
 gpui = { package = "gpui-pre", version = "=0.3.14", features = ["test-support"] }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.14", features = ["x11", "wayland"] }
 unicode-segmentation = "1"
+
+[profile.dev.package."*"]
+opt-level = 2

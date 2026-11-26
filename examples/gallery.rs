@@ -20,6 +20,9 @@ mod copy;
 mod demo;
 #[path = "gallery/pages/mod.rs"]
 mod pages;
+#[cfg(test)]
+#[path = "gallery/perf.rs"]
+mod perf;
 #[path = "gallery/row.rs"]
 mod row;
 #[path = "gallery/search.rs"]
