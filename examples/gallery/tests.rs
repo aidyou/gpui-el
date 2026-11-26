@@ -1,9 +1,9 @@
 use super::*;
 
 /// A missing name renders as a blank gutter instead of failing, so the catalog
-/// icons are checked against every bundled pack.
+/// icons are checked against the pack the chrome pins them to.
 #[test]
-fn catalog_icons_exist_in_both_packs() {
+fn catalog_icons_exist_in_the_chrome_pack() {
     for name in [
         nav_icon::INIT,
         nav_icon::BASICS,
@@ -11,12 +11,10 @@ fn catalog_icons_exist_in_both_packs() {
         nav_icon::NAVIGATION,
         nav_icon::FEEDBACK,
     ] {
-        for pack in [IconPack::ElementPlus, IconPack::Tabler] {
-            assert!(
-                pack.names().any(|candidate| candidate == name),
-                "{name} is missing from {pack:?}"
-            );
-        }
+        assert!(
+            IconPack::ElementPlus.names().any(|candidate| candidate == name),
+            "{name} is missing from the Element Plus pack"
+        );
     }
 }
 

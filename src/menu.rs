@@ -135,6 +135,19 @@ impl MenuStyle {
         }
     }
 }
+
+impl Metrics {
+    /// Icons read as part of the label line: two pixels above the text size,
+    /// not the 18 px web glyph box that made them look a size or two larger.
+    fn icon_size(&self) -> f32 {
+        self.font_size + 2.
+    }
+
+    /// Fixed icon column: the glyph plus equal breathing room on both sides.
+    fn icon_gutter(&self) -> f32 {
+        self.icon_size() + 5.
+    }
+}
 /// Popup fade duration, like Theme Chalk's `el-zoom-in-center` transition.
 /// Normal speed for a popup fade; [`MotionSpeed`] scales it.
 const FADE_SECS: f64 = 0.2;
@@ -826,7 +839,7 @@ impl RenderOnce for MenuItem {
                 theme.primary_text()
             }));
         if let Some(icon) = self.icon {
-            el = el.child(icon.size(18.));
+            el = el.child(icon.size(metrics.icon_size()));
         }
         el = el.child(title(&self.label, &self.slot));
         if self.disabled {
@@ -995,7 +1008,7 @@ impl RenderOnce for Menu {
                     .whitespace_nowrap()
                     .when_some(font.clone(), |el, font| el.font_family(font));
                 if node.icon.is_some() {
-                    row = row.child(div().w(px(24.)));
+                    row = row.child(div().w(px(options.metrics.icon_gutter())));
                 }
                 if node.index.as_ref() != MORE {
                     row = row.child(title(&node.label, &node.slot));
@@ -1721,10 +1734,10 @@ impl Frame {
         if let Some(icon) = &node.icon {
             row = row.child(
                 div()
-                    .w(px(24.))
+                    .w(px(metrics.icon_gutter()))
                     .flex()
                     .justify_center()
-                    .child(icon.clone().size(18.)),
+                    .child(icon.clone().size(metrics.icon_size())),
             );
         }
         if !collapsed && key.as_ref() != MORE {

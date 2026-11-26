@@ -7,7 +7,7 @@ use gpui::{
 };
 use gpui_el::{
     Direction, IconPack, Locale, MenuEvent, MenuMode, MenuTrigger, Theme, el_aside, el_container,
-    el_icon, el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
+    el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
 };
 
 #[path = "gallery/api.rs"]
@@ -63,13 +63,20 @@ impl Gallery {
     }
 }
 
-/// Catalog icons, picked so both bundled packs have a glyph for each name.
+/// Catalog icons: thin Element Plus outlines of comparable ink weight, so the
+/// group rows read as one family instead of mixing solid and line glyphs.
 mod nav_icon {
-    pub const INIT: &str = "flag";
-    pub const BASICS: &str = "box";
-    pub const DATA: &str = "list";
+    pub const INIT: &str = "guide";
+    pub const BASICS: &str = "collection";
+    pub const DATA: &str = "pie-chart";
     pub const NAVIGATION: &str = "compass";
-    pub const FEEDBACK: &str = "bell";
+    pub const FEEDBACK: &str = "chat-line-round";
+}
+
+/// The catalog chrome stays on one pack even when the icon page switches the
+/// application preference, so the group icons never mix stroke and fill styles.
+fn nav_glyph(name: &str) -> gpui_el::Icon {
+    gpui_el::Icon::from_pack(IconPack::ElementPlus, name)
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -243,10 +250,10 @@ impl Render for Gallery {
                         )
                         .child(
                             nav.border(false)
-                                .entry(item(Page::Init).icon(el_icon(nav_icon::INIT)))
+                                .entry(item(Page::Init).icon(nav_glyph(nav_icon::INIT)))
                                 .entry(
                                     el_sub_menu("basics", s.basics.as_str())
-                                        .icon(el_icon(nav_icon::BASICS))
+                                        .icon(nav_glyph(nav_icon::BASICS))
                                         .entries(
                                             [
                                                 Page::Button,
@@ -261,17 +268,17 @@ impl Render for Gallery {
                                 )
                                 .entry(
                                     el_sub_menu("data", s.data.as_str())
-                                        .icon(el_icon(nav_icon::DATA))
+                                        .icon(nav_glyph(nav_icon::DATA))
                                         .entries([Page::Table, Page::Tag].map(item)),
                                 )
                                 .entry(
                                     el_sub_menu("navigation", s.navigation.as_str())
-                                        .icon(el_icon(nav_icon::NAVIGATION))
+                                        .icon(nav_glyph(nav_icon::NAVIGATION))
                                         .entry(item(Page::Menu)),
                                 )
                                 .entry(
                                     el_sub_menu("feedback", s.feedback.as_str())
-                                        .icon(el_icon(nav_icon::FEEDBACK))
+                                        .icon(nav_glyph(nav_icon::FEEDBACK))
                                         .entry(item(Page::Loading)),
                                 ),
                         ),
