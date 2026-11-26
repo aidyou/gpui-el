@@ -199,4 +199,7 @@ splitter_bottom: Bottom
 splitter_frozen: Frozen
 splitter_report: 'sizes: %{sizes} px'
 splitter_none: drag a divider
-splitter_keyboard: Dividers are keyboard-focusable: arrow keys resize by 10 px, Shift widens the step to 40 px.
+splitter_keyboard: 'Dividers are keyboard-focusable: arrow keys resize by 10 px, Shift widens the step to 40 px.'
+scrollbar_add_row: Add a row
+scrollbar_remove_row: Remove a row
+scrollbar_rows: '%{count} rows · max height 200 px'

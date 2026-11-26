@@ -200,3 +200,6 @@ splitter_frozen: 固定
 splitter_report: '尺寸：%{sizes} px'
 splitter_none: 拖动分隔条
 splitter_keyboard: 分隔条可键盘聚焦：方向键按 10 px 调整，Shift 放大到 40 px。
+scrollbar_add_row: 增加一行
+scrollbar_remove_row: 减少一行
+scrollbar_rows: '%{count} 行 · 最大高度 200 px'

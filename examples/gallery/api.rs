@@ -427,7 +427,7 @@ const SCROLLBAR: &[Row] = &[
         "每次滚动时报告逻辑像素为单位的 scroll_left 与 scroll_top。",
     ),
     (
-        "on_end_reached",
+        "onreached",
         "ScrollbarDirection, f32 · — / 0",
         "Reports a newly reached edge; the distance argument widens it like the upstream attribute.",
         "报告新触到的视口边缘；distance 参数与上游属性一样放宽触边判定。",
@@ -441,7 +441,7 @@ const SCROLLBAR_EVENTS: &[Row] = &[
         "滚轮、拖拽滑块或手动 set_offset 改变视口位置时触发。",
     ),
     (
-        "on_end_reached",
+        "onreached",
         "ScrollbarDirection",
         "The viewport newly reached the top, bottom, left or right edge.",
         "视口新触到上、下、左或右边缘时触发。",

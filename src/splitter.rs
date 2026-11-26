@@ -486,6 +486,7 @@ fn divider(info: Divider) -> impl IntoElement {
             })
     };
     let down_state = info.state.clone();
+    let down_handlers = info.handlers.clone();
     let key_state = info.state.clone();
     let key_limits = info.limits.clone();
     let key_handlers = info.handlers.clone();
@@ -538,15 +539,25 @@ fn divider(info: Divider) -> impl IntoElement {
                     })
                     .focusable()
                     .tab_stop(true)
-                    .on_mouse_down(MouseButton::Left, move |event, _, cx| {
+                    .on_mouse_down(MouseButton::Left, move |event, window, cx| {
                         let sizes = down_state.read(cx).sizes.clone().unwrap_or_default();
                         down_state.update(cx, |state, _| {
                             state.drag = Some(Drag {
                                 index: key_index,
                                 pointer: event.position,
-                                sizes,
+                                sizes: sizes.clone(),
                             });
                         });
+                        if let Some(handler) = &down_handlers.onresize_start {
+                            handler(
+                                &SplitterResizeEvent {
+                                    index: key_index,
+                                    sizes: Rc::from(sizes),
+                                },
+                                window,
+                                cx,
+                            );
+                        }
                         cx.stop_propagation();
                     })
                     .on_key_down(move |event: &KeyDownEvent, window, cx| {

@@ -12,6 +12,9 @@ pub(crate) struct State {
     pub(crate) scroll_left: f32,
     pub(crate) scroll_top: f32,
     pub(crate) reached: Option<ScrollbarDirection>,
+    /// Rows in the max-height demo: it starts below the maximum height and
+    /// grows past it on demand.
+    pub(crate) rows: usize,
 }
 
 impl Default for State {
@@ -22,6 +25,7 @@ impl Default for State {
             scroll_left: 0.,
             scroll_top: 0.,
             reached: None,
+            rows: 5,
         }
     }
 }
@@ -75,6 +79,16 @@ impl Gallery {
                         .child(format!("{item}. {}", s.scrollbar_row))
                 }),
             )
+        };
+        let rows = |count: usize| {
+            div().flex().flex_col().children((1..=count).map(|item| {
+                div()
+                    .h(px(36.))
+                    .flex()
+                    .items_center()
+                    .px(px(12.))
+                    .child(format!("{item}. {}", s.scrollbar_row))
+            }))
         };
         let report = div()
             .text_size(px(tokens::font_size::SMALL))
@@ -156,14 +170,56 @@ impl Gallery {
             .child(section(
                 "scrollbar-max-height",
                 &s.scrollbar_max_height,
-                r#"el_scrollbar()
+                r#"// Five rows fit under the limit, so the box stays content-sized.
+el_scrollbar()
     .id("max-height")
     .max_height(200.)
-    .child(list);"#,
-                el_scrollbar()
-                    .id("max-height")
-                    .max_height(MAX_HEIGHT)
-                    .child(list(&self.scrollbar.items))
+    .child(rows(self.scrollbar.rows));
+
+// In the button handlers:
+this.scrollbar.rows += 1; // scrolls once the rows pass 200 px
+this.scrollbar.rows = (this.scrollbar.rows - 1).max(1); // shrinks back
+cx.notify();"#,
+                div()
+                    .child(
+                        el_scrollbar()
+                            .id("max-height")
+                            .max_height(MAX_HEIGHT)
+                            .child(rows(self.scrollbar.rows)),
+                    )
+                    .child(
+                        row()
+                            .child(
+                                el_button()
+                                    .id("max-height-add")
+                                    .small()
+                                    .label(s.scrollbar_add_row.as_str())
+                                    .onclick(cx.listener(|this, _, window, cx| {
+                                        this.scrollbar.rows += 1;
+                                        window.refresh();
+                                        cx.notify();
+                                    })),
+                            )
+                            .child(
+                                el_button()
+                                    .id("max-height-remove")
+                                    .small()
+                                    .label(s.scrollbar_remove_row.as_str())
+                                    .onclick(cx.listener(|this, _, window, cx| {
+                                        this.scrollbar.rows = this.scrollbar.rows.saturating_sub(1).max(1);
+                                        window.refresh();
+                                        cx.notify();
+                                    })),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(tokens::font_size::SMALL))
+                                    .child(
+                                        s.scrollbar_rows
+                                            .replace("%{count}", &self.scrollbar.rows.to_string()),
+                                    ),
+                            ),
+                    )
                     .into_any_element(),
             ))
             .child(section(
@@ -198,7 +254,7 @@ window.refresh();"#,
                 r#"el_scrollbar()
     .id("infinite")
     .height(200.)
-    .on_end_reached(0., cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
+    .onreached(0., cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
         if direction == ScrollbarDirection::Bottom {
             this.scrollbar.more();
             cx.notify();
@@ -210,7 +266,7 @@ window.refresh();"#,
                         el_scrollbar()
                             .id("infinite")
                             .height(200.)
-                            .on_end_reached(0., cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
+                            .onreached(0., cx.listener(|this, direction: &ScrollbarDirection, _, cx| {
                                 this.scrollbar.reached = Some(*direction);
                                 this.scrollbar.more();
                                 cx.notify();

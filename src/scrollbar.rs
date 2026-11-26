@@ -28,7 +28,7 @@ pub struct ScrollbarEvent {
     pub scroll_top: f32,
 }
 
-/// The viewport edge a [`Scrollbar::on_end_reached`] callback reports.
+/// The viewport edge a [`Scrollbar::onreached`] callback reports.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ScrollbarDirection {
     Top,
@@ -107,10 +107,10 @@ fn scrolled_position(handle: &ScrollHandle) -> Point<f32> {
     Point::new(-offset.x.as_f32(), -offset.y.as_f32())
 }
 
-/// Delivers `onscroll` and `on_end_reached` from one observed offset.
+/// Delivers `onscroll` and `onreached` from one observed offset.
 struct Sink {
     onscroll: Option<ScrollHandler>,
-    on_end_reached: Option<EndReachedHandler>,
+    onreached: Option<EndReachedHandler>,
     distance: f32,
 }
 
@@ -134,7 +134,7 @@ impl Sink {
                 cx,
             );
         }
-        if self.on_end_reached.is_some() {
+        if self.onreached.is_some() {
             let prev = state.read(cx).prev_position;
             let mut directions = Vec::new();
             if let Some(reached) = newly_reached(prev.y, position.y, max.y.as_f32(), self.distance) {
@@ -152,7 +152,7 @@ impl Sink {
                 });
             }
             for direction in directions {
-                if let Some(handler) = &self.on_end_reached {
+                if let Some(handler) = &self.onreached {
                     handler(&direction, window, cx);
                 }
             }
@@ -197,7 +197,7 @@ pub struct Scrollbar {
     handle: Option<ScrollHandle>,
     children: Vec<AnyElement>,
     onscroll: Option<ScrollHandler>,
-    on_end_reached: Option<EndReachedHandler>,
+    onreached: Option<EndReachedHandler>,
     distance: f32,
 }
 
@@ -264,13 +264,13 @@ impl Scrollbar {
     /// `distance` widens the edge in logical pixels, like the upstream
     /// `distance` attribute.
     #[track_caller]
-    pub fn on_end_reached(
+    pub fn onreached(
         mut self,
         distance: f32,
         handler: impl Fn(&ScrollbarDirection, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.distance = distance;
-        self.on_end_reached = Some(Box::new(handler));
+        self.onreached = Some(Box::new(handler));
         self
     }
 }
@@ -316,7 +316,7 @@ impl RenderOnce for Scrollbar {
         };
         let sink = Rc::new(Sink {
             onscroll: self.onscroll,
-            on_end_reached: self.on_end_reached,
+            onreached: self.onreached,
             distance: self.distance,
         });
 
@@ -547,7 +547,7 @@ mod tests {
                     .height(200.)
                     .handle(handle)
                     .onscroll(move |event, _, _| scrolled.borrow_mut().push(*event))
-                    .on_end_reached(0., move |direction, _, _| {
+                    .onreached(0., move |direction, _, _| {
                         ends.borrow_mut().push(*direction)
                     })
                     .child(
@@ -639,6 +639,35 @@ mod tests {
         // its content and painting over the next section.
         assert_eq!(handle.bounds().size.height, px(200.));
         assert_eq!(handle.max_offset().y, px(400.));
+    }
+
+    #[gpui::test]
+    fn short_content_keeps_the_box_content_sized(cx: &mut gpui::TestAppContext) {
+        // The gallery max-height demo starts with five 36 px rows: the box
+        // must stay at 180 px and only grow into the 200 px limit later.
+        struct Harness {
+            handle: ScrollHandle,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                el_scrollbar()
+                    .id("scroller")
+                    .max_height(200.)
+                    .handle(self.handle.clone())
+                    .child(div().h(px(180.)).child("five rows"))
+            }
+        }
+        let handle = ScrollHandle::new();
+        let (_, view) = cx.add_window_view({
+            let handle = handle.clone();
+            move |_, _| Harness { handle }
+        });
+        for _ in 0..2 {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+            view.run_until_parked();
+        }
+        assert_eq!(handle.bounds().size.height, px(180.));
+        assert_eq!(handle.max_offset().y, px(0.));
     }
 
     #[gpui::test]

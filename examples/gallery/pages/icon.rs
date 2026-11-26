@@ -309,7 +309,8 @@ mod tests {
                     rects,
                 }
             });
-            rects.borrow_mut().clear();
+            // The window lays out and paints on creation; clearing here would
+            // discard the bounds recorded by that first retained frame.
             view.update(|window, cx| window.draw(cx).clear(cx));
             let measured = rects.borrow();
             assert_eq!(measured.len(), 2 * columns);
