@@ -1924,7 +1924,7 @@ impl Frame {
             .min_w(px(metrics.popup_min_width))
             .max_h(self.max_popup_height)
             .rounded(px(metrics.popup_radius))
-            .shadow(vec![self.theme.light_shadow()])
+            .shadow(self.theme.overlay_shadow())
             .bg(rgb(self.theme.overlay_background()));
         let styled = if let Some(style) = branch
             .popup_style

@@ -95,15 +95,29 @@ impl Theme {
         }
     }
 
-    /// Theme Chalk `--el-box-shadow-light` in light and dark `var.scss`.
-    pub(crate) fn light_shadow(&self) -> BoxShadow {
-        BoxShadow {
-            color: Hsla::from(rgb(0)).opacity(if self.dark { 0.72 } else { 0.12 }),
-            offset: point(px(0.), px(0.)),
-            blur_radius: px(12.),
-            spread_radius: px(0.),
+    /// Desktop floating-menu elevation, layered like a native popover instead
+    /// of the CSS `--el-box-shadow-light` halo: a hairline edge ring, a tight
+    /// contact shadow, and a downward ambient shadow.
+    pub(crate) fn overlay_shadow(&self) -> Vec<BoxShadow> {
+        let edge = Hsla::from(rgb(if self.dark { WHITE } else { 0 })).opacity(if self.dark {
+            0.10
+        } else {
+            0.06
+        });
+        let contact = Hsla::from(rgb(0)).opacity(if self.dark { 0.45 } else { 0.10 });
+        let ambient = Hsla::from(rgb(0)).opacity(if self.dark { 0.55 } else { 0.16 });
+        let layer = |color: Hsla, offset_y: f32, blur: f32, spread: f32| BoxShadow {
+            color,
+            offset: point(px(0.), px(offset_y)),
+            blur_radius: px(blur),
+            spread_radius: px(spread),
             inset: false,
-        }
+        };
+        vec![
+            layer(edge, 0., 0., 0.5),
+            layer(contact, 1., 3., 0.),
+            layer(ambient, if self.dark { 12. } else { 10. }, 28., -2.),
+        ]
     }
 
     /// Theme Chalk `--el-mask-color` and `--el-mask-color-extra-light`.
@@ -321,10 +335,16 @@ mod tests {
         assert_eq!(dark.overlay_background(), 0x1d1e1f);
         assert_eq!(light.disabled_text(), 0xa8abb2);
         assert_eq!(dark.disabled_text(), 0x8d9095);
-        for (theme, shadow_alpha) in [(light, 0.12), (dark, 0.72)] {
-            let shadow = theme.light_shadow();
-            assert_eq!(shadow.color.a, shadow_alpha);
-            assert_eq!(shadow.blur_radius, px(12.));
+        for theme in [light, dark] {
+            let shadow = theme.overlay_shadow();
+            assert_eq!(shadow.len(), 3);
+            // Hairline ring, contact layer, downward ambient layer.
+            assert_eq!(shadow[0].spread_radius, px(0.5));
+            assert_eq!(shadow[0].blur_radius, px(0.));
+            assert_eq!(shadow[1].offset.y, px(1.));
+            assert!(shadow[2].offset.y >= px(10.));
+            assert_eq!(shadow[2].blur_radius, px(28.));
+            assert_eq!(shadow.iter().filter(|s| s.inset).count(), 0);
             assert_eq!(theme.mask(Mask::ExtraLight).a, 0.3);
         }
         assert!(popup_priority(1) > popup_priority(0));
