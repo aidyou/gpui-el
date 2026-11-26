@@ -389,7 +389,12 @@ impl RenderOnce for Tag {
                         inset: false,
                     }])
                 })
-                .on_click(move |event, window, cx| handler(event, window, cx));
+                .on_click(move |event, window, cx| {
+                    handler(event, window, cx);
+                    // A clickable tag owns its click; the close button already
+                    // stops its own.
+                    cx.stop_propagation();
+                });
         }
         root.into_any_element()
     }

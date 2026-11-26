@@ -440,6 +440,9 @@ impl RenderOnce for Button {
             root = root.on_click(move |event, window, cx| {
                 if event.standard_click() {
                     handler(event, window, cx);
+                    // The button owns its activation; ancestors must not also
+                    // react to the same click.
+                    cx.stop_propagation();
                 }
             });
         }

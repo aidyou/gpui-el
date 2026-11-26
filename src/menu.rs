@@ -508,7 +508,9 @@ impl Default for Options {
             onopen: None,
             onclose: None,
             metrics: MenuStyle::default().metrics(),
-            speed: None,
+            // Desktop menus open and close quickly; `normal()` restores the
+            // Element Plus 1x timings.
+            speed: Some(MotionSpeed::Fast),
         }
     }
 }
@@ -580,14 +582,15 @@ impl Menu {
         self
     }
     /// Explicitly sets the [`MotionSpeed`] for the collapse, popup fade, and
-    /// chevron rotation; [`Self::fast`] and [`Self::slow`] cover the common
-    /// cases.
+    /// chevron rotation. Menus use [`MotionSpeed::Fast`] by default, the
+    /// desktop-regular timing; [`Self::normal`] restores the Element Plus 1x
+    /// durations.
     pub fn speed(mut self, speed: MotionSpeed) -> Self {
         self.options.speed = Some(speed);
         self
     }
-    /// Runs this animation at jQuery's `fast` speed (0.6×); omit for the
-    /// theme's speed.
+    /// Runs this animation at jQuery's `fast` speed (0.6×), already the
+    /// default.
     pub fn fast(mut self) -> Self {
         self.options.speed = Some(MotionSpeed::Fast);
         self
@@ -600,7 +603,7 @@ impl Menu {
         self
     }
 
-    /// Restores the theme's speed after [`Self::fast`] or [`Self::slow`].
+    /// Uses the Element Plus 1x timings instead of the default desktop speed.
     pub fn normal(mut self) -> Self {
         self.options.speed = Some(MotionSpeed::Normal);
         self
@@ -1970,6 +1973,7 @@ impl Frame {
             )
             .id(popup_id)
             .overflow_y_scroll()
+            .on_scroll(|_, _, cx| cx.stop_propagation())
             .occlude()
             .when(self.options.hover(), |el| {
                 el.on_hover({
@@ -2206,7 +2210,7 @@ mod tests {
 
     #[test]
     fn speed_chainables_are_optional() {
-        assert_eq!(el_menu().options.speed, None);
+        assert_eq!(el_menu().options.speed, Some(MotionSpeed::Fast));
         assert_eq!(el_menu().fast().options.speed, Some(MotionSpeed::Fast));
         assert_eq!(el_menu().slow().options.speed, Some(MotionSpeed::Slow));
         assert_eq!(

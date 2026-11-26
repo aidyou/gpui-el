@@ -319,6 +319,9 @@ impl RenderOnce for Link {
                 if let Some(href) = href.as_ref() {
                     cx.open_url(href);
                 }
+                // Activating the link is the whole gesture; do not bubble it to
+                // a surrounding row or card.
+                cx.stop_propagation();
             });
         root.into_any_element()
     }

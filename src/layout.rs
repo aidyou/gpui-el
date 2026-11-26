@@ -226,6 +226,7 @@ impl RenderOnce for Aside {
                 el.border_r_1().border_color(color)
             })
             .overflow_scroll()
+            .on_scroll(|_, _, cx| cx.stop_propagation())
             .children(self.children)
     }
 }
@@ -278,6 +279,7 @@ impl RenderOnce for Main {
             .min_h_0()
             .p(px(self.padding))
             .overflow_scroll()
+            .on_scroll(|_, _, cx| cx.stop_propagation())
             .children(self.children)
     }
 }
