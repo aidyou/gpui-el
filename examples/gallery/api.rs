@@ -479,6 +479,12 @@ const MENU: &[Row] = &[
         "悬停底色与文字颜色、浮层纵向内边距与菜单字号。",
     ),
     (
+        "speed",
+        "MotionSpeed · theme",
+        "Scales the collapse, popup fade, and chevron rotation. Fast is 0.6×, Slow 1.6×, Custom multiplies the normal duration.",
+        "缩放展开、浮层淡入淡出与箭头旋转。Fast 为 0.6 倍，Slow 为 1.6 倍，Custom 为自定义倍数。",
+    ),
+    (
         "MenuState::active_index, is_open, open, close, update_active_index",
         "Option<&str> / bool / index, Window",
         "Inspect or update menu state from your view.",

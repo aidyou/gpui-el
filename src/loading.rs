@@ -6,7 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    Icon, IconPack, Locale, Theme, motion,
+    Icon, IconPack, Locale, Theme,
+    motion::{self, MotionSpeed},
     theme::{Mask, PRIMARY},
 };
 
@@ -25,21 +26,33 @@ pub enum LoadingSpinner {
 /// Angular speed within each revolution.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum LoadingMotion {
-    #[default]
+    /// Element Plus's linear rotation, two seconds per turn.
     Uniform,
-    /// Speed increases linearly from rest and resets each revolution.
+    /// Speed increases linearly from rest and rests briefly each revolution.
     LinearAcceleration,
     /// ChatSpeed-style acceleration: CSS `ease-in`, one second per turn.
     EaseIn,
+    /// CSS `spin 1s ease-in-out infinite`: one second per turn, slowing to a
+    /// brief rest at the loop point. The desktop default.
+    #[default]
+    EaseInOut,
 }
 
 impl LoadingMotion {
-    pub(crate) fn phase(self, elapsed: f64) -> f32 {
-        let progress = motion::turn_phase(elapsed, if self == Self::EaseIn { 1. } else { 2. });
+    /// Seconds for one revolution at normal speed.
+    pub(crate) fn period(self) -> f64 {
+        match self {
+            Self::Uniform | Self::LinearAcceleration => 2.,
+            Self::EaseIn | Self::EaseInOut => 1.,
+        }
+    }
+    pub(crate) fn phase(self, elapsed: f64, speed: MotionSpeed) -> f32 {
+        let progress = motion::turn_phase(elapsed, speed.scale(self.period()));
         match self {
             Self::Uniform => progress,
             Self::LinearAcceleration => progress * progress,
             Self::EaseIn => motion::ease_in(progress),
+            Self::EaseInOut => motion::ease_in_out(progress),
         }
     }
 }
@@ -60,6 +73,7 @@ pub struct Loading {
     horizontal: bool,
     spinner: LoadingSpinner,
     motion: LoadingMotion,
+    speed: Option<MotionSpeed>,
     opacity: Option<f32>,
     background: Option<Hsla>,
     indicator: Option<Indicator>,
@@ -97,6 +111,11 @@ impl Loading {
     }
     pub fn motion(mut self, motion: LoadingMotion) -> Self {
         self.motion = motion;
+        self
+    }
+    /// Overrides the theme's [`MotionSpeed`] for the spinner rotation.
+    pub fn speed(mut self, speed: MotionSpeed) -> Self {
+        self.speed = Some(speed);
         self
     }
     /// Sets the theme mask alpha; 0 keeps pointer blocking but draws no mask.
@@ -166,6 +185,7 @@ impl RenderOnce for Loading {
             return finish(root);
         }
         let theme = Theme::current(cx);
+        let speed = self.speed.unwrap_or(theme.motion_speed);
         let size = if self.fullscreen { 50. } else { 42. };
         let background = self
             .background
@@ -175,11 +195,12 @@ impl RenderOnce for Loading {
             Some(Indicator::Icon(icon)) => icon
                 .with_default_size(size)
                 .spin(self.motion)
+                .spin_speed(speed)
                 .into_any_element(),
             None if self.spinner == LoadingSpinner::Spokes => {
-                element_plus_spinner(size, self.motion)
+                element_plus_spinner(size, self.motion, speed)
             }
-            None => animated_spinner(size, self.spinner, self.motion),
+            None => animated_spinner(size, self.spinner, self.motion, speed),
         };
         let text = self
             .text
@@ -252,13 +273,14 @@ fn mask_geometry(size: f32, elapsed: f64, turn: f32) -> (f32, f32, f32, f32) {
 }
 
 pub(crate) fn inline_spinner(size: f32) -> AnyElement {
-    element_plus_spinner(size, LoadingMotion::Uniform)
+    element_plus_spinner(size, LoadingMotion::Uniform, MotionSpeed::Normal)
 }
 
-fn element_plus_spinner(size: f32, motion: LoadingMotion) -> AnyElement {
+fn element_plus_spinner(size: f32, motion: LoadingMotion, speed: MotionSpeed) -> AnyElement {
     Icon::from_pack(IconPack::ElementPlus, "Loading")
         .size(size)
         .spin(motion)
+        .spin_speed(speed)
         .into_any_element()
 }
 
@@ -281,7 +303,12 @@ const DOTS: [(f32, f32, f32); 14] = [
     (886., 508., 153.),
 ];
 
-fn animated_spinner(size: f32, style: LoadingSpinner, motion: LoadingMotion) -> AnyElement {
+fn animated_spinner(
+    size: f32,
+    style: LoadingSpinner,
+    motion: LoadingMotion,
+    speed: MotionSpeed,
+) -> AnyElement {
     canvas(
         |_, _, _| {},
         move |bounds, _, window, cx| {
@@ -292,7 +319,7 @@ fn animated_spinner(size: f32, style: LoadingSpinner, motion: LoadingMotion) -> 
             let elapsed = motion::animation_time(window, cx);
             let center = bounds.center();
             let color = window.text_style().color;
-            let turn = motion.phase(elapsed);
+            let turn = motion.phase(elapsed, speed);
             if style == LoadingSpinner::Dots {
                 let (sin, cos) = (TAU * turn).sin_cos();
                 let scale = size / 1024.;
@@ -415,11 +442,18 @@ mod tests {
         assert_eq!(start, 0.);
         assert!(later > start && peak > initial);
         assert_eq!(mask_geometry(42., 1.5, 0.75).3, initial);
-        assert_eq!(LoadingMotion::Uniform.phase(1.), 0.5);
-        assert_eq!(LoadingMotion::LinearAcceleration.phase(1.), 0.25);
-        assert_eq!(LoadingMotion::LinearAcceleration.phase(2.), 0.);
-        assert!((LoadingMotion::EaseIn.phase(0.5) - 0.31536).abs() < 0.0001);
-        assert_eq!(LoadingMotion::EaseIn.phase(1.), 0.);
+        let normal = MotionSpeed::Normal;
+        assert_eq!(LoadingMotion::Uniform.phase(1., normal), 0.5);
+        assert_eq!(LoadingMotion::LinearAcceleration.phase(1., normal), 0.25);
+        assert_eq!(LoadingMotion::LinearAcceleration.phase(2., normal), 0.);
+        assert!((LoadingMotion::EaseIn.phase(0.5, normal) - 0.31536).abs() < 0.0001);
+        assert_eq!(LoadingMotion::EaseIn.phase(1., normal), 0.);
+        // The desktop default: CSS `spin 1s ease-in-out infinite`.
+        assert!((LoadingMotion::EaseInOut.phase(0.5, normal) - 0.5).abs() < 1e-5);
+        assert_eq!(LoadingMotion::EaseInOut.phase(1., normal), 0.);
+        assert!(LoadingMotion::EaseInOut.phase(0.1, normal) < 0.1);
+        // A faster speed completes a turn sooner.
+        assert_eq!(LoadingMotion::EaseInOut.phase(0.6, MotionSpeed::Fast), 0.);
         assert!(DOTS.windows(2).all(|pair| pair[0].2 < pair[1].2));
     }
 

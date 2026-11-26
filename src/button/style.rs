@@ -303,11 +303,11 @@ mod tests {
     }
 
     #[test]
-    fn normal_geometry_matches_theme_chalk_sizes() {
+    fn normal_geometry_matches_desktop_sizes() {
         for (size, expected) in [
-            (ButtonSize::Small, (24., 11., 12., 3., 4.)),
-            (ButtonSize::Default, (32., 15., 14., 4., 6.)),
-            (ButtonSize::Large, (40., 19., 14., 4., 8.)),
+            (ButtonSize::Small, (20., 11., 11., 4., 4.)),
+            (ButtonSize::Default, (28., 15., 13., 5., 6.)),
+            (ButtonSize::Large, (32., 19., 13., 5., 8.)),
         ] {
             let m = size.metrics(ButtonShape::Normal);
             assert_eq!(
@@ -322,8 +322,9 @@ mod tests {
         let small = ButtonSize::Small.metrics(ButtonShape::Round);
         assert_eq!(
             (small.height, small.radius, small.font_size),
-            (24., 20., 12.)
+            (20., 20., 11.)
         );
-        assert_eq!(ButtonSize::Large.metrics(ButtonShape::Circle).radius, 20.);
+        // Circle buttons round by half the shorter edge.
+        assert_eq!(ButtonSize::Large.metrics(ButtonShape::Circle).radius, 16.);
     }
 }

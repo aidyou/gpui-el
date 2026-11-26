@@ -1,10 +1,15 @@
 use gpui::{App, BoxShadow, Global, Hsla, SharedString, point, px, rgb};
 
+use crate::motion::MotionSpeed;
+
 /// Element Plus light/dark defaults and native rendering preferences.
 #[derive(Clone, Debug)]
 pub struct Theme {
     pub dark: bool,
     pub reduced_motion: bool,
+    /// Scales every animation duration; components honor it unless they set
+    /// their own [`MotionSpeed`].
+    pub motion_speed: MotionSpeed,
     /// Overrides native font selection; missing glyphs still use system fallback.
     pub font_family: Option<SharedString>,
 }
@@ -22,6 +27,7 @@ impl Theme {
         Self {
             dark: false,
             reduced_motion: false,
+            motion_speed: MotionSpeed::Normal,
             font_family: None,
         }
     }
@@ -30,6 +36,7 @@ impl Theme {
         Self {
             dark: true,
             reduced_motion: false,
+            motion_speed: MotionSpeed::Normal,
             font_family: None,
         }
     }
@@ -189,14 +196,24 @@ impl Theme {
 struct DefaultFont(Option<SharedString>);
 impl Global for DefaultFont {}
 
-// Theme Chalk's default font stack, excluding the generic system fallback.
-const FONT_FALLBACKS: [&str; 7] = [
-    "Helvetica Neue",
-    "Helvetica",
+// Native desktop UI faces first, then CJK coverage and the Theme Chalk web
+// stack, excluding the generic system fallback.
+const FONT_FALLBACKS: &[&str] = &[
+    "SF Pro Text",
+    ".AppleSystemUIFont",
+    "Segoe UI Variable Text",
+    "Segoe UI",
+    "Inter",
+    "Noto Sans",
+    "Cantarell",
+    "Ubuntu",
     "PingFang SC",
     "Hiragino Sans GB",
+    "Noto Sans CJK SC",
     "Microsoft YaHei",
     "微软雅黑",
+    "Helvetica Neue",
+    "Helvetica",
     "Arial",
 ];
 
@@ -224,11 +241,13 @@ const DARK_TEXT_BASE: u32 = 0xf0f5ff;
 /// Shared Theme Chalk defaults. Component-specific recipes still follow
 /// their own maps rather than equating every `small` preset.
 pub mod tokens {
-    /// `$common-component-size` in Theme Chalk `common/var.scss`.
+    /// Desktop control heights. Apple's desktop guidance uses a 28 pt default
+    /// control with a 20 pt minimum; KDE Breeze tool buttons and inputs sit at
+    /// 28 px as well.
     pub mod control_height {
-        pub const SMALL: f32 = 24.;
-        pub const DEFAULT: f32 = 32.;
-        pub const LARGE: f32 = 40.;
+        pub const SMALL: f32 = 20.;
+        pub const DEFAULT: f32 = 28.;
+        pub const LARGE: f32 = 32.;
     }
 
     /// Element Plus Space `SIZE_MAP` (`components/space/src/use-space.ts`).
@@ -238,10 +257,11 @@ pub mod tokens {
         pub const LARGE: f32 = 16.;
     }
 
-    /// Theme Chalk `$border-radius` and the native capsule geometry.
+    /// Desktop corner radii. macOS standard controls use about 6 pt and KDE
+    /// Breeze about 3 px; `BASE` takes the middle of that range.
     pub mod radius {
-        pub const SMALL: f32 = 2.;
-        pub const BASE: f32 = 4.;
+        pub const SMALL: f32 = 3.;
+        pub const BASE: f32 = 5.;
         /// Upstream `round`; used by Button. There is no global `large` key.
         pub const ROUND: f32 = 20.;
 
@@ -258,13 +278,14 @@ pub mod tokens {
     /// Theme Chalk `--el-font-weight-primary` (500).
     pub const FONT_WEIGHT_PRIMARY: gpui::FontWeight = gpui::FontWeight::MEDIUM;
 
-    /// Theme Chalk `$font-size` values commonly used by controls.
+    /// Desktop type scale. macOS body text is 13 pt and KDE's default font is
+    /// a 10 pt face (~13 px), so `BASE` is the regular UI size.
     pub mod font_size {
-        pub const EXTRA_SMALL: f32 = 12.;
-        pub const SMALL: f32 = 13.;
-        pub const BASE: f32 = 14.;
-        pub const MEDIUM: f32 = 16.;
-        pub const LARGE: f32 = 18.;
+        pub const EXTRA_SMALL: f32 = 11.;
+        pub const SMALL: f32 = 12.;
+        pub const BASE: f32 = 13.;
+        pub const MEDIUM: f32 = 15.;
+        pub const LARGE: f32 = 17.;
         pub const EXTRA_LARGE: f32 = 20.;
     }
 }

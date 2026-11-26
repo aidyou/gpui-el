@@ -75,9 +75,11 @@
 //! class, or persistent DOM. `popup_style` overrides submenu surfaces via
 //! GPUI; vertical submenu expand and collapse animate through [`Transition`]
 //! like upstream's `ElCollapseTransition`, popups fade like
-//! `el-zoom-in-center`, and floating submenus nest beside their parents to any
-//! depth, flipping at the window edge. Horizontal width is measured from the
-//! menu itself and overflow is updated after layout.
+//! `el-zoom-in-center`, and the built-in chevron rotates in place instead of
+//! swapping icons: 180° for an inline expand (∨ ↔ ∧) and 90° for a floating
+//! submenu that opened beside its row (› ↔ ∨). Floating submenus nest beside
+//! their parents to any depth, flipping at the window edge. Horizontal width
+//! is measured from the menu itself and overflow is updated after layout.
 //!
 //! [`Transition`] collects Theme Chalk's `el-fade-in`, `el-fade-in-linear`,
 //! `el-zoom-in-center`, `el-collapse-transition`, and
@@ -85,7 +87,11 @@
 //! content mounted while it leaves. GPUI has no transform animation, so the
 //! zoom effects reduce to their opacity channel. Motion curves and the
 //! animation clock are shared with `Loading`, whose spinner turns use the
-//! same easing and reduced-motion handling.
+//! same easing and reduced-motion handling. Durations are the brief desktop
+//! variants of Theme Chalk's web values, and [`MotionSpeed`] presets
+//! (`Fast`, `Normal`, `Slow`, `Custom`) scale every animation: set it once on
+//! the theme's `motion_speed` field, or per component through
+//! `Transition::speed`, `Menu::speed`, and `Loading::speed`.
 //!
 //! Table follows `table.md`, `components/table/src`, and Theme Chalk
 //! `table.scss` for its basic subset: typed columns with fixed or distributed
@@ -125,7 +131,7 @@ mod link;
 mod loading;
 mod locale;
 mod menu;
-mod motion;
+pub mod motion;
 mod table;
 mod tag;
 mod theme;
@@ -148,6 +154,7 @@ pub use menu::{
     Menu, MenuEntry, MenuEvent, MenuItem, MenuItemGroup, MenuMode, MenuPopupTheme, MenuState,
     MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
+pub use motion::MotionSpeed;
 pub use table::{Column, Table, TableAlign, TableSize};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use theme::{Theme, tokens};

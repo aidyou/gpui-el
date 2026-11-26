@@ -11,6 +11,41 @@ use gpui::{App, Window};
 
 use crate::Theme;
 
+/// Animation speed presets, like jQuery's `fade('fast')` and `fade('slow')`.
+///
+/// The presets scale every duration in the library. `Normal` keeps the
+/// component defaults, which are already tuned for desktop feedback; `Fast`
+/// shortens them for pointer responses and `Slow` lengthens them for
+/// presentations.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum MotionSpeed {
+    /// 0.6× the normal duration.
+    Fast,
+    /// 1.0× the normal duration.
+    #[default]
+    Normal,
+    /// 1.6× the normal duration.
+    Slow,
+    /// A custom multiplier of the normal duration (2.0 is twice as slow).
+    /// Non-finite and non-positive values fall back to normal speed.
+    Custom(f32),
+}
+
+impl MotionSpeed {
+    /// Scales a normal duration in seconds. Callers keep their base duration
+    /// and multiply, so presets stay consistent across components.
+    pub fn scale(self, seconds: f64) -> f64 {
+        let factor = match self {
+            Self::Fast => 0.6,
+            Self::Normal => 1.0,
+            Self::Slow => 1.6,
+            Self::Custom(factor) if factor.is_finite() && factor > 0. => factor as f64,
+            Self::Custom(_) => 1.0,
+        };
+        seconds * factor
+    }
+}
+
 /// Seconds since the first animation in this process, or 0 while reduced
 /// motion is enabled. Schedules the next animation frame, so callers repaint
 /// for as long as they keep calling this.
@@ -81,6 +116,17 @@ pub(crate) fn turn_phase(elapsed: f64, period: f64) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn motion_speeds_scale_durations() {
+        assert_eq!(MotionSpeed::Normal.scale(0.2), 0.2);
+        assert!((MotionSpeed::Fast.scale(0.2) - 0.12).abs() < 1e-9);
+        assert!((MotionSpeed::Slow.scale(0.2) - 0.32).abs() < 1e-9);
+        assert!((MotionSpeed::Custom(2.).scale(0.2) - 0.4).abs() < 1e-9);
+        assert_eq!(MotionSpeed::Custom(f32::NAN).scale(0.2), 0.2);
+        assert_eq!(MotionSpeed::Custom(0.).scale(0.2), 0.2);
+        assert_eq!(MotionSpeed::Custom(-1.).scale(0.2), 0.2);
+    }
 
     #[test]
     fn identity_and_symmetric_curves_pass_through_their_ends() {

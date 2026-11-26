@@ -11,7 +11,8 @@ use gpui::{
 };
 
 use crate::{
-    Icon, Locale, Theme, TransitionEffect, el_icon, el_transition, motion,
+    Icon, Locale, Theme, TransitionEffect, el_icon, el_transition,
+    motion::{self, MotionSpeed},
     theme::{PRIMARY, popup_priority},
     tokens,
 };
@@ -93,7 +94,8 @@ impl MenuStyle {
                 popup_min_width: 200.,
                 hover: HoverFill::PrimaryLight,
                 hover_text: None,
-                font_size: tokens::font_size::BASE,
+                // The web baseline is 14 px, independent of the desktop BASE.
+                font_size: 14.,
             },
             // 24 px rows at 13 px with a 20 px minimum hit target, like the
             // macOS menu bar menus.
@@ -134,7 +136,8 @@ impl MenuStyle {
     }
 }
 /// Popup fade duration, like Theme Chalk's `el-zoom-in-center` transition.
-const FADE_SECS: f64 = 0.3;
+/// Normal speed for a popup fade; [`MotionSpeed`] scales it.
+const FADE_SECS: f64 = 0.2;
 
 /// One in-flight popup fade. Vertical submenu bodies animate through
 /// [`Transition`] instead.
@@ -144,10 +147,10 @@ struct Fade {
     opening: bool,
 }
 
-fn fade_progress(fade: Option<Fade>, reduced: bool) -> f32 {
+fn fade_progress(fade: Option<Fade>, reduced: bool, secs: f64) -> f32 {
     match fade {
         Some(fade) if !reduced => {
-            let t = ((motion::elapsed() - fade.started) / FADE_SECS).clamp(0., 1.) as f32;
+            let t = ((motion::elapsed() - fade.started) / secs).clamp(0., 1.) as f32;
             if fade.opening {
                 motion::element_plus(t)
             } else {
@@ -327,6 +330,28 @@ impl MenuItemGroup {
     }
 }
 
+/// One chevron rotation, from a sampled angle to the target.
+#[derive(Clone, Copy)]
+struct Arrow {
+    started: f64,
+    from: f32,
+    to: f32,
+}
+
+impl Arrow {
+    /// Normal speed for a chevron rotation; [`MotionSpeed`] scales it.
+    const SECS: f64 = 0.15;
+
+    fn sample(&self, now: f64, secs: f64) -> f32 {
+        let delta = ((now - self.started) / secs).clamp(0., 1.) as f32;
+        self.from + (self.to - self.from) * motion::ease_in_out(delta)
+    }
+
+    fn running(&self, now: f64, secs: f64) -> bool {
+        now - self.started < secs
+    }
+}
+
 /// Persistent menu data. `Menu::state` exposes programmatic control; otherwise
 /// the component keeps this state under its own stable element ID.
 #[derive(Default)]
@@ -349,10 +374,31 @@ pub struct MenuState {
     unique_opened: bool,
     /// In-flight popup fade-ins and fade-outs.
     fading: HashMap<SharedString, Fade>,
+    /// In-flight chevron rotations, sampled from 0 (closed) to 1 (open).
+    arrows: HashMap<SharedString, Arrow>,
 }
 impl MenuState {
-    /// Records a popup fade for a submenu branch.
+    /// Records the chevron rotation and, for popups, the fade of a submenu
+    /// branch.
     fn animate(&mut self, key: &SharedString, opening: bool) {
+        let now = motion::elapsed();
+        let from = self
+            .arrows
+            .get(key)
+            .map_or(if opening { 0. } else { 1. }, |arrow| {
+                arrow.sample(now, Arrow::SECS)
+            });
+        let to = if opening { 1. } else { 0. };
+        if from != to {
+            self.arrows.insert(
+                key.clone(),
+                Arrow {
+                    started: now,
+                    from,
+                    to,
+                },
+            );
+        }
         if self.popup {
             self.fading.insert(
                 key.clone(),
@@ -437,6 +483,7 @@ struct Options {
     onopen: Option<Listener>,
     onclose: Option<Listener>,
     metrics: Metrics,
+    speed: Option<MotionSpeed>,
 }
 impl Default for Options {
     fn default() -> Self {
@@ -461,6 +508,7 @@ impl Default for Options {
             onopen: None,
             onclose: None,
             metrics: MenuStyle::default().metrics(),
+            speed: None,
         }
     }
 }
@@ -529,6 +577,12 @@ impl Menu {
     }
     pub fn unique_opened(mut self, value: bool) -> Self {
         self.options.unique = value;
+        self
+    }
+    /// Overrides the theme's [`MotionSpeed`] for the collapse, popup fade,
+    /// and chevron rotation.
+    pub fn speed(mut self, speed: MotionSpeed) -> Self {
+        self.options.speed = Some(speed);
         self
     }
     /// Chooses a desktop surface preset; individual knobs still override it.
@@ -993,6 +1047,7 @@ impl RenderOnce for Menu {
                     && s.branches.get(key) == branches.get(key)
             });
             s.bounds.retain(|key, _| s.paths.contains_key(key));
+            s.arrows.retain(|key, _| s.paths.contains_key(key));
             s.branches = branches;
             if popup {
                 let opened = s.opened.clone();
@@ -1566,6 +1621,8 @@ impl Frame {
         }
         let key = &node.index;
         let state = self.state.read(cx);
+        let speed = self.options.speed.unwrap_or(self.theme.motion_speed);
+        let arrow_secs = speed.scale(Arrow::SECS);
         let open = state.is_open(key);
         let selected = node.item.as_ref().is_some_and(|item| item.selected)
             || state.active.as_ref().is_some_and(|active| {
@@ -1661,17 +1718,33 @@ impl Frame {
             } else {
                 &branch.expand_icons
             };
+            // The built-in chevron rotates instead of swapping icons: 180°
+            // for an inline expand, 90° for a floating submenu opened beside
+            // its row. Custom icon pairs still swap.
+            let angle = if custom.is_some() {
+                0.
+            } else {
+                let target = if open { 1. } else { 0. };
+                let sampled = if Theme::motion_reduced(cx) {
+                    target
+                } else {
+                    state
+                        .arrows
+                        .get(key)
+                        .map_or(target, |arrow| arrow.sample(motion::elapsed(), arrow_secs))
+                };
+                sampled
+                    * if floating {
+                        std::f32::consts::FRAC_PI_2
+                    } else {
+                        std::f32::consts::PI
+                    }
+            };
             let arrow = custom
                 .as_ref()
                 .map(|(closed, opened)| if open { opened.clone() } else { closed.clone() })
                 .unwrap_or_else(|| {
-                    el_icon(if floating {
-                        "ArrowRight"
-                    } else if open {
-                        "ArrowUp"
-                    } else {
-                        "ArrowDown"
-                    })
+                    el_icon(if floating { "ArrowRight" } else { "ArrowDown" }).rotate(angle)
                 });
             if !top {
                 row = row.child(div().flex_1());
@@ -1740,6 +1813,14 @@ impl Frame {
                             window.on_next_frame(|window, _| window.refresh());
                         }
                     }
+                    if owner
+                        .read(cx)
+                        .arrows
+                        .get(&row_key)
+                        .is_some_and(|arrow| arrow.running(motion::elapsed(), arrow_secs))
+                    {
+                        window.request_animation_frame();
+                    }
                 },
                 |_, _, _, _| {},
             )
@@ -1769,12 +1850,24 @@ impl Frame {
                 .flex()
                 .flex_col()
                 .child(row)
-                .child(el_transition(body_id, open, TransitionEffect::Collapse).child(body))
+                .child(
+                    el_transition(body_id, open, TransitionEffect::Collapse)
+                        .speed(speed)
+                        .child(body),
+                )
                 .into_any_element();
         }
         let prior = state.bounds.get(key).copied();
         let fade = self.state.read(cx).fading.get(key).copied();
-        let progress = fade_progress(fade, Theme::motion_reduced(cx));
+        let fade_secs = speed.scale(FADE_SECS);
+        let progress = fade_progress(fade, Theme::motion_reduced(cx), fade_secs);
+        // Inside the wrapper (a flex row) the row grows to the menu width, so
+        // the flex spacer pushes a floating submenu's chevron to the right edge.
+        let row = if !top && !collapsed {
+            row.flex_grow(1.)
+        } else {
+            row
+        };
         let wrapper = div().relative().flex().flex_shrink_0().child(row);
         wrapper
             .children(
@@ -1798,6 +1891,11 @@ impl Frame {
         let branch = node.branch.as_ref().expect("popup branch");
         let offset = px(branch.offset.unwrap_or(self.options.offset));
         let metrics = self.options.metrics;
+        let fade_secs = self
+            .options
+            .speed
+            .unwrap_or(self.theme.motion_speed)
+            .scale(FADE_SECS);
         let base = div()
             .flex()
             .flex_col()
@@ -1830,7 +1928,7 @@ impl Frame {
                             owner.update(cx, |s, _| {
                                 s.popup_bounds.insert(key.clone(), bounds);
                                 let done = s.fading.get(&key).is_some_and(|fade| {
-                                    reduced || (motion::elapsed() - fade.started) >= FADE_SECS
+                                    reduced || (motion::elapsed() - fade.started) >= fade_secs
                                 });
                                 if done {
                                     s.fading.remove(&key);
@@ -2085,6 +2183,30 @@ mod tests {
         );
     }
 
+    #[test]
+    fn chevron_rotation_animates_between_closed_and_open() {
+        let arrow = Arrow {
+            started: 10.,
+            from: 0.,
+            to: 1.,
+        };
+        assert_eq!(arrow.sample(10., Arrow::SECS), 0.);
+        assert_eq!(arrow.sample(10. + Arrow::SECS, Arrow::SECS), 1.);
+        let mid = arrow.sample(10. + Arrow::SECS / 2., Arrow::SECS);
+        assert!(mid > 0.1 && mid < 0.9, "midway angle {mid}");
+        assert!(arrow.running(10. + Arrow::SECS / 2., Arrow::SECS));
+
+        let mut state = MenuState::default();
+        let key: SharedString = "one".into();
+        state.animate(&key, true);
+        let opened = state.arrows[&key];
+        assert_eq!((opened.from, opened.to), (0., 1.));
+        // Closing without a running animation starts from the open angle.
+        state.animate(&key, false);
+        assert_eq!(state.arrows[&key].to, 0.);
+        assert!(state.arrows[&key].from > 0.);
+    }
+
     #[gpui::test]
     fn nested_popups_open_a_third_level_and_report_the_full_path(cx: &mut gpui::TestAppContext) {
         let events: EventLog = Rc::new(std::cell::RefCell::new(Vec::new()));
@@ -2143,6 +2265,11 @@ mod tests {
             assert!(s.is_open("theme"), "a grandchild popup opens beside it");
             assert!(s.popup_bounds.contains_key("settings"));
             assert!(s.popup_bounds.contains_key("theme"));
+            // Branch rows fill the popup so the chevron sits at the right edge.
+            assert_eq!(
+                s.bounds["theme"].size.width,
+                s.popup_bounds["settings"].size.width
+            );
         });
         let dark = view.update(|_, cx| state.read(cx).bounds["dark"].center());
         view.simulate_click(dark, gpui::Modifiers::default());

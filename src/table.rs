@@ -36,7 +36,7 @@ impl TableSize {
     fn font_size(self) -> f32 {
         match self {
             TableSize::Large | TableSize::Default => tokens::font_size::BASE,
-            TableSize::Small => tokens::font_size::EXTRA_SMALL,
+            TableSize::Small => tokens::font_size::SMALL,
         }
     }
 }
@@ -281,7 +281,14 @@ fn header_cell<T: 'static>(
         .font_weight(gpui::FontWeight::SEMIBOLD)
         .text_color(rgb(theme.secondary_text()));
     let inner = match &column.header {
-        Some(header) => justified(align, inner.flex().items_center().child(header())),
+        Some(header) => justified(
+            align,
+            inner
+                .flex()
+                .items_center()
+                // Constrain custom content so it wraps inside the cell.
+                .child(div().min_w_0().child(header())),
+        ),
         None => aligned(align, inner.child(column.label.clone())),
     };
     div()
@@ -294,6 +301,7 @@ fn header_cell<T: 'static>(
             el.flex_1()
         })
         .when(border, |el| el.border_r_1().border_color(line))
+        .overflow_hidden()
         .py(px(size.vertical_padding()))
         .child(inner)
 }
@@ -315,7 +323,12 @@ fn body_cell<T: 'static>(
     let inner = match (&column.render, &column.text) {
         (Some(render), _) => justified(
             column.align,
-            inner.flex().items_center().child(render(row, index)),
+            inner
+                .flex()
+                .items_center()
+                // Constrain custom content so it wraps inside the cell instead
+                // of drawing over the next column.
+                .child(div().min_w_0().child(render(row, index))),
         ),
         (None, Some(text)) => aligned(column.align, inner.child(text(row, index))),
         (None, None) => inner,
@@ -330,6 +343,7 @@ fn body_cell<T: 'static>(
             el.flex_1()
         })
         .when(border, |el| el.border_r_1().border_color(line))
+        .overflow_hidden()
         .py(px(size.vertical_padding()))
         .child(inner)
 }
@@ -351,7 +365,9 @@ impl<T: 'static> RenderOnce for Table<T> {
         } = self;
         let theme = Theme::current(cx);
         let border = rgb(theme.border_lighter());
-        let hover = rgb(theme.fill(crate::theme::Fill::Light));
+        // One step stronger than the web value so pointer feedback reads on
+        // a white surface, close to KDE's row highlight.
+        let hover = rgb(theme.fill(crate::theme::Fill::Base));
         let stripe = rgb(theme.fill(crate::theme::Fill::Lighter));
         let header = show_header.then(|| {
             div()
@@ -382,7 +398,9 @@ impl<T: 'static> RenderOnce for Table<T> {
             for (index, row) in rows.iter().enumerate() {
                 let status = row_background.as_ref().and_then(|paint| paint(row, index));
                 let is_striped = striped && index % 2 == 1;
+                // GPUI applies hover styles through hitboxes, which need an id.
                 let row_base = div()
+                    .id(("table-row", index as u32))
                     .flex()
                     .w_full()
                     .flex_none()
@@ -401,7 +419,6 @@ impl<T: 'static> RenderOnce for Table<T> {
                         let rows = rows.clone();
                         let row_index = index;
                         row_base
-                            .id(("table-row", index as u32))
                             .cursor_pointer()
                             .hover(move |style| style.bg(hover))
                             .on_click(move |event, window, cx| {
@@ -455,7 +472,7 @@ mod tests {
         assert_eq!(TableSize::Default.vertical_padding(), 8.);
         assert_eq!(TableSize::Small.vertical_padding(), 4.);
         assert_eq!(TableSize::Small.font_size(), 12.);
-        assert_eq!(TableSize::Default.font_size(), 14.);
+        assert_eq!(TableSize::Default.font_size(), 13.);
     }
 
     #[gpui::test]

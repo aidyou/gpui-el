@@ -480,8 +480,8 @@ mod tests {
         assert_eq!(button.kind, ButtonType::Success);
         assert_eq!(button.variant, ButtonVariant::Plain);
         assert_eq!(button.resolved_font_size(), 13.);
-        assert_eq!(el_button().small().resolved_font_size(), 12.);
-        assert_eq!(button.font_size(f32::NAN).resolved_font_size(), 12.);
+        assert_eq!(el_button().small().resolved_font_size(), 11.);
+        assert_eq!(button.font_size(f32::NAN).resolved_font_size(), 11.);
     }
 
     struct Harness(std::rc::Rc<std::cell::Cell<usize>>);

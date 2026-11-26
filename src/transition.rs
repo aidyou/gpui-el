@@ -12,30 +12,36 @@ use gpui::{
     canvas, div, prelude::*, px,
 };
 
-use crate::{Theme, motion};
+use crate::{
+    Theme,
+    motion::{self, MotionSpeed},
+};
 
 /// The curve, duration, and channel of a transition.
+///
+/// Durations are the desktop variants of Theme Chalk's web values: brief
+/// feedback instead of 300 ms fades.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum TransitionEffect {
-    /// `el-fade-in`: opacity over 0.3 s with `cubic-bezier(0.55, 0, 0.1, 1)`.
+    /// `el-fade-in`: opacity over 0.2 s with `cubic-bezier(0.55, 0, 0.1, 1)`.
     #[default]
     Fade,
-    /// `el-fade-in-linear`: opacity over 0.2 s linearly.
+    /// `el-fade-in-linear`: opacity over 0.15 s linearly.
     FadeLinear,
-    /// `el-zoom-in-center`: opacity over 0.3 s (upstream also scales).
+    /// `el-zoom-in-center`: opacity over 0.2 s (upstream also scales).
     ZoomInCenter,
-    /// `el-collapse-transition`: content height over 0.3 s, ease in out.
+    /// `el-collapse-transition`: content height over 0.2 s, ease in out.
     Collapse,
-    /// `horizontal-collapse-transition`: content width over 0.3 s, ease in out.
+    /// `horizontal-collapse-transition`: content width over 0.2 s, ease in out.
     CollapseHorizontal,
 }
 
 impl TransitionEffect {
     fn duration(self) -> f64 {
         match self {
-            TransitionEffect::Fade | TransitionEffect::ZoomInCenter => 0.3,
-            TransitionEffect::FadeLinear => 0.2,
-            TransitionEffect::Collapse | TransitionEffect::CollapseHorizontal => 0.3,
+            TransitionEffect::Fade | TransitionEffect::ZoomInCenter => 0.2,
+            TransitionEffect::FadeLinear => 0.15,
+            TransitionEffect::Collapse | TransitionEffect::CollapseHorizontal => 0.2,
         }
     }
     fn easing(self) -> fn(f32) -> f32 {
@@ -74,6 +80,7 @@ pub struct Transition {
     id: ElementId,
     visible: bool,
     effect: TransitionEffect,
+    speed: Option<MotionSpeed>,
     child: AnyElement,
 }
 
@@ -88,6 +95,7 @@ pub fn el_transition(
         id: id.into(),
         visible,
         effect,
+        speed: None,
         child: div().into_any_element(),
     }
 }
@@ -95,6 +103,12 @@ pub fn el_transition(
 impl Transition {
     pub fn new(id: impl Into<ElementId>, visible: bool, effect: TransitionEffect) -> Self {
         el_transition(id, visible, effect)
+    }
+
+    /// Overrides the theme's [`MotionSpeed`] for this transition.
+    pub fn speed(mut self, speed: MotionSpeed) -> Self {
+        self.speed = Some(speed);
+        self
     }
 
     /// Sets the content to animate.
@@ -120,7 +134,10 @@ impl RenderOnce for Transition {
         let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Phase::default());
         let now = motion::elapsed();
         let reduced = Theme::motion_reduced(cx);
-        let duration = self.effect.duration();
+        let speed = self
+            .speed
+            .unwrap_or_else(|| Theme::current(cx).motion_speed);
+        let duration = speed.scale(self.effect.duration());
         let easing = self.effect.easing();
         let mut phase = *state.read(cx);
         if !phase.initialized || phase.visible != self.visible {
@@ -210,9 +227,9 @@ mod tests {
 
     #[test]
     fn effects_map_to_upstream_durations_and_channels() {
-        assert_eq!(TransitionEffect::Fade.duration(), 0.3);
-        assert_eq!(TransitionEffect::FadeLinear.duration(), 0.2);
-        assert_eq!(TransitionEffect::Collapse.duration(), 0.3);
+        assert_eq!(TransitionEffect::Fade.duration(), 0.2);
+        assert_eq!(TransitionEffect::FadeLinear.duration(), 0.15);
+        assert_eq!(TransitionEffect::Collapse.duration(), 0.2);
         assert_eq!(TransitionEffect::Fade.size(), None);
         assert_eq!(TransitionEffect::ZoomInCenter.size(), None);
         assert_eq!(TransitionEffect::Collapse.size(), Some(true));

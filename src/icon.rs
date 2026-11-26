@@ -148,6 +148,8 @@ pub struct Icon {
     size: Option<f32>,
     color: Option<Hsla>,
     spin: Option<crate::LoadingMotion>,
+    spin_speed: Option<crate::MotionSpeed>,
+    rotate: f32,
 }
 
 impl Icon {
@@ -157,6 +159,8 @@ impl Icon {
             size: None,
             color: None,
             spin: None,
+            spin_speed: None,
+            rotate: 0.,
         }
     }
 
@@ -196,6 +200,21 @@ impl Icon {
     /// GPUI does not expose glyph rotation. Honors reduced-motion settings.
     pub fn spin(mut self, motion: crate::LoadingMotion) -> Self {
         self.spin = Some(motion);
+        self
+    }
+
+    /// Overrides the theme's [`MotionSpeed`](crate::MotionSpeed) for [`Self::spin`].
+    pub fn spin_speed(mut self, speed: crate::MotionSpeed) -> Self {
+        self.spin_speed = Some(speed);
+        self
+    }
+
+    /// Rotates an SVG icon clockwise around its center, in radians. Callers
+    /// animate this by re-rendering with a new angle, as the menu chevron
+    /// does. Font glyphs stay static because GPUI does not expose glyph
+    /// rotation.
+    pub fn rotate(mut self, radians: f32) -> Self {
+        self.rotate = if radians.is_finite() { radians } else { 0. };
         self
     }
 
@@ -247,6 +266,9 @@ impl RenderOnce for Icon {
             Some(Source::Svg(bytes)) if self.spin.is_some() => {
                 use std::hash::{DefaultHasher, Hash, Hasher};
                 let motion = self.spin.unwrap_or_default();
+                let speed = self
+                    .spin_speed
+                    .unwrap_or_else(|| crate::Theme::current(cx).motion_speed);
                 let mut hasher = DefaultHasher::new();
                 bytes.hash(&mut hasher);
                 let key = SharedString::from(format!("__binary_svg__{}", hasher.finish()));
@@ -257,7 +279,7 @@ impl RenderOnce for Icon {
                             return;
                         }
                         let elapsed = crate::motion::animation_time(window, cx);
-                        let angle = std::f32::consts::TAU * motion.phase(elapsed);
+                        let angle = std::f32::consts::TAU * motion.phase(elapsed, speed);
                         let center = bounds.center();
                         let scale = window.scale_factor();
                         let matrix = gpui::TransformationMatrix::unit()
@@ -276,6 +298,9 @@ impl RenderOnce for Icon {
                 .size(size)
                 .flex_none()
                 .text_color(color)
+                .with_transformation(
+                    gpui::Transformation::default().with_rotation(gpui::radians(self.rotate)),
+                )
                 .into_any_element(),
             Some(Source::Glyph(glyph, family)) => div()
                 .flex_none()
