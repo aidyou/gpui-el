@@ -405,8 +405,8 @@ const SCROLLBAR: &[Row] = &[
     (
         "height, max_height",
         "f32 · 100% of parent / —",
-        "Fix the viewport height, or scroll only past a maximum height.",
-        "固定视口高度，或超过最大高度后才滚动。",
+        "Constrain the scroll box itself. Content wider than the viewport must state a width; GPUI has no inline-block wrapper.",
+        "直接约束滚动盒。宽于视口的内容必须声明宽度；GPUI 没有 inline-block 包裹层。",
     ),
     (
         "always, native, min_size",

@@ -173,6 +173,10 @@ pub fn el_scrollbar() -> Scrollbar {
 
 /// A scroll viewport with Element Plus styled scrollbars.
 ///
+/// Content taller than the viewport scrolls on its own; content wider than it
+/// must state a width (for example `div().w(px(1200.))`) because GPUI has no
+/// inline-block wrapper that would size a block child to its contents.
+///
 /// Pass a [`ScrollHandle`] to read or set the offset imperatively, which is
 /// the native replacement for the upstream `setScrollTop`, `setScrollLeft`
 /// and `scrollTo` exposes. Native differences: the gradient `mask` property,
@@ -319,16 +323,25 @@ impl RenderOnce for Scrollbar {
         let mut root = div()
             .id(id.clone())
             .relative()
-            // Upstream defaults to `height: 100%` of the parent.
+            // Upstream defaults to `height: 100%` of the parent. With only a
+            // maximum height the box stays content-sized so the clamp applies
+            // to the scroll container below instead of a stretched root.
             .when_some(self.height, |el, height| el.h(px(height)))
-            .when(self.height.is_none(), |el| el.h_full())
+            .when(self.height.is_none() && self.max_height.is_none(), |el| {
+                el.h_full()
+            })
             .when_some(self.max_height, |el, max| el.max_h(px(max)))
             .min_w_0()
             .min_h_0()
             .child(
                 div()
                     .id((id.clone(), "view"))
-                    .size_full()
+                    .w_full()
+                    .when_some(self.height, |el, height| el.h(px(height)))
+                    .when(self.height.is_none() && self.max_height.is_none(), |el| {
+                        el.h_full()
+                    })
+                    .when_some(self.max_height, |el, max| el.max_h(px(max)))
                     .overflow_x_scroll()
                     .overflow_y_scroll()
                     .track_scroll(&handle)
@@ -416,7 +429,6 @@ impl RenderOnce for Scrollbar {
         root = root
             .on_mouse_move(move |event, window, cx| {
                 let drag = state.read(cx).drag;
-                eprintln!("DBG move at {:?} drag={:?}", event.position, drag.is_some());
                 let Some(drag) = drag else {
                     return;
                 };
@@ -577,6 +589,153 @@ mod tests {
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].scroll_top, max.y.as_f32());
         assert_eq!(*ends.borrow(), vec![ScrollbarDirection::Bottom]);
+    }
+
+    #[gpui::test]
+    fn max_height_limits_the_scroll_box(cx: &mut gpui::TestAppContext) {
+        // Mirrors the gallery: a scrollable main region, a centered column,
+        // and a padded section box around the scrollbar. A root that only
+        // clamps itself would let the content grow past the maximum here.
+        struct Harness {
+            handle: ScrollHandle,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div()
+                    .id("main")
+                    .size_full()
+                    .overflow_y_scroll()
+                    .child(
+                        div()
+                            .w_full()
+                            .max_w(px(760.))
+                            .mx_auto()
+                            .flex()
+                            .flex_col()
+                            .gap(px(28.))
+                            .child(
+                                div().border_1().child(div().p(px(24.)).child(
+                                    el_scrollbar()
+                                        .id("scroller")
+                                        .max_height(200.)
+                                        .handle(self.handle.clone())
+                                        .child(div().h(px(600.)).child("content")),
+                                )),
+                            )
+                            .child(div().h(px(40.)).child("next section")),
+                    )
+            }
+        }
+        let handle = ScrollHandle::new();
+        let (_, view) = cx.add_window_view({
+            let handle = handle.clone();
+            move |_, _| Harness { handle }
+        });
+        for _ in 0..2 {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+            view.run_until_parked();
+        }
+        // The scroll box stops at the maximum height instead of growing with
+        // its content and painting over the next section.
+        assert_eq!(handle.bounds().size.height, px(200.));
+        assert_eq!(handle.max_offset().y, px(400.));
+    }
+
+    #[gpui::test]
+    fn wide_content_scrolls_horizontally(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            handle: ScrollHandle,
+            scrolled: Rc<RefCell<Vec<ScrollbarEvent>>>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let scrolled = self.scrolled.clone();
+                el_scrollbar()
+                    .id("scroller")
+                    .height(160.)
+                    .handle(self.handle.clone())
+                    .onscroll(move |event, _, _| scrolled.borrow_mut().push(*event))
+                    .child(div().w(px(3000.)).h(px(120.)).child("wide"))
+            }
+        }
+        let handle = ScrollHandle::new();
+        let scrolled: Rc<RefCell<Vec<ScrollbarEvent>>> = Rc::new(RefCell::new(Vec::new()));
+        let (_, view) = cx.add_window_view({
+            let handle = handle.clone();
+            let scrolled = scrolled.clone();
+            move |_, _| Harness { handle, scrolled }
+        });
+        for _ in 0..2 {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+            view.run_until_parked();
+        }
+        let max = handle.max_offset();
+        assert!(max.x > px(0.), "wide content should overflow horizontally");
+        assert_eq!(max.y, px(0.), "short content should not overflow vertically");
+        // A horizontal wheel delta scrolls the viewport and reports it.
+        view.simulate_event(gpui::ScrollEvent {
+            position: gpui::point(px(10.), px(10.)),
+            delta: gpui::ScrollDelta::Pixels(gpui::point(-max.x, px(0.))),
+            modifiers: Default::default(),
+            touch_phase: Default::default(),
+            source: Default::default(),
+        });
+        view.run_until_parked();
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        let events = scrolled.borrow();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].scroll_left, max.x.as_f32());
+        assert_eq!(events[0].scroll_top, 0.);
+    }
+
+    #[gpui::test]
+    fn hovering_shows_the_thumb(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            handle: ScrollHandle,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                el_scrollbar()
+                    .id("scroller")
+                    .height(200.)
+                    .handle(self.handle.clone())
+                    .child(div().h(px(600.)).child("content"))
+            }
+        }
+        let handle = ScrollHandle::new();
+        let (_, view) = cx.add_window_view({
+            let handle = handle.clone();
+            move |_, _| Harness { handle }
+        });
+        for _ in 0..2 {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+            view.run_until_parked();
+        }
+        // Hovering the viewport renders the thumb, which can then be dragged.
+        view.simulate_mouse_move(gpui::point(px(20.), px(20.)), None, Default::default());
+        for _ in 0..2 {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+            view.run_until_parked();
+        }
+        let viewport = handle.bounds().size;
+        let max = handle.max_offset();
+        let geometry = thumb(viewport.height.as_f32(), max.y.as_f32(), 0., DEFAULT_MIN_SIZE).unwrap();
+        let thumb_center = gpui::point(
+            px(viewport.width.as_f32() - INSET - BAR / 2.),
+            px(geometry.position + geometry.length / 2.),
+        );
+        view.simulate_mouse_down(thumb_center, gpui::MouseButton::Left, Default::default());
+        view.simulate_mouse_move(
+            thumb_center + gpui::point(px(0.), px(30.)),
+            None,
+            Default::default(),
+        );
+        view.run_until_parked();
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        assert!(
+            scrolled_position(&handle).y > 0.,
+            "the hovered thumb should be draggable"
+        );
     }
 
     #[gpui::test]

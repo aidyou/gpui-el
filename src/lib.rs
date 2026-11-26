@@ -141,11 +141,14 @@
 //! Scrollbar follows `scrollbar.md`, `components/scrollbar/src`, and Theme
 //! Chalk `scrollbar.scss`. GPUI overflow containers have no scrollbar chrome,
 //! so the component draws the 6 px thumbs itself and reports DOM-like
-//! positive scroll positions. Native differences: the gradient `mask`
-//! property, `wrap`/`view` class and style hooks, and `noresize` are not
-//! reproduced; `setScrollTop`, `setScrollLeft` and `scrollTo` become a
-//! [`gpui::ScrollHandle`] passed through `handle`; thumbs show on hover or
-//! with `always` without the upstream fade, and the wheel is stopped at the
+//! positive scroll positions. The height or maximum height constrains the
+//! scroll box itself, so a tall list never paints over the next section.
+//! Native differences: content wider than the viewport must state a width
+//! because GPUI has no inline-block wrapper, the gradient `mask` property,
+//! `wrap`/`view` class and style hooks and `noresize` are not reproduced,
+//! `setScrollTop`, `setScrollLeft` and `scrollTo` become a
+//! [`gpui::ScrollHandle`] passed through `handle`, and thumbs show on hover
+//! or with `always` without the upstream fade. The wheel is stopped at the
 //! viewport like the other scroll containers.
 
 mod button;

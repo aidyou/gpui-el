@@ -43,8 +43,12 @@ impl Gallery {
         let border = rgb(if self.dark { 0x414243 } else { 0xe4e7ed });
         let stripe = rgb(if self.dark { 0x262727 } else { 0xf5f7fa });
         // A row of labeled stripes stands in for any content wider than the box.
+        // GPUI has no inline-block content wrapper, so horizontally
+        // scrolling content must state its width; a block child alone stays
+        // at the viewport width and only paints outside.
         let wide = |labels: &[&'static str]| {
             div()
+                .w(px(labels.len() as f32 * 172. - 12.))
                 .flex()
                 .gap(px(12.))
                 .children(labels.iter().enumerate().map(|(i, label)| {
