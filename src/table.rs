@@ -8,8 +8,11 @@
 //! and copies plain text, and the scrolling body never forwards wheel deltas to
 //! an outer scroll container. Headers use the bold face and the body text color
 //! instead of Theme Chalk's weight 600 on secondary text, which native font
-//! stacks render as plain, faded labels. Sorting, row selection, filtering,
-//! fixed columns, tree data, lazy loading, and summary rows are not reproduced.
+//! stacks render as plain, faded labels. Like the other components, the table
+//! renders in the theme's resolved font family, because a weight only reaches
+//! the screen when that family has a bold face. Sorting, row selection,
+//! filtering, fixed columns, tree data, lazy loading, and summary rows are not
+//! reproduced.
 
 use std::{
     cell::{Cell as BoundsCell, RefCell},
@@ -768,6 +771,12 @@ impl<T: 'static> RenderOnce for Table<T> {
             .flex_col()
             .text_size(px(size.font_size()))
             .text_color(rgb(theme.regular_text()))
+            // Headers ask for the bold face, which only exists when the family
+            // is resolved to an installed one; the platform default family can
+            // silently land on a single-weight fallback.
+            .when_some(theme.resolved_font(cx), |el, family| {
+                el.font_family(family)
+            })
             .bg(rgb(theme.background()))
             .when(bordered, |el| el.border_1().border_color(border))
             .when_some(height, |el, height| el.h(px(height)));
