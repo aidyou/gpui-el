@@ -284,7 +284,7 @@ impl Render for Gallery {
                                     .gap(px(28.))
                                     .child(heading)
                                     .child(content)
-                                    .child(api::render(page, locale, self.dark)),
+                                    .child(api::render(page, locale)),
                             ),
                     ),
             )

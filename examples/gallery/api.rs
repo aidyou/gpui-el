@@ -1,5 +1,6 @@
 use super::{Locale, Page};
-use gpui::{Div, div, prelude::*, px, rgb};
+use gpui::{Div, div, prelude::*, px};
+use gpui_el::{Column, Table};
 
 // Each row has a Rust name, type/default, and matching localized descriptions.
 type Row = (&'static str, &'static str, &'static str, &'static str);
@@ -613,7 +614,7 @@ const MENU_EVENTS: &[Row] = &[
     ),
 ];
 
-pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
+pub(super) fn render(page: Page, locale: Locale) -> Div {
     let zh = locale == Locale::SimplifiedChinese;
     let (api, events): (&[Row], &[Row]) = match page {
         Page::Init => (INIT, &[]),
@@ -627,37 +628,33 @@ pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
     };
-    let border = rgb(if dark { 0x414243 } else { 0xe4e7ed });
-    let fill = rgb(if dark { 0x262727 } else { 0xf5f7fa });
     let table = |headers: [&'static str; 3], rows: &[Row]| {
-        let line = |a, b, c| {
-            div()
-                .flex()
-                .gap(px(8.))
-                .px(px(10.))
-                .py(px(9.))
-                .child(
-                    div()
-                        .w(gpui::relative(0.28))
-                        .min_w_0()
-                        .font_family("monospace")
-                        .child(a),
-                )
-                .child(div().w(gpui::relative(0.30)).min_w_0().child(b))
-                .child(div().flex_1().min_w_0().child(c))
-        };
-        div()
-            .w_full()
-            .rounded(px(4.))
-            .border_1()
-            .border_color(border)
-            .text_size(px(13.))
-            .child(line(headers[0], headers[1], headers[2]).bg(fill))
-            .children(rows.iter().map(|&(a, b, en, cn)| {
-                line(a, b, if zh { cn } else { en })
-                    .border_t_1()
-                    .border_color(border)
-            }))
+        Table::new(rows.iter().copied())
+            .border(true)
+            .column(
+                Column::new(headers[0])
+                    .min_width(180.)
+                    .render(|row: &Row, _| {
+                        div()
+                            .font_family("monospace")
+                            .child(row.0)
+                            .into_any_element()
+                    }),
+            )
+            .column(
+                Column::new(headers[1])
+                    .min_width(170.)
+                    .text(|row: &Row, _| row.1.into()),
+            )
+            .column(
+                Column::new(headers[2])
+                    .min_width(200.)
+                    .text(
+                        move |row: &Row, _| {
+                            if zh { row.3.into() } else { row.2.into() }
+                        },
+                    ),
+            )
     };
     let heading = |label| {
         div()

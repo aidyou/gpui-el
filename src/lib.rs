@@ -81,6 +81,14 @@
 //! animation clock are shared with `Loading`, whose spinner turns use the
 //! same easing and reduced-motion handling.
 //!
+//! Table follows `table.md`, `components/table/src`, and Theme Chalk
+//! `table.scss` for its basic subset: typed columns with fixed or distributed
+//! widths, header and cell alignment, stripes, borders, three sizes, a fixed
+//! header over a scrolling body, status row colors, row clicks, and an empty
+//! state. Sorting, selection, filtering, fixed columns, tree data, and summary
+//! rows are not reproduced. The gallery's API and event reference tables are
+//! built with it.
+//!
 //! Button styles were checked against Element Plus Theme Chalk's `button.scss`,
 //! `mixins/_button.scss`, and light/dark variables. The native sample switches
 //! pointer states immediately rather than reproducing the browser's 100 ms
@@ -112,6 +120,7 @@ mod loading;
 mod locale;
 mod menu;
 mod motion;
+mod table;
 mod tag;
 mod theme;
 mod transition;
@@ -133,6 +142,7 @@ pub use menu::{
     Menu, MenuEntry, MenuEvent, MenuItem, MenuItemGroup, MenuMode, MenuPopupTheme, MenuState,
     MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
+pub use table::{Column, Table, TableAlign, TableSize};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use theme::{Theme, tokens};
 pub use transition::{Transition, TransitionEffect, el_transition};

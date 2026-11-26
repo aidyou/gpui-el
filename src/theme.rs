@@ -146,6 +146,14 @@ impl Theme {
             0xdcdfe6
         }
     }
+    /// `--el-border-color-lighter`, used by Table dividers.
+    pub(crate) fn border_lighter(&self) -> u32 {
+        if self.dark {
+            mix(self.background(), 0xf5f8ff, 15)
+        } else {
+            0xebeef5
+        }
+    }
 
     pub(crate) fn fill(&self, shade: Fill) -> u32 {
         if self.dark {
@@ -154,6 +162,7 @@ impl Theme {
                 0xfafcff,
                 match shade {
                     Fill::Light => 8,
+                    Fill::Lighter => 4,
                     Fill::Base => 12,
                     Fill::Dark => 16,
                 },
@@ -161,6 +170,7 @@ impl Theme {
         } else {
             match shade {
                 Fill::Light => 0xf5f7fa,
+                Fill::Lighter => 0xfafafa,
                 Fill::Base => 0xf0f2f5,
                 Fill::Dark => 0xebedf0,
             }
@@ -197,6 +207,7 @@ pub(crate) enum Mask {
 
 pub(crate) enum Fill {
     Light,
+    Lighter,
     Base,
     Dark,
 }
