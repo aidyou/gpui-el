@@ -8,6 +8,7 @@ init_intro: 在打开窗口前，配置应用语言和默认图标库。
 init_fonts: 可用 fonts 列表注册嵌入的字体文件。调用 Icon::from_font 时使用字体内部的字族名。
 container_intro: 嵌套容器来组织顶栏、侧栏、主内容和底栏。
 layout_intro: 用响应式的 24 列栅格组织内容。
+link_intro: 用不同语义颜色的文字链接触发操作或打开 URL。
 space_intro: 为相邻元素设置间距和对齐方式。
 tag_intro: 用标签标记内容，或用可选择标签切换选中状态。
 menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
@@ -40,6 +41,7 @@ button_page: Button 按钮
 icon_page: Icon 图标
 container_page: Container 布局容器
 layout_page: Layout 布局
+link_page: Link 文字链接
 space_page: Space 间距
 tag_page: Tag 标签
 menu_page: Menu 菜单
@@ -53,6 +55,15 @@ specific_icons: 为单个图标指定图标库或字体
 container_title: 容器区域
 space_title: 间距与换行
 space_presets: 常用间距
+link_basic: 基础用法
+link_disabled: 禁用状态
+link_underline: 下划线
+link_with_icon: 图标
+underline_always: 总是显示
+underline_hover: 悬停显示
+underline_never: 从不显示
+link_edit: 编辑
+link_check: 查看
 menu_first: 概览
 menu_second: 设置
 menu_language: 语言

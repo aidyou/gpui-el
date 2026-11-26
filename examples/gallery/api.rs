@@ -242,6 +242,50 @@ const LAYOUT: &[Row] = &[
         "窗口断点：<768、≥768、≥992、≥1200、≥1920 px；ColSpec 可覆盖宽度、偏移、右移和左移。",
     ),
 ];
+const LINK: &[Row] = &[
+    (
+        "el_link(), Link::new, id",
+        "ElementId · call site",
+        "Create a link. Supply a stable sibling-unique ID when creating repeated links at the same call site.",
+        "创建文字链接。同一调用位置生成多个链接时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "label, content, accessibility_label",
+        "SharedString / IntoElement / SharedString · —",
+        "Label, custom contents, or the accessible name.",
+        "文字、自定义内容或无障碍名称。",
+    ),
+    (
+        "kind, primary, success, info, warning, danger",
+        "LinkType · Default",
+        "Semantic color; default uses the regular text color and hovers to primary.",
+        "语义颜色；default 使用常规文字色，悬停为 primary。",
+    ),
+    (
+        "underline",
+        "LinkUnderline · Hover",
+        "Show the underline always, on hover, or never.",
+        "下划线显示时机：总是、悬停或从不。",
+    ),
+    (
+        "href",
+        "SharedString · —",
+        "Open the URL through the platform handler on activation; ignored while disabled.",
+        "激活时由平台处理器打开 URL；禁用时忽略。",
+    ),
+    (
+        "icon, trailing_icon",
+        "IntoElement · —",
+        "Leading or trailing icon, five pixels from the content.",
+        "内容前后的图标，与内容相距 5 px。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Block activation, the URL, and the hover color.",
+        "禁止触发、打开 URL 和悬停变色。",
+    ),
+];
 const SPACE: &[Row] = &[
     (
         "el_space(), Space::new, child, children",
@@ -516,6 +560,12 @@ const BUTTON_EVENTS: &[Row] = &[(
     "Standard pointer or keyboard activation; not emitted while disabled or loading.",
     "标准指针或键盘激活时触发；禁用或加载时不触发。",
 )];
+const LINK_EVENTS: &[Row] = &[(
+    "Link::onclick",
+    "&ClickEvent, &mut Window, &mut App",
+    "Standard pointer or keyboard activation; fires before the URL opens, and not while disabled.",
+    "标准指针或键盘激活时触发；先于打开 URL，禁用时不触发。",
+)];
 const TAG_EVENTS: &[Row] = &[
     (
         "Tag::onclick",
@@ -571,6 +621,7 @@ pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
         Page::Icon => (ICON, &[]),
         Page::Container => (CONTAINER, &[]),
         Page::Layout => (LAYOUT, &[]),
+        Page::Link => (LINK, LINK_EVENTS),
         Page::Space => (SPACE, &[]),
         Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
@@ -625,5 +676,6 @@ pub(super) fn render(page: Page, locale: Locale, dark: bool) -> Div {
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table(if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
+        .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
 }

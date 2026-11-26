@@ -8,6 +8,7 @@ init_intro: Configure the application locale and default icon pack before openin
 init_fonts: Use the optional fonts list to register embedded font bytes. Use the font’s internal family name with Icon::from_font.
 container_intro: Arrange headers, sidebars, main content and footers in nested containers.
 layout_intro: Divide rows into 24 responsive columns.
+link_intro: Trigger an action or open an URL with a text link in any semantic color.
 space_intro: Set the spacing and alignment between adjacent elements.
 tag_intro: Mark content with tags, or toggle a selection with check tags.
 menu_intro: Navigate with nested entries, collapsible sidebars, and horizontal menus.
@@ -40,6 +41,7 @@ button_page: Button
 icon_page: Icon
 container_page: Container
 layout_page: Layout
+link_page: Link
 space_page: Space
 tag_page: Tag
 menu_page: Menu
@@ -53,6 +55,15 @@ specific_icons: Choose a pack or a font for one icon
 container_title: Container regions
 space_title: Spacing and wrapping
 space_presets: Spacing presets
+link_basic: Basic usage
+link_disabled: Disabled
+link_underline: Underline
+link_with_icon: With icon
+underline_always: Always
+underline_hover: Hover
+underline_never: Never
+link_edit: Edit
+link_check: Check
 menu_first: Overview
 menu_second: Settings
 menu_language: Language

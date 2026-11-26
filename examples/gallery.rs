@@ -23,6 +23,8 @@ mod pages;
 mod row;
 #[path = "gallery/search.rs"]
 mod search;
+#[path = "gallery/syntax.rs"]
+mod syntax;
 #[path = "gallery/titlebar.rs"]
 mod titlebar;
 
@@ -36,6 +38,7 @@ struct Gallery {
     expanded: HashSet<&'static str>,
     button: pages::button::State,
     icon: pages::icon::State,
+    link: pages::link::State,
     loading: pages::loading::State,
     menu: pages::menu::State,
     tag: pages::tag::State,
@@ -61,6 +64,7 @@ enum Page {
     Init,
     Container,
     Layout,
+    Link,
     Space,
     Tag,
     Menu,
@@ -68,12 +72,13 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Init,
         Self::Button,
         Self::Icon,
         Self::Container,
         Self::Layout,
+        Self::Link,
         Self::Space,
         Self::Tag,
         Self::Menu,
@@ -87,6 +92,7 @@ impl Page {
             Self::Init => &s.init_intro,
             Self::Container => &s.container_intro,
             Self::Layout => &s.layout_intro,
+            Self::Link => &s.link_intro,
             Self::Space => &s.space_intro,
             Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
@@ -101,6 +107,7 @@ impl Page {
             Self::Init => "init",
             Self::Container => "container",
             Self::Layout => "layout",
+            Self::Link => "link",
             Self::Space => "space",
             Self::Tag => "tag",
             Self::Menu => "menu",
@@ -115,6 +122,7 @@ impl Page {
             Self::Init => &s.init_title,
             Self::Container => &s.container_page,
             Self::Layout => &s.layout_page,
+            Self::Link => &s.link_page,
             Self::Space => &s.space_page,
             Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
@@ -135,6 +143,7 @@ impl Page {
                 "el-footer",
             ],
             Self::Layout => &["el-row", "el-col"],
+            Self::Link => &["el-link"],
             Self::Space => &["el-space"],
             Self::Tag => &["el-tag", "el-check-tag"],
             Self::Menu => &[
@@ -191,6 +200,7 @@ impl Render for Gallery {
                                     Page::Icon,
                                     Page::Container,
                                     Page::Layout,
+                                    Page::Link,
                                     Page::Space,
                                     Page::Tag,
                                 ]
@@ -208,6 +218,7 @@ impl Render for Gallery {
             Page::Init => self.initialization(s, cx),
             Page::Container => self.containers(s, cx),
             Page::Layout => self.grids(s, cx),
+            Page::Link => self.links(s, cx),
             Page::Space => self.spaces(s, cx),
             Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),

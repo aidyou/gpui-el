@@ -31,6 +31,18 @@
 //! `Icon::from_pack` overrides the preference for one icon. Use
 //! `register_icon_font` and `Icon::from_font` for application-supplied glyphs.
 //!
+//! A Link reports activation through `onclick` and optionally opens an URL
+//! through the platform handler:
+//!
+//! ```
+//! use gpui_el::{LinkUnderline, el_link};
+//! let details = el_link().label("View details").primary();
+//! let external = el_link()
+//!     .label("Element Plus")
+//!     .href("https://element-plus.org")
+//!     .underline(LinkUnderline::Never);
+//! ```
+//!
 //! GPUI dispatches input and focus; components translate that into callbacks.
 //! Buttons expose `onclick`, while menus expose `onselect`, `onopen`, and
 //! `onclose` with the original index path (not the visual overflow path):
@@ -74,11 +86,19 @@
 //! `disable-transitions` property is therefore not reproduced. `color` overrides
 //! only the background, as upstream's inline style does. CheckTag is focusable
 //! and keyboard activatable, which the upstream `span` is not.
+//!
+//! Link follows `link.md`, `components/link/src`, and Theme Chalk
+//! `link.scss`. Native differences: `href` opens the URL through the platform
+//! handler, `target` is omitted because a desktop application has no frames to
+//! target, and the deprecated boolean form of `underline` is not reproduced.
+//! The upstream anchor's `outline: none` is replaced by a visible focus ring
+//! because the native link is keyboard-focusable.
 
 mod button;
 mod grid;
 mod icon;
 mod layout;
+mod link;
 mod loading;
 mod locale;
 mod menu;
@@ -95,6 +115,7 @@ pub use layout::{
     Aside, Container, Direction, Footer, Header, Main, Space, SpaceAlignment, SpaceSize, el_aside,
     el_container, el_footer, el_header, el_main, el_space,
 };
+pub use link::{Link, LinkType, LinkUnderline, el_link};
 pub use loading::{Loading, LoadingMotion, LoadingSpinner, el_loading};
 pub use locale::Locale;
 pub use menu::{
