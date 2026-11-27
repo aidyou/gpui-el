@@ -187,6 +187,7 @@ copy_fields!(
     slider_vertical,
     slider_marks,
     slider_formatted,
+    slider_colors,
     slider_readonly,
     slider_mark_a,
     slider_mark_b,

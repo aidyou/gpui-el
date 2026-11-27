@@ -25,7 +25,7 @@
 use std::{cell::Cell as BoundsCell, rc::Rc, sync::Arc};
 
 use gpui::{
-    App, Bounds, CursorStyle, ElementId, FocusHandle, IntoElement, KeyDownEvent, MouseButton,
+    App, Bounds, CursorStyle, ElementId, FocusHandle, Hsla, IntoElement, KeyDownEvent, MouseButton,
     MouseMoveEvent, MouseUpEvent, Pixels, Point, RenderOnce, SharedString, Window, div, prelude::*,
     px, relative, rgb,
 };
@@ -140,6 +140,8 @@ pub struct Slider {
     height: f32,
     show_stops: bool,
     show_tooltip: bool,
+    active_color: Option<Hsla>,
+    inactive_color: Option<Hsla>,
     format_tooltip: Option<TooltipFormatter>,
     marks: Vec<SliderMark>,
     oninput: Option<InputHandler>,
@@ -167,6 +169,8 @@ impl Default for Slider {
             height: 200.,
             show_stops: false,
             show_tooltip: true,
+            active_color: None,
+            inactive_color: None,
             format_tooltip: None,
             marks: Vec::new(),
             oninput: None,
@@ -262,6 +266,20 @@ impl Slider {
     /// Shows the value in a tooltip on the handles; on by default.
     pub fn show_tooltip(mut self, show_tooltip: bool) -> Self {
         self.show_tooltip = show_tooltip;
+        self
+    }
+
+    /// Sets the active bar and handle outline color; primary by default.
+    /// Disabled sliders keep their neutral disabled colors.
+    pub fn active_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.active_color = Some(color.into());
+        self
+    }
+
+    /// Sets the inactive runway color; the theme border color by default.
+    /// Disabled sliders keep their neutral disabled colors.
+    pub fn inactive_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.inactive_color = Some(color.into());
         self
     }
 
@@ -455,6 +473,8 @@ impl RenderOnce for Slider {
             height,
             show_stops,
             show_tooltip,
+            active_color,
+            inactive_color,
             format_tooltip,
             marks,
             oninput,
@@ -468,12 +488,16 @@ impl RenderOnce for Slider {
         let state = window.use_keyed_state(id.clone(), cx, |_, cx| SliderState::new(cx));
         let drag = state.read(cx).drag;
         let active_handle = drag.map(|drag| drag.handle);
-        let runway_bg = rgb(theme.border(true));
-        let bar_color = rgb(if disabled {
-            theme.disabled_text()
+        let runway_bg: Hsla = if disabled {
+            rgb(theme.border(true)).into()
         } else {
-            crate::theme::PRIMARY
-        });
+            inactive_color.unwrap_or_else(|| rgb(theme.border(true)).into())
+        };
+        let bar_color: Hsla = if disabled {
+            rgb(theme.disabled_text()).into()
+        } else {
+            active_color.unwrap_or_else(|| rgb(crate::theme::PRIMARY).into())
+        };
         let stop = rgb(theme.background());
         let info = rgb(theme.secondary_text());
         let span = max - min;
@@ -866,6 +890,26 @@ mod tests {
         assert_eq!(SliderSize::Large.height(), 40.);
         assert_eq!(SliderSize::Default.height(), 32.);
         assert_eq!(SliderSize::Small.height(), 24.);
+    }
+
+    #[test]
+    fn color_settings_do_not_reset_other_dimensions() {
+        let widget = el_slider()
+            .value(42.)
+            .small()
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949));
+        assert_eq!(widget.single, Some(42.));
+        assert_eq!(widget.size, SliderSize::Small);
+        assert_eq!(widget.active_color, Some(rgb(0x13ce66).into()));
+        assert_eq!(widget.inactive_color, Some(rgb(0xff4949).into()));
+        let overridden = el_slider()
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949))
+            .active_color(rgb(0x626aef))
+            .inactive_color(rgb(0x909399));
+        assert_eq!(overridden.active_color, Some(rgb(0x626aef).into()));
+        assert_eq!(overridden.inactive_color, Some(rgb(0x909399).into()));
     }
 
     #[test]

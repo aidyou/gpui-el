@@ -1005,6 +1005,12 @@ const SLIDER: &[Row] = &[
         "在手柄上以提示显示值，并可格式化；默认为原始数字。",
     ),
     (
+        "active_color, inactive_color",
+        "Hsla · primary / border",
+        "Native color overrides for the active bar and handle outline, and the inactive runway. Disabled sliders keep their neutral disabled colors.",
+        "原生颜色覆盖：进度条与手柄轮廓使用 active_color，未填充滑轨使用 inactive_color。禁用态保持中性禁用色。",
+    ),
+    (
         "marks",
         "Iterator<SliderMark>",
         "The labeled breakpoints; points outside [min, max] are dropped and the rest are sorted.",

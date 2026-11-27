@@ -260,6 +260,7 @@ slider_range: 范围选择
 slider_vertical: 竖直
 slider_marks: 标记
 slider_formatted: 格式化提示
+slider_colors: 自定义颜色
 slider_readonly: 只读
 slider_mark_a: 0%
 slider_mark_b: 25%

@@ -260,6 +260,7 @@ slider_range: Range
 slider_vertical: Vertical
 slider_marks: Marks
 slider_formatted: Formatted tooltip
+slider_colors: Custom colors
 slider_readonly: Read-only
 slider_mark_a: 0%
 slider_mark_b: 25%

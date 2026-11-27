@@ -1,4 +1,4 @@
-use gpui::{Context, Div, div, prelude::*, px};
+use gpui::{Context, Div, div, prelude::*, px, rgb};
 use gpui_el::{SliderMark, el_button, el_icon, el_slider};
 
 use crate::{Gallery, copy::Copy, demo::row};
@@ -18,6 +18,7 @@ pub(crate) struct State {
     vertical: f32,
     marks: f32,
     formatted: f32,
+    colors: f32,
 }
 
 impl Default for State {
@@ -30,6 +31,7 @@ impl Default for State {
             vertical: 40.,
             marks: 30.,
             formatted: 40.,
+            colors: 55.,
         }
     }
 }
@@ -55,7 +57,8 @@ impl Gallery {
                             2 => &mut this.slider.steps,
                             3 => &mut this.slider.vertical,
                             4 => &mut this.slider.marks,
-                            _ => &mut this.slider.formatted,
+                            5 => &mut this.slider.formatted,
+                            _ => &mut this.slider.colors,
                         };
                         *target = reported;
                         cx.notify();
@@ -133,6 +136,13 @@ impl Gallery {
                     .format_tooltip(|value| format!("{value:.0}%").into()),
             ),
         );
+        let colors = row().child(
+            horizontal_demo().child(
+                slider(6, "slider-colors".into(), self.slider.colors)
+                    .active_color(rgb(0x13ce66))
+                    .inactive_color(rgb(0xff4949)),
+            ),
+        );
         let readonly = row().child(
             horizontal_demo().child(el_slider().id("slider-readonly").value(70.).disabled(true)),
         );
@@ -190,6 +200,14 @@ impl Gallery {
                 &s.slider_formatted,
                 || "el_slider().value(40.).format_tooltip(|v| format!(\"{v:.0}%\"));".into(),
                 formatted.into_any_element(),
+            ))
+            .child(self.section(
+                cx,
+                "slider-colors",
+                &s.slider_colors,
+                || "el_slider().value(55.).active_color(rgb(0x13ce66)).inactive_color(rgb(0xff4949));"
+                    .into(),
+                colors.into_any_element(),
             ))
             .child(self.section(
                 cx,
