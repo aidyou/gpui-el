@@ -100,9 +100,11 @@ layout_main: 主内容
 layout_footer: 底栏
 show_loading: 显示加载遮罩
 hide_loading: 关闭加载遮罩
-loading_vertical: Element Plus 官方 Loading 图标 · 成功色 · 文字在下
+loading_vertical: Element Plus 官方 Loading 图标 · 默认主色 · 文字在下
+loading_color: 自定义前景色 · 警告色 · 默认圆弧
 loading_horizontal: 大小渐变圆点 · 加速旋转 · 文字在右
-loading_clear: 自定义旋转图标 · 透明遮罩
+loading_clear: 自定义旋转 SVG · 透明遮罩
+loading_font_icon: 字体字符 ☯ · 静态 · 透明遮罩
 loading_text: 正在加载数据
 solid_title: 默认与语义颜色
 plain_title: 朴素按钮

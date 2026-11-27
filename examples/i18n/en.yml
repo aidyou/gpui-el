@@ -100,9 +100,11 @@ layout_main: Main
 layout_footer: Footer
 show_loading: Show loading mask
 hide_loading: Hide loading mask
-loading_vertical: Element Plus Loading icon · success color · text below
+loading_vertical: Element Plus Loading icon · default primary · text below
+loading_color: Foreground color override · warning · default circle
 loading_horizontal: Graduated dots · accelerating rotation · text to the right
-loading_clear: Custom rotating icon · transparent mask
+loading_clear: Custom rotating SVG · transparent mask
+loading_font_icon: Font glyph ☯ · static · transparent mask
 loading_text: Loading data
 solid_title: Default and semantic colors
 plain_title: Plain buttons

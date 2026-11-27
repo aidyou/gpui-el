@@ -753,8 +753,8 @@ const LOADING: &[Row] = &[
     (
         "loading_icon, indicator",
         "Icon / IntoElement · built-in",
-        "Rotate an SVG icon using motion, or supply an element with its own behavior. Font glyphs stay static.",
-        "按所选动效旋转 SVG 图标，或传入自行控制动效的元素。字体图标保持静态。",
+        "Rotate an SVG icon using motion, or supply an element with its own behavior. Font glyphs such as ☯ stay static.",
+        "按所选动效旋转 SVG 图标，或传入自行控制动效的元素。☯ 等字体字符保持静态。",
     ),
     (
         "child, children",

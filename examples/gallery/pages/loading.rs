@@ -33,9 +33,13 @@ impl Gallery {
 
 el_loading().id("element-plus-mask").active(masked)
     .spinner(LoadingSpinner::Spokes)
-    .color(rgb(0x67c23a))
     .v_text("Loading data")
-    .child("Element Plus Loading icon · success color · text below");
+    .child("Element Plus Loading icon · default primary · text below");
+
+el_loading().id("color-mask").active(masked)
+    .color(rgb(0xe6a23c))
+    .v_text("Loading data")
+    .child("Foreground color override · warning · default circle");
 
 el_loading().id("dots-mask").active(masked)
     .h_text("Loading data")
@@ -48,7 +52,13 @@ el_loading().id("custom-icon-mask").active(masked)
     .h_text("Loading data")
     .loading_icon(Icon::from_pack(IconPack::ElementPlus, "RefreshRight").size(28.))
     .mask_opacity(0.)
-    .child("Custom rotating icon · transparent mask");"#
+    .child("Custom rotating SVG · transparent mask");
+
+el_loading().id("font-icon-mask").active(masked)
+    .h_text("Loading data")
+    .loading_icon(Icon::new('☯').size(36.))
+    .mask_opacity(0.)
+    .child("Font glyph ☯ · static · transparent mask");"#
                     .into()
             },
             div()
@@ -76,10 +86,17 @@ el_loading().id("custom-icon-mask").active(masked)
                     el_loading()
                         .id("element-plus-mask")
                         .spinner(LoadingSpinner::Spokes)
-                        .color(rgb(0x67c23a))
                         .v_text(s.loading_text.as_str())
                         .active(self.loading.masked)
                         .child(panel(s.loading_vertical.as_str())),
+                )
+                .child(
+                    el_loading()
+                        .id("color-mask")
+                        .color(rgb(0xe6a23c))
+                        .v_text(s.loading_text.as_str())
+                        .active(self.loading.masked)
+                        .child(panel(s.loading_color.as_str())),
                 )
                 .child(
                     el_loading()
@@ -101,6 +118,15 @@ el_loading().id("custom-icon-mask").active(masked)
                         )
                         .mask_opacity(0.)
                         .child(panel(s.loading_clear.as_str())),
+                )
+                .child(
+                    el_loading()
+                        .id("font-icon-mask")
+                        .h_text(s.loading_text.as_str())
+                        .active(self.loading.masked)
+                        .loading_icon(Icon::new('☯').size(36.))
+                        .mask_opacity(0.)
+                        .child(panel(s.loading_font_icon.as_str())),
                 ),
         )
     }
