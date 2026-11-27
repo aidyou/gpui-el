@@ -311,6 +311,24 @@ capsule_interval: Interval
 capsule_once: Once
 capsule_weekdays: Weekdays
 capsule_monthly: Monthly
+select_intro: Choose one or more values from a filterable dropdown with native text editing, keyboard navigation, and controlled events.
+select_page: Select 选择器
+select_basic: Basic usage
+select_filterable: Filterable
+select_multiple: Multiple selection
+select_clearable: Clearable and value on clear
+select_sizes: Sizes
+select_disabled: Disabled option and disabled select
+select_loading: Loading
+select_empty: Empty data
+select_custom: Prefix, suffix, header, and footer
+select_daily: Daily
+select_interval: Interval
+select_once: Once
+select_weekdays: Weekdays
+select_no_data: No data
+select_header: Choose an execution frequency
+select_footer: Selection is controlled by the application
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

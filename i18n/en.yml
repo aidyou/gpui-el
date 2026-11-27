@@ -10,3 +10,9 @@ table:
 input_number:
   increase: Increase
   decrease: Decrease
+select:
+  loading: Loading
+  no_data: No data
+  no_match: No matching data
+  clear: Clear selection
+  placeholder: Select

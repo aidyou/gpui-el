@@ -13,6 +13,7 @@ pub(super) mod menu;
 pub(super) mod radio;
 pub(super) mod rate;
 pub(super) mod scrollbar;
+pub(super) mod select;
 pub(super) mod slider;
 pub(super) mod space;
 pub(super) mod splitter;

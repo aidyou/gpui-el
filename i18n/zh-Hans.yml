@@ -10,3 +10,9 @@ table:
 input_number:
   increase: 增加
   decrease: 减少
+select:
+  loading: 加载中
+  no_data: 暂无数据
+  no_match: 无匹配数据
+  clear: 清空选择
+  placeholder: 请选择

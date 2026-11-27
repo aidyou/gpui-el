@@ -311,6 +311,24 @@ capsule_interval: 间隔
 capsule_once: 一次
 capsule_weekdays: 工作日
 capsule_monthly: 每月
+select_intro: 从可过滤的下拉列表选择一个或多个值，支持原生文本编辑、键盘导航与受控事件。
+select_page: Select 选择器
+select_basic: 基本用法
+select_filterable: 可过滤
+select_multiple: 多选
+select_clearable: 可清空与清空值
+select_sizes: 尺寸
+select_disabled: 禁用选项与禁用选择器
+select_loading: 加载中
+select_empty: 空数据
+select_custom: 前缀、后缀、页眉与页脚
+select_daily: 每天
+select_interval: 间隔
+select_once: 一次
+select_weekdays: 工作日
+select_no_data: 暂无数据
+select_header: 选择执行频率
+select_footer: 选中值由应用控制
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

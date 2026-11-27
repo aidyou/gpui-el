@@ -1105,6 +1105,112 @@ const CAPSULE_EVENTS: &[Row] = &[(
     "Pointer or Enter/Space activation reports the option value, including an already selected option.",
     "指针或 Enter/Space 激活报告选项值；重复激活已选项也会报告。",
 )];
+const SELECT: &[Row] = &[
+    (
+        "el_select(), Select::new, id",
+        "ElementId · call site",
+        "Create a 100%-width select field with a stable sibling-unique ID.",
+        "创建宽度为 100% 的选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value, selected, values",
+        "Option<SharedString> / SharedString / Vec<SharedString> · none",
+        "Control a single value or the multiple-selection vector. The application moves it in onchange.",
+        "控制单选值或多选向量；应用在 onchange 中移动该值。",
+    ),
+    (
+        "options",
+        "IntoIterator<SelectOption> · empty",
+        "Set value/label pairs; individual options may be disabled.",
+        "设置值/标签对；单个选项可禁用。",
+    ),
+    (
+        "multiple, multiple_limit",
+        "bool / usize · false / 0",
+        "Enable multiple selection and optionally cap it; zero means unlimited.",
+        "启用多选并可限制数量；0 表示不限。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights and 14/14/12 px type sizes.",
+        "使用 Input 字段的 40/32/24 px 外高与 14/14/12 px 字号。",
+    ),
+    (
+        "filterable, filter_method, remote",
+        "bool / Fn / bool · false / none / false",
+        "Enable native text filtering, caller-driven filtering, or remote option updates.",
+        "启用原生文本过滤、调用方驱动过滤或远程选项更新。",
+    ),
+    (
+        "clearable, value_on_clear",
+        "bool / Option<SharedString> · false / None",
+        "Show a clear control on focus or hover and choose the single-select clear value.",
+        "聚焦或悬停时显示清空控件，并选择单选清空值。",
+    ),
+    (
+        "reserve_keyword",
+        "bool · true",
+        "Keep the filter query after a multiple selection, or clear it.",
+        "多选后保留过滤关键词，或将其清空。",
+    ),
+    (
+        "disabled, loading",
+        "bool · false",
+        "Disable all interaction, or show the localized loading row and spinner.",
+        "禁用全部交互，或显示本地化加载行与旋转图标。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · locale / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+    (
+        "prefix, suffix, header, footer",
+        "IntoElement · none",
+        "Add field adornments and dropdown header/footer content.",
+        "添加字段前后缀与下拉列表页眉/页脚。",
+    ),
+    (
+        "loading_text, no_data_text, no_match_text",
+        "SharedString · locale",
+        "Override the built-in loading, empty, and no-match messages.",
+        "覆盖内置加载、空数据与无匹配文案。",
+    ),
+];
+const SELECT_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "SelectValue, &mut Window, &mut App",
+        "A single option, multiple toggle, removal, or clear changed the controlled value.",
+        "单选、多选切换、移除或清空导致受控值变化。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The dropdown opened or closed.",
+        "下拉列表打开或关闭。",
+    ),
+    (
+        "onremove",
+        "SharedString, &mut Window, &mut App",
+        "A multiple-selection value was removed.",
+        "多选值被移除。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The clear control was activated.",
+        "清空控件被激活。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1639,6 +1745,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Input => (INPUT, INPUT_EVENTS),
         Page::InputNumber => (INPUT_NUMBER, INPUT_NUMBER_EVENTS),
         Page::Capsule => (CAPSULE, CAPSULE_EVENTS),
+        Page::Select => (SELECT, SELECT_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1697,6 +1804,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、选项分组、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, option groups, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
         .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
         .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))

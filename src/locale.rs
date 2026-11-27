@@ -22,6 +22,7 @@ struct Messages {
     tag: TagMessages,
     table: TableMessages,
     input_number: InputNumberMessages,
+    select: SelectMessages,
 }
 
 #[derive(Deserialize)]
@@ -56,6 +57,16 @@ struct InputNumberMessages {
     decrease: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SelectMessages {
+    loading: String,
+    no_data: String,
+    no_match: String,
+    clear: String,
+    placeholder: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -78,6 +89,13 @@ impl Messages {
             input_number: InputNumberMessages {
                 increase: "Increase".into(),
                 decrease: "Decrease".into(),
+            },
+            select: SelectMessages {
+                loading: "Loading".into(),
+                no_data: "No data".into(),
+                no_match: "No matching data".into(),
+                clear: "Clear selection".into(),
+                placeholder: "Select".into(),
             },
         }
     }
@@ -116,6 +134,21 @@ impl Locale {
     pub(crate) fn input_number_decrease(self) -> &'static str {
         &self.messages().input_number.decrease
     }
+    pub(crate) fn select_loading(self) -> &'static str {
+        &self.messages().select.loading
+    }
+    pub(crate) fn select_no_data(self) -> &'static str {
+        &self.messages().select.no_data
+    }
+    pub(crate) fn select_no_match(self) -> &'static str {
+        &self.messages().select.no_match
+    }
+    pub(crate) fn select_clear(self) -> &'static str {
+        &self.messages().select.clear
+    }
+    pub(crate) fn select_placeholder(self) -> &'static str {
+        &self.messages().select.placeholder
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -148,6 +181,16 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.input_number_increase(), "增加");
         assert_eq!(Locale::default().input_number_decrease(), "Decrease");
         assert_eq!(Locale::SimplifiedChinese.input_number_decrease(), "减少");
+        assert_eq!(Locale::default().select_loading(), "Loading");
+        assert_eq!(Locale::SimplifiedChinese.select_loading(), "加载中");
+        assert_eq!(Locale::default().select_no_data(), "No data");
+        assert_eq!(Locale::SimplifiedChinese.select_no_data(), "暂无数据");
+        assert_eq!(Locale::default().select_no_match(), "No matching data");
+        assert_eq!(Locale::SimplifiedChinese.select_no_match(), "无匹配数据");
+        assert_eq!(Locale::default().select_clear(), "Clear selection");
+        assert_eq!(Locale::SimplifiedChinese.select_clear(), "清空选择");
+        assert_eq!(Locale::default().select_placeholder(), "Select");
+        assert_eq!(Locale::SimplifiedChinese.select_placeholder(), "请选择");
     }
 
     #[test]
@@ -168,5 +211,10 @@ mod tests {
             fallback.input_number.decrease,
             embedded.input_number.decrease
         );
+        assert_eq!(fallback.select.loading, embedded.select.loading);
+        assert_eq!(fallback.select.no_data, embedded.select.no_data);
+        assert_eq!(fallback.select.no_match, embedded.select.no_match);
+        assert_eq!(fallback.select.clear, embedded.select.clear);
+        assert_eq!(fallback.select.placeholder, embedded.select.placeholder);
     }
 }
