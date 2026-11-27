@@ -15,9 +15,12 @@
 //! on them. GPUI cannot scale an element on hover, so the handle's 1.2× hover
 //! and drag enlargement is a 20 → 24 px size change instead, and the value
 //! tooltip keeps the text it was built with rather than following a drag frame
-//! by frame. A drag keeps tracking the pointer after it leaves the slider
-//! through a window-level move listener, which gpui-fast needs because it only
-//! reports an element exit at the window edge.
+//! by frame. The whole slider row (or vertical strip) is an interaction
+//! target, and grabbing the handle preserves the pointer's offset from its
+//! center so the 36 px hit area does not jump the value. A drag keeps tracking
+//! the pointer after it leaves the slider through a window-level move listener,
+//! which gpui-fast needs because it only reports an element exit at the window
+//! edge.
 
 use std::{cell::Cell as BoundsCell, rc::Rc, sync::Arc};
 
@@ -73,10 +76,19 @@ impl Handle {
     }
 }
 
+/// An in-progress drag. `offset` is the pointer's distance from the handle
+/// center in runway percent, so grabbing the edge of the 36 px handle does not
+/// jump the value under the pointer.
+#[derive(Clone, Copy, Debug)]
+struct Drag {
+    handle: Handle,
+    offset: f32,
+}
+
 /// An in-progress drag, the last value it reported, and the measured runway,
 /// all keyed per slider.
 struct SliderState {
-    drag: Option<Handle>,
+    drag: Option<Drag>,
     /// The last value sent through `oninput`, reported again by `onchange`
     /// when the drag ends.
     last: Option<f32>,
@@ -455,6 +467,7 @@ impl RenderOnce for Slider {
         };
         let state = window.use_keyed_state(id.clone(), cx, |_, cx| SliderState::new(cx));
         let drag = state.read(cx).drag;
+        let active_handle = drag.map(|drag| drag.handle);
         let runway_bg = rgb(theme.border(true));
         let bar_color = rgb(if disabled {
             theme.disabled_text()
@@ -499,35 +512,6 @@ impl RenderOnce for Slider {
             .rounded(px(geometry::RADIUS))
             .bg(runway_bg)
             .when(!disabled, |el| el.cursor_pointer())
-            .on_mouse_down(MouseButton::Left, {
-                let state = state.clone();
-                let oninput = oninput.clone();
-                move |event, window, cx| {
-                    if disabled {
-                        return;
-                    }
-                    let Some(bounds) = state.read(cx).bounds.get() else {
-                        return;
-                    };
-                    let percent = percent_at(event.position, &bounds, vertical);
-                    let handle = handle_at(percent, min, max, single, range);
-                    let value = quantize(percent, min, max, step);
-                    state.update(cx, |state, cx| {
-                        state.drag = Some(handle);
-                        state.last = Some(value);
-                        let focus = match handle {
-                            Handle::Low => &state.focus[0],
-                            Handle::High => &state.focus[1],
-                        };
-                        focus.focus(window, cx);
-                        cx.notify();
-                    });
-                    if let Some(oninput) = &oninput {
-                        oninput(report_value(range, handle, value), window, cx);
-                    }
-                    cx.stop_propagation();
-                }
-            })
             .child(
                 // The bar spans the selection: the minimum to the value for a
                 // single slider, the low end to the high end for a range.
@@ -638,7 +622,7 @@ impl RenderOnce for Slider {
                     } else {
                         0.
                     };
-                    let active = drag == Some(handle);
+                    let active = active_handle == Some(handle);
                     let hint: SharedString = match &format_tooltip {
                         Some(format) => format(value),
                         None => SharedString::from(format!("{value}")),
@@ -677,6 +661,33 @@ impl RenderOnce for Slider {
                         })
                         .tab_stop(true)
                         .when(!disabled, |el| el.cursor(CursorStyle::OpenHand))
+                        .on_mouse_down(MouseButton::Left, {
+                            let state = state.clone();
+                            move |event, window, cx| {
+                                if disabled {
+                                    return;
+                                }
+                                let Some(bounds) = state.read(cx).bounds.get() else {
+                                    return;
+                                };
+                                // Preserve the grab point: the 36 px handle is
+                                // much larger than the 6 px runway, and its
+                                // outer area must drag without jumping.
+                                let offset =
+                                    percent_at(event.position, &bounds, vertical) - percent;
+                                state.update(cx, |state, cx| {
+                                    state.drag = Some(Drag { handle, offset });
+                                    state.last = Some(value);
+                                    let focus = match handle {
+                                        Handle::Low => &state.focus[0],
+                                        Handle::High => &state.focus[1],
+                                    };
+                                    focus.focus(window, cx);
+                                    cx.notify();
+                                });
+                                cx.stop_propagation();
+                            }
+                        })
                         .when(show_tooltip && !disabled, |el| {
                             el.tooltip(move |_, cx| {
                                 cx.new(|_| SliderHint(hint.clone(), dark)).into()
@@ -699,7 +710,7 @@ impl RenderOnce for Slider {
                                 return;
                             };
                             key_state.update(cx, |state, cx| {
-                                state.drag = Some(handle);
+                                state.drag = Some(Drag { handle, offset: 0. });
                                 state.last = Some(next);
                                 cx.notify();
                             });
@@ -747,14 +758,14 @@ impl RenderOnce for Slider {
                             if phase != gpui::DispatchPhase::Bubble || disabled {
                                 return;
                             }
-                            let Some(handle) = state.read(cx).drag else {
+                            let Some(drag) = state.read(cx).drag else {
                                 return;
                             };
                             let Some(bounds) = state.read(cx).bounds.get() else {
                                 return;
                             };
                             let value = quantize(
-                                percent_at(event.position, &bounds, vertical),
+                                percent_at(event.position, &bounds, vertical) - drag.offset,
                                 min,
                                 max,
                                 step,
@@ -764,7 +775,7 @@ impl RenderOnce for Slider {
                                 cx.notify();
                             });
                             if let Some(oninput) = &move_oninput {
-                                oninput(report_value(range, handle, value), window, cx);
+                                oninput(report_value(range, drag.handle, value), window, cx);
                             }
                         });
                         let state = release_state.clone();
@@ -773,21 +784,21 @@ impl RenderOnce for Slider {
                             if phase != gpui::DispatchPhase::Bubble || disabled {
                                 return;
                             }
-                            let Some(handle) = state.read(cx).drag else {
+                            let Some(drag) = state.read(cx).drag else {
                                 return;
                             };
                             // The drag's last reported value, or the
                             // handle's current value when the press never
                             // moved.
                             let value = state.read(cx).last.unwrap_or_else(|| {
-                                handle_value(range, single, handle).unwrap_or(min)
+                                handle_value(range, single, drag.handle).unwrap_or(min)
                             });
                             state.update(cx, |state, cx| {
                                 state.drag = None;
                                 cx.notify();
                             });
                             if let Some(onchange) = &release_change {
-                                onchange(report_value(range, handle, value), window, cx);
+                                onchange(report_value(range, drag.handle, value), window, cx);
                             }
                         });
                     },
@@ -806,6 +817,40 @@ impl RenderOnce for Slider {
             })
             .when(!vertical, |el| {
                 el.flex().items_center().h(px(size.height())).w_full()
+            })
+            .when(!disabled, |el| el.cursor_pointer())
+            .on_mouse_down(MouseButton::Left, {
+                let state = state.clone();
+                let oninput = oninput.clone();
+                move |event, window, cx| {
+                    if disabled {
+                        return;
+                    }
+                    let Some(bounds) = state.read(cx).bounds.get() else {
+                        return;
+                    };
+                    // The whole row/strip is an interaction target, not just
+                    // the 6 px visual runway. This keeps horizontal sliders
+                    // easy to grab and gives the vertical slider a usable
+                    // width while preserving the upstream geometry.
+                    let percent = percent_at(event.position, &bounds, vertical);
+                    let handle = handle_at(percent, min, max, single, range);
+                    let value = quantize(percent, min, max, step);
+                    state.update(cx, |state, cx| {
+                        state.drag = Some(Drag { handle, offset: 0. });
+                        state.last = Some(value);
+                        let focus = match handle {
+                            Handle::Low => &state.focus[0],
+                            Handle::High => &state.focus[1],
+                        };
+                        focus.focus(window, cx);
+                        cx.notify();
+                    });
+                    if let Some(oninput) = &oninput {
+                        oninput(report_value(range, handle, value), window, cx);
+                    }
+                    cx.stop_propagation();
+                }
             })
             .child(runway)
             .into_any_element()
@@ -950,6 +995,19 @@ mod tests {
             view.update(|window, cx| window.draw(cx).clear(cx));
         };
         draw(view);
+        // The whole 32 px row is interactive, not only the 6 px runway. This
+        // press is above the runway and outside the handle wrapper.
+        view.simulate_mouse_down(
+            gpui::point(px(20.), px(2.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        assert_eq!(value.get(), 5.);
+        view.simulate_mouse_up(
+            gpui::point(px(20.), px(2.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
         // The runway fills the 400 px harness, so 60 % of it is x 240. A
         // click there jumps, and releasing commits.
         view.simulate_mouse_down(
@@ -984,6 +1042,115 @@ mod tests {
         );
         assert_eq!(value.get(), 100., "the drag clamps at the maximum");
         assert_eq!(committed.get(), 100.);
+    }
+
+    #[gpui::test]
+    fn handle_wrapper_drags_without_jumping_in_both_orientations(cx: &mut gpui::TestAppContext) {
+        use std::cell::Cell as StdCell;
+        struct Harness {
+            horizontal: Rc<StdCell<f32>>,
+            vertical: Rc<StdCell<f32>>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let horizontal = self.horizontal.clone();
+                let vertical = self.vertical.clone();
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(
+                        // The horizontal handle is centered at x 120. Its wrapper
+                        // reaches x 102..138 and y -2..34, so x 110/y 4 is firmly
+                        // inside the handle but outside the 6 px runway.
+                        div().w(px(400.)).child(
+                            el_slider()
+                                .id("horizontal-handle")
+                                .value(horizontal.get())
+                                .oninput(move |reported, _, _| {
+                                    let SliderValue::Single(reported) = reported else {
+                                        return;
+                                    };
+                                    horizontal.set(reported);
+                                }),
+                        ),
+                    )
+                    .child(
+                        // The vertical runway is x 16..22 and starts at y 32. Its
+                        // 40 % handle wrapper reaches x 1..37 and y 134..170, so
+                        // x 30/y 144 is also outside the runway.
+                        div().w(px(400.)).h(px(200.)).child(
+                            el_slider()
+                                .id("vertical-handle")
+                                .value(vertical.get())
+                                .vertical(true)
+                                .height(200.)
+                                .oninput(move |reported, _, _| {
+                                    let SliderValue::Single(reported) = reported else {
+                                        return;
+                                    };
+                                    vertical.set(reported);
+                                }),
+                        ),
+                    )
+            }
+        }
+        let horizontal = Rc::new(StdCell::new(30.));
+        let vertical = Rc::new(StdCell::new(40.));
+        let (_, view) = cx.add_window_view({
+            let horizontal = horizontal.clone();
+            let vertical = vertical.clone();
+            move |_, _| Harness {
+                horizontal,
+                vertical,
+            }
+        });
+        let draw = |view: &mut gpui::VisualTestContext| {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+        };
+        draw(view);
+
+        view.simulate_mouse_down(
+            gpui::point(px(110.), px(4.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        assert_eq!(horizontal.get(), 30., "grabbing the handle must not jump");
+        view.simulate_mouse_move(
+            gpui::point(px(210.), px(4.)),
+            Some(MouseButton::Left),
+            gpui::Modifiers::default(),
+        );
+        draw(view);
+        view.simulate_mouse_up(
+            gpui::point(px(210.), px(4.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        assert_eq!(horizontal.get(), 55., "the grab offset is preserved");
+
+        // The vertical slider starts below the 32 px horizontal row.
+        view.simulate_mouse_down(
+            gpui::point(px(30.), px(144.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        assert_eq!(vertical.get(), 40., "vertical handle grabs must not jump");
+        view.simulate_mouse_move(
+            gpui::point(px(30.), px(94.)),
+            Some(MouseButton::Left),
+            gpui::Modifiers::default(),
+        );
+        draw(view);
+        view.simulate_mouse_up(
+            gpui::point(px(30.), px(94.)),
+            MouseButton::Left,
+            gpui::Modifiers::default(),
+        );
+        assert_eq!(
+            vertical.get(),
+            65.,
+            "vertical dragging uses the same offset"
+        );
     }
 
     #[gpui::test]
