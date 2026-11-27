@@ -1169,6 +1169,12 @@ const RADIO: &[Row] = &[
         "绘制外边框与禁止触发。",
     ),
     (
+        "active_color, inactive_color",
+        "Hsla · primary / border",
+        "Native color overrides for the selected accent, and the unchecked outline. Disabled radios keep their neutral disabled colors.",
+        "原生颜色覆盖：选中强调色使用 active_color，未选中轮廓使用 inactive_color。禁用态保持中性禁用色。",
+    ),
+    (
         "accessibility_label",
         "SharedString · —",
         "The accessible name; label icon-only radios. The selected state uses the toggle attribute.",
@@ -1199,6 +1205,12 @@ const RADIO_GROUP: &[Row] = &[
         "RadioSize / bool · unset",
         "Defaults for children that have not chosen their own.",
         "未显式设置的子项使用这些默认值。",
+    ),
+    (
+        "active_color, inactive_color",
+        "Hsla · unset",
+        "Native color defaults for children that have not chosen their own.",
+        "原生颜色默认值；未显式设置的子项继承。",
     ),
 ];
 const RADIO_EVENTS: &[Row] = &[(

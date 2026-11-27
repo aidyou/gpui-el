@@ -239,6 +239,7 @@ radio_disabled: 禁用
 radio_sizes: 尺寸
 radio_bordered: 带边框
 radio_custom: 自定义内容
+radio_colors: 自定义颜色
 radio_prepare: 备货
 radio_ship: 发货
 radio_pickup: 自提

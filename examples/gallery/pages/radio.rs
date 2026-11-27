@@ -1,4 +1,4 @@
-use gpui::{Context, Div, div, prelude::*, px};
+use gpui::{Context, Div, div, prelude::*, px, rgb};
 use gpui_el::{RadioSize, el_button, el_icon, el_radio, el_radio_group};
 
 use crate::{Gallery, copy::Copy};
@@ -9,6 +9,7 @@ pub(crate) struct State {
     sized: usize,
     bordered: usize,
     custom: usize,
+    colors: usize,
 }
 
 impl Default for State {
@@ -19,6 +20,7 @@ impl Default for State {
             sized: 0,
             bordered: 1,
             custom: 0,
+            colors: 0,
         }
     }
 }
@@ -118,6 +120,24 @@ impl Gallery {
                             .child(label),
                     )
             }));
+        let colors = el_radio_group()
+            .vertical()
+            .gap(12.)
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949))
+            .radios(options.into_iter().enumerate().map(|(index, label)| {
+                let view = view.clone();
+                el_radio()
+                    .id(("radio-color", index))
+                    .label(label)
+                    .checked(self.radio.colors == index)
+                    .onchange(move |_, _, cx| {
+                        view.update(cx, |this, cx| {
+                            this.radio.colors = index;
+                            cx.notify();
+                        })
+                    })
+            }));
         let section =
             |id, title, code: &str, controls| self.section(cx, id, title, || code.into(), controls);
         div()
@@ -194,6 +214,17 @@ el_radio().label("Pickup");"#,
         .child("Ship"),
 );"#,
                 custom.into_any_element(),
+            ))
+            .child(section(
+                "radio-colors",
+                &s.radio_colors,
+                r#"el_radio_group().active_color(rgb(0x13ce66))
+    .inactive_color(rgb(0xff4949))
+    .radios(options.enumerate().map(|(index, label)| {
+        el_radio().id(("radio-color", index)).label(label)
+            .checked(self.radio.colors == index)
+    }));"#,
+                colors.into_any_element(),
             ))
             .child(
                 div().flex().items_center().gap(px(12.)).child(

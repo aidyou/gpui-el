@@ -170,6 +170,7 @@ copy_fields!(
     radio_sizes,
     radio_bordered,
     radio_custom,
+    radio_colors,
     radio_prepare,
     radio_ship,
     radio_pickup,

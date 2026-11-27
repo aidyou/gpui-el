@@ -239,6 +239,7 @@ radio_disabled: Disabled
 radio_sizes: Sizes
 radio_bordered: Bordered
 radio_custom: Custom content
+radio_colors: Custom colors
 radio_prepare: Prepare
 radio_ship: Ship
 radio_pickup: Pickup

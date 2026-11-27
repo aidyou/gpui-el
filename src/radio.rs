@@ -6,7 +6,7 @@
 //! toggle attribute because GPUI has no native radio input.
 
 use gpui::{
-    AnyElement, App, ElementId, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
+    AnyElement, App, ElementId, Hsla, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
     prelude::*, px, rgb,
 };
 
@@ -103,6 +103,8 @@ pub struct Radio {
     border: bool,
     /// Whether `border` was set explicitly, so a group cannot override it.
     explicit_border: bool,
+    active_color: Option<Hsla>,
+    inactive_color: Option<Hsla>,
     onchange: Option<ChangeHandler>,
 }
 
@@ -169,6 +171,20 @@ impl Radio {
         self
     }
 
+    /// Sets the selected accent color; primary by default. Disabled radios
+    /// keep their neutral disabled colors.
+    pub fn active_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.active_color = Some(color.into());
+        self
+    }
+
+    /// Sets the unchecked outline color; the theme border color by default.
+    /// Disabled radios keep their neutral disabled colors.
+    pub fn inactive_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.inactive_color = Some(color.into());
+        self
+    }
+
     /// Reports that this radio was activated by pointer or keyboard. Not
     /// emitted while disabled, and clicking the already selected radio does
     /// not switch it elsewhere, like upstream.
@@ -199,23 +215,37 @@ impl RenderOnce for Radio {
         // Upstream fills the input with the primary color and centers a 4 px
         // white dot when selected; the disabled states swap in neutral fills.
         let border = theme.border(false);
+        let active_color: Hsla = self.active_color.unwrap_or_else(|| rgb(PRIMARY).into());
+        let inactive_color: Hsla = self.inactive_color.unwrap_or_else(|| rgb(border).into());
         let (input_bg, input_border, dot) = if self.disabled {
             if self.checked {
-                (theme.fill(Fill::Light), border, theme.disabled_text())
+                (
+                    rgb(theme.fill(Fill::Light)).into(),
+                    rgb(border).into(),
+                    theme.disabled_text(),
+                )
             } else {
-                (theme.fill(Fill::Light), border, theme.fill(Fill::Light))
+                (
+                    rgb(theme.fill(Fill::Light)).into(),
+                    rgb(border).into(),
+                    theme.fill(Fill::Light),
+                )
             }
         } else if self.checked {
-            (PRIMARY, PRIMARY, WHITE)
+            (active_color, active_color, WHITE)
         } else {
-            (theme.background(), border, theme.background())
+            (
+                rgb(theme.background()).into(),
+                inactive_color,
+                theme.background(),
+            )
         };
-        let label_color = if self.disabled {
-            theme.disabled_text()
+        let label_color: Hsla = if self.disabled {
+            rgb(theme.disabled_text()).into()
         } else if self.checked {
-            PRIMARY
+            active_color
         } else {
-            theme.regular_text()
+            rgb(theme.regular_text()).into()
         };
         let accessibility_label = self.accessibility_label.or_else(|| self.label.clone());
         let content = self
@@ -227,16 +257,16 @@ impl RenderOnce for Radio {
             .items_center()
             .h(px(metrics.height))
             .text_size(px(metrics.font_size))
-            .text_color(rgb(label_color))
+            .text_color(label_color)
             .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
             .when(self.border, |el| {
                 el.border_1()
                     .border_color(if self.disabled {
-                        rgb(theme.border_lighter())
+                        rgb(theme.border_lighter()).into()
                     } else if self.checked {
-                        rgb(PRIMARY)
+                        active_color
                     } else {
-                        rgb(border)
+                        inactive_color
                     })
                     .rounded(px(metrics.radius))
                     .pl(px(metrics.padding_left))
@@ -251,10 +281,10 @@ impl RenderOnce for Radio {
                     .size(px(input))
                     .rounded_full()
                     .border_1()
-                    .border_color(rgb(input_border))
-                    .bg(rgb(input_bg))
+                    .border_color(input_border)
+                    .bg(input_bg)
                     .when(!self.disabled, |el| {
-                        el.hover(move |style| style.border_color(rgb(PRIMARY)))
+                        el.hover(move |style| style.border_color(active_color))
                     })
                     .when(self.checked, |el| {
                         // `$radio` `::after`: a 4 px dot at half the input.
@@ -297,7 +327,7 @@ impl RenderOnce for Radio {
                 // ring on the radio itself.
                 .focus_visible(move |s| {
                     s.shadow(vec![gpui::BoxShadow {
-                        color: rgb(PRIMARY).into(),
+                        color: active_color,
                         offset: gpui::point(px(0.), px(0.)),
                         blur_radius: px(0.),
                         spread_radius: px(2.),
@@ -335,6 +365,8 @@ pub struct RadioGroup {
     size: Option<RadioSize>,
     disabled: Option<bool>,
     border: Option<bool>,
+    active_color: Option<Hsla>,
+    inactive_color: Option<Hsla>,
     /// Upstream spaces siblings with `margin-right: 30px`.
     gap: Option<f32>,
     accessibility_label: Option<SharedString>,
@@ -383,6 +415,18 @@ impl RadioGroup {
         self
     }
 
+    /// Sets the selected accent for radios that do not choose their own.
+    pub fn active_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.active_color = Some(color.into());
+        self
+    }
+
+    /// Sets the unchecked outline for radios that do not choose their own.
+    pub fn inactive_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.inactive_color = Some(color.into());
+        self
+    }
+
     /// Overrides the 30 px gap between siblings.
     pub fn gap(mut self, gap: f32) -> Self {
         self.gap = Some(gap);
@@ -419,6 +463,16 @@ impl RadioGroup {
                 && let Some(border) = self.border
             {
                 radio.border = border;
+            }
+            if radio.active_color.is_none()
+                && let Some(active_color) = self.active_color
+            {
+                radio.active_color = Some(active_color);
+            }
+            if radio.inactive_color.is_none()
+                && let Some(inactive_color) = self.inactive_color
+            {
+                radio.inactive_color = Some(inactive_color);
             }
         }
     }
@@ -488,11 +542,15 @@ mod tests {
             .label("Option")
             .checked(true)
             .small()
-            .border(true);
+            .border(true)
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949));
         assert_eq!(widget.label.as_deref(), Some("Option"));
         assert!(widget.checked);
         assert_eq!(widget.size, RadioSize::Small);
         assert!(widget.border);
+        assert_eq!(widget.active_color, Some(rgb(0x13ce66).into()));
+        assert_eq!(widget.inactive_color, Some(rgb(0xff4949).into()));
         assert!(el_radio().checked(true).small().checked);
     }
 
@@ -502,16 +560,29 @@ mod tests {
             .large()
             .disabled(true)
             .border(true)
-            .radio(el_radio().id("a").small().disabled(false))
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949))
+            .radio(
+                el_radio()
+                    .id("a")
+                    .small()
+                    .disabled(false)
+                    .active_color(rgb(0x626aef))
+                    .inactive_color(rgb(0x909399)),
+            )
             .radio(el_radio().id("b"));
         group.apply_defaults();
         let first = &group.radios[0];
         assert_eq!(first.size, RadioSize::Small);
         assert!(!first.disabled);
+        assert_eq!(first.active_color, Some(rgb(0x626aef).into()));
+        assert_eq!(first.inactive_color, Some(rgb(0x909399).into()));
         let second = &group.radios[1];
         assert_eq!(second.size, RadioSize::Large);
         assert!(second.disabled);
         assert!(second.border);
+        assert_eq!(second.active_color, Some(rgb(0x13ce66).into()));
+        assert_eq!(second.inactive_color, Some(rgb(0xff4949).into()));
         // The 30 px sibling gap is the render default, not a stored setting.
     }
 
