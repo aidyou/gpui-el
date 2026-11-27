@@ -1990,6 +1990,7 @@ dependencies = [
  "gpui-fast-platform",
  "serde",
  "serde_yaml_ng",
+ "ttf-parser",
  "unicode-segmentation",
 ]
 

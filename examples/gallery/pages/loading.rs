@@ -58,7 +58,7 @@ el_loading().id("font-icon-mask").active(masked)
     .h_text("Loading data")
     .loading_icon(Icon::new('☯').size(36.))
     .mask_opacity(0.)
-    .child("Font glyph ☯ · static · transparent mask");"#
+    .child("Font glyph ☯ · rotating · transparent mask");"#
                     .into()
             },
             div()

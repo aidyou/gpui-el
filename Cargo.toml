@@ -13,6 +13,7 @@ include = ["/src/**", "/examples/**", "/i18n/**", "/README.md", "/CONSTITUTION.m
 gpui = { package = "gpui-fast", version = "=0.1.19" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
+ttf-parser = "0.25"
 
 [dev-dependencies]
 gpui = { package = "gpui-fast", version = "=0.1.19", features = ["test-support"] }

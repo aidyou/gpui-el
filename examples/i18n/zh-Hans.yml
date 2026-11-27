@@ -104,7 +104,7 @@ loading_vertical: Element Plus 官方 Loading 图标 · 默认主色 · 文字�
 loading_color: 自定义前景色 · 警告色 · 默认圆弧
 loading_horizontal: 大小渐变圆点 · 加速旋转 · 文字在右
 loading_clear: 自定义旋转 SVG · 透明遮罩
-loading_font_icon: 字体字符 ☯ · 静态 · 透明遮罩
+loading_font_icon: 字体字符 ☯ · 旋转 · 透明遮罩
 loading_text: 正在加载数据
 solid_title: 默认与语义颜色
 plain_title: 朴素按钮

@@ -1,13 +1,24 @@
-use std::{borrow::Cow, collections::BTreeMap, sync::OnceLock};
+use std::{
+    borrow::Cow,
+    collections::BTreeMap,
+    fmt::Write,
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::{Arc, Mutex, OnceLock},
+};
 
 use gpui::{
     App, FontWeight, Global, Hsla, IntoElement, RenderOnce, SharedString, Window, div, prelude::*,
     px, svg,
 };
+use ttf_parser::OutlineBuilder;
 
 include!(concat!(env!("OUT_DIR"), "/element_plus_icons.rs"));
 
 const TABLER_FAMILY: &str = "tabler-icons";
+
+static REGISTERED_FONTS: OnceLock<Mutex<BTreeMap<String, &'static [u8]>>> = OnceLock::new();
+type GlyphSvgCache = BTreeMap<(String, char), Arc<[u8]>>;
+static GLYPH_SVGS: OnceLock<Mutex<GlyphSvgCache>> = OnceLock::new();
 
 fn element_plus(name: &str) -> Option<&'static [u8]> {
     ELEMENT_PLUS
@@ -132,7 +143,44 @@ pub fn register_icon_font(cx: &App, bytes: &'static [u8]) -> crate::Result<()> {
     cx.text_system()
         .add_fonts(vec![Cow::Borrowed(bytes)])
         .map_err(crate::Error::font)?;
+    remember_icon_font(bytes);
     Ok(())
+}
+
+fn registered_fonts() -> &'static Mutex<BTreeMap<String, &'static [u8]>> {
+    REGISTERED_FONTS.get_or_init(|| Mutex::new(BTreeMap::new()))
+}
+
+fn remember_icon_font(bytes: &'static [u8]) {
+    let Ok(face) = ttf_parser::Face::parse(bytes, 0) else {
+        return;
+    };
+    // Family, typographic family, and WWS family names are all valid ways to
+    // address a font in GPUI. Keep the bytes so transformed glyphs can use
+    // outlines even though GPUI's SVG renderer has a separate font database.
+    let names: Vec<_> = face
+        .names()
+        .into_iter()
+        .filter(|name| matches!(name.name_id, 1 | 16 | 21))
+        .filter_map(|name| name.to_string())
+        .collect();
+    if names.is_empty() {
+        return;
+    }
+    let mut fonts = registered_fonts()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    for name in names {
+        fonts.insert(name, bytes);
+    }
+}
+
+fn registered_font_bytes(family: &str) -> Option<&'static [u8]> {
+    registered_fonts()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(family)
+        .copied()
 }
 
 #[derive(Clone)]
@@ -212,8 +260,9 @@ impl Icon {
         self
     }
 
-    /// Rotates SVG icons around their center. Font glyphs stay static because
-    /// GPUI does not expose glyph rotation. Honors reduced-motion settings.
+    /// Rotates SVG and font glyph icons around their center. Font glyphs are
+    /// rasterized through SVG so GPUI can transform them. Honors reduced-motion
+    /// settings.
     pub fn spin(mut self, motion: crate::LoadingMotion) -> Self {
         self.spin = Some(motion);
         self
@@ -225,10 +274,9 @@ impl Icon {
         self
     }
 
-    /// Rotates an SVG icon clockwise around its center, in radians. Callers
-    /// animate this by re-rendering with a new angle, as the menu chevron
-    /// does. Font glyphs stay static because GPUI does not expose glyph
-    /// rotation.
+    /// Rotates an SVG or font glyph clockwise around its center, in radians.
+    /// Callers animate this by re-rendering with a new angle, as the menu
+    /// chevron does.
     pub fn rotate(mut self, radians: f32) -> Self {
         self.rotate = if radians.is_finite() { radians } else { 0. };
         self
@@ -267,6 +315,149 @@ fn resolve_named(name: &str, explicit: Option<IconPack>, cx: &mut App) -> Option
     element_plus(name).map(Source::Svg)
 }
 
+#[derive(Default)]
+struct SvgPathBuilder {
+    path: String,
+}
+
+impl OutlineBuilder for SvgPathBuilder {
+    fn move_to(&mut self, x: f32, y: f32) {
+        let _ = write!(self.path, "M {x} {y} ");
+    }
+
+    fn line_to(&mut self, x: f32, y: f32) {
+        let _ = write!(self.path, "L {x} {y} ");
+    }
+
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        let _ = write!(self.path, "Q {x1} {y1} {x} {y} ");
+    }
+
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        let _ = write!(self.path, "C {x1} {y1} {x2} {y2} {x} {y} ");
+    }
+
+    fn close(&mut self) {
+        self.path.push_str("Z ");
+    }
+}
+
+fn glyph_path_svg(bytes: &[u8], glyph: char) -> Option<Vec<u8>> {
+    let face = ttf_parser::Face::parse(bytes, 0).ok()?;
+    let glyph_id = face.glyph_index(glyph)?;
+    let mut builder = SvgPathBuilder::default();
+    let bbox = face.outline_glyph(glyph_id, &mut builder)?;
+    let x_min = bbox.x_min as f32;
+    let x_max = bbox.x_max as f32;
+    let y_min = bbox.y_min as f32;
+    let y_max = bbox.y_max as f32;
+    let width = x_max - x_min;
+    let height = y_max - y_min;
+    if !width.is_finite() || !height.is_finite() || width <= 0. || height <= 0. {
+        return None;
+    }
+    let scale = 100. / width.max(height);
+    let x = (100. - width * scale) / 2.;
+    let y = (100. - height * scale) / 2.;
+    Some(
+        format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="{}" transform="translate({x} {y}) scale({scale} {}) translate({} {})"/></svg>"#,
+            builder.path, -scale, -x_min, -y_max
+        )
+        .into_bytes(),
+    )
+}
+
+fn xml_escape(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&apos;"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
+}
+
+fn svg_font_family(family: &str) -> &str {
+    match family {
+        ".SystemUIFont" => "sans-serif",
+        ".ZedSans" | "Zed Plex Sans" => "IBM Plex Sans",
+        ".ZedMono" | "Zed Plex Mono" => "Lilex",
+        _ => family,
+    }
+}
+
+fn glyph_text_svg(glyph: char, family: &str) -> Vec<u8> {
+    format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="{}" font-size="100">{}</text></svg>"#,
+        xml_escape(svg_font_family(family)),
+        xml_escape(&glyph.to_string())
+    )
+    .into_bytes()
+}
+
+fn transformed_glyph_svg(glyph: char, family: &str) -> Arc<[u8]> {
+    let key = (family.to_owned(), glyph);
+    let cache = GLYPH_SVGS.get_or_init(|| Mutex::new(BTreeMap::new()));
+    if let Some(svg) = cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(&key)
+    {
+        return Arc::clone(svg);
+    }
+    let svg = Arc::from(
+        registered_font_bytes(family)
+            .and_then(|bytes| glyph_path_svg(bytes, glyph))
+            .unwrap_or_else(|| glyph_text_svg(glyph, family)),
+    );
+    cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(key, Arc::clone(&svg));
+    svg
+}
+
+fn spinning_svg<D>(
+    data: D,
+    size: gpui::Pixels,
+    color: Hsla,
+    motion: crate::LoadingMotion,
+    speed: crate::MotionSpeed,
+) -> gpui::AnyElement
+where
+    D: AsRef<[u8]> + 'static,
+{
+    let mut hasher = DefaultHasher::new();
+    data.as_ref().hash(&mut hasher);
+    let key = SharedString::from(format!("__binary_svg__{}", hasher.finish()));
+    gpui::canvas(
+        |_, _, _| {},
+        move |bounds, _, window, cx| {
+            if !bounds.intersects(&window.content_mask().bounds) {
+                return;
+            }
+            let elapsed = crate::motion::animation_time(window, cx);
+            let angle = std::f32::consts::TAU * motion.phase(elapsed, speed);
+            let center = bounds.center();
+            let scale = window.scale_factor();
+            let matrix = gpui::TransformationMatrix::unit()
+                .translate(center.scale(scale))
+                .rotate(gpui::radians(angle))
+                .translate(center.scale(-scale));
+            let _ = window.paint_svg(bounds, key, Some(data.as_ref()), matrix, color, cx);
+        },
+    )
+    .size(size)
+    .flex_none()
+    .into_any_element()
+}
+
 impl RenderOnce for Icon {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let inherited = window.text_style();
@@ -280,34 +471,11 @@ impl RenderOnce for Icon {
         };
         match source {
             Some(Source::Svg(bytes)) if self.spin.is_some() => {
-                use std::hash::{DefaultHasher, Hash, Hasher};
                 let motion = self.spin.unwrap_or_default();
                 let speed = self
                     .spin_speed
                     .unwrap_or_else(|| crate::Theme::current(cx).motion_speed);
-                let mut hasher = DefaultHasher::new();
-                bytes.hash(&mut hasher);
-                let key = SharedString::from(format!("__binary_svg__{}", hasher.finish()));
-                gpui::canvas(
-                    |_, _, _| {},
-                    move |bounds, _, window, cx| {
-                        if !bounds.intersects(&window.content_mask().bounds) {
-                            return;
-                        }
-                        let elapsed = crate::motion::animation_time(window, cx);
-                        let angle = std::f32::consts::TAU * motion.phase(elapsed, speed);
-                        let center = bounds.center();
-                        let scale = window.scale_factor();
-                        let matrix = gpui::TransformationMatrix::unit()
-                            .translate(center.scale(scale))
-                            .rotate(gpui::radians(angle))
-                            .translate(center.scale(-scale));
-                        let _ = window.paint_svg(bounds, key, Some(bytes), matrix, color, cx);
-                    },
-                )
-                .size(size)
-                .flex_none()
-                .into_any_element()
+                spinning_svg(bytes, size, color, motion, speed)
             }
             Some(Source::Svg(bytes)) => svg()
                 .data(bytes)
@@ -318,21 +486,45 @@ impl RenderOnce for Icon {
                     gpui::Transformation::default().with_rotation(gpui::radians(self.rotate)),
                 )
                 .into_any_element(),
-            Some(Source::Glyph(glyph, family)) => div()
-                .flex_none()
-                .flex()
-                .items_center()
-                .justify_center()
-                .min_w(size)
-                .min_h(size)
-                .text_size(size)
-                .line_height(size)
-                .text_color(color)
-                .when_some(family, |el, family| {
-                    el.font_family(family).font_weight(FontWeight::NORMAL)
-                })
-                .child(glyph.to_string())
-                .into_any_element(),
+            Some(Source::Glyph(glyph, family)) => {
+                let family_name = family.as_deref().unwrap_or(inherited.font_family.as_str());
+                if self.spin.is_some() || self.rotate != 0. {
+                    let data = transformed_glyph_svg(glyph, family_name);
+                    if let Some(motion) = self.spin {
+                        let speed = self
+                            .spin_speed
+                            .unwrap_or_else(|| crate::Theme::current(cx).motion_speed);
+                        spinning_svg(data, size, color, motion, speed)
+                    } else {
+                        svg()
+                            .data(data.as_ref())
+                            .size(size)
+                            .flex_none()
+                            .text_color(color)
+                            .with_transformation(
+                                gpui::Transformation::default()
+                                    .with_rotation(gpui::radians(self.rotate)),
+                            )
+                            .into_any_element()
+                    }
+                } else {
+                    div()
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .min_w(size)
+                        .min_h(size)
+                        .text_size(size)
+                        .line_height(size)
+                        .text_color(color)
+                        .when_some(family, |el, family| {
+                            el.font_family(family).font_weight(FontWeight::NORMAL)
+                        })
+                        .child(glyph.to_string())
+                        .into_any_element()
+                }
+            }
             _ => div().size(size).flex_none().into_any_element(),
         }
     }
@@ -415,5 +607,26 @@ mod tests {
         let icon = icon.size(f32::NAN);
         assert!(icon.size.is_none());
         assert!(icon.color.is_some());
+    }
+
+    #[test]
+    fn glyph_text_svg_escapes_xml_and_maps_virtual_fonts() {
+        let svg = String::from_utf8(glyph_text_svg('☯', ".SystemUIFont")).unwrap();
+        assert!(svg.contains("font-family=\"sans-serif\""));
+        assert!(svg.contains(">☯</text>"));
+
+        let svg = String::from_utf8(glyph_text_svg('<', "A\"&<")).unwrap();
+        assert!(svg.contains("font-family=\"A&quot;&amp;&lt;\""));
+        assert!(svg.contains(">&lt;</text>"));
+    }
+
+    #[test]
+    fn registered_tabler_glyphs_have_svg_outlines() {
+        let svg = glyph_path_svg(include_bytes!("icons/tabler/tabler-icons.ttf"), '\u{ec35}')
+            .expect("Tabler yin-yang glyph should have an outline");
+        let svg = String::from_utf8(svg).unwrap();
+        assert!(svg.contains("<path d=\"M "));
+        assert!(svg.contains("transform=\"translate("));
+        assert!(svg.contains("scale("));
     }
 }

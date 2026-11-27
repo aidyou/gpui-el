@@ -139,8 +139,8 @@ const ICON: &[Row] = &[
     (
         "spin",
         "LoadingMotion · —",
-        "Rotate an SVG around its center. Respects reduced motion; font glyphs stay static.",
-        "围绕中心旋转 SVG。遵从减少动效设置；字体图标保持静态。",
+        "Rotate an SVG or font glyph around its center. Respects reduced motion.",
+        "围绕中心旋转 SVG 或字体字形。遵从减少动效设置。",
     ),
     (
         "IconPack::set, current, names",
@@ -753,8 +753,8 @@ const LOADING: &[Row] = &[
     (
         "loading_icon, indicator",
         "Icon / IntoElement · built-in",
-        "Rotate an SVG icon using motion, or supply an element with its own behavior. Font glyphs such as ☯ stay static.",
-        "按所选动效旋转 SVG 图标，或传入自行控制动效的元素。☯ 等字体字符保持静态。",
+        "Rotate an SVG or font glyph using motion, or supply an element with its own behavior.",
+        "按所选动效旋转 SVG 或字体字形，或传入自行控制动效的元素。",
     ),
     (
         "child, children",

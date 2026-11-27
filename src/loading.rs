@@ -177,7 +177,7 @@ impl Loading {
     }
 
     /// Replaces the spinner with an icon and applies the selected motion.
-    /// SVG icons rotate; font glyphs remain static.
+    /// SVG and font glyph icons rotate; arbitrary elements keep their own behavior.
     ///
     /// ```
     /// use gpui_el::{Icon, IconPack, LoadingMotion, el_loading};
