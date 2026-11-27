@@ -127,6 +127,8 @@ struct InputState {
     /// without notifying — the swap is not a state change the view needs to
     /// hear about.
     layout: RefCell<TextLayout>,
+    /// Last caret rectangle reported to the platform for IME positioning.
+    ime_bounds: RefCell<Option<gpui::Bounds<Pixels>>>,
     password_visible: bool,
     /// Textarea scrolling, kept with the field so caret visibility can be
     /// maintained without making callers own another handle.
@@ -181,7 +183,10 @@ impl InputState {
                         onchange(props.borrow().value.clone(), window, cx);
                     }
                 }
-                state.update(cx, |_, cx| cx.notify());
+                state.update(cx, |state, cx| {
+                    state.clear_ime_bounds();
+                    cx.notify();
+                });
             })
         };
         subscriptions.push(focus_in);
@@ -192,6 +197,7 @@ impl InputState {
             anchor: 0,
             marked: None,
             layout: RefCell::new(TextLayout::default()),
+            ime_bounds: RefCell::new(None),
             password_visible: false,
             scroll: ScrollHandle::new(),
             props,
@@ -203,6 +209,16 @@ impl InputState {
     /// The selected range, ordered low to high.
     fn selection(&self) -> Range<usize> {
         self.caret.min(self.anchor)..self.caret.max(self.anchor)
+    }
+
+    /// Records the caret rectangle and reports whether the platform needs a
+    /// fresh IME anchor. Repeated paints of an unchanged caret stay silent.
+    fn update_ime_bounds(&self, bounds: gpui::Bounds<Pixels>) -> bool {
+        self.ime_bounds.replace(Some(bounds)) != Some(bounds)
+    }
+
+    fn clear_ime_bounds(&self) {
+        self.ime_bounds.borrow_mut().take();
     }
 }
 
@@ -1700,7 +1716,7 @@ impl RenderOnce for Input {
                     },
                     {
                         let state = state.clone();
-                        move |_bounds, _, window, cx| {
+                        move |_, _, window, cx| {
                             let state = state.read(cx);
                             let focused = state.focus.is_focused(window);
                             let props = state.props.borrow().clone();
@@ -1709,6 +1725,7 @@ impl RenderOnce for Input {
                             } else {
                                 display_text(&props.value, password, state.password_visible)
                             };
+                            let mut caret_bounds = None;
                             if caret_visible(focused, props.disabled, props.readonly) {
                                 let layout = state.layout.borrow().clone();
                                 let caret = value_byte_to_display(
@@ -1717,13 +1734,12 @@ impl RenderOnce for Input {
                                     state.caret.min(props.value.len()),
                                 );
                                 if let Some(origin) = layout.position_for_index(caret) {
-                                    window.paint_quad(gpui::fill(
-                                        gpui::Bounds::new(
-                                            origin,
-                                            gpui::size(px(1.5), layout.line_height()),
-                                        ),
-                                        caret_color,
-                                    ));
+                                    let bounds = gpui::Bounds::new(
+                                        origin,
+                                        gpui::size(px(1.5), layout.line_height()),
+                                    );
+                                    window.paint_quad(gpui::fill(bounds, caret_color));
+                                    caret_bounds = Some(bounds);
                                 }
                             }
                             if focused && !props.disabled && !props.readonly {
@@ -1734,6 +1750,19 @@ impl RenderOnce for Input {
                                     },
                                     cx,
                                 );
+                                // gpui-fast's TextLayout already returns window
+                                // coordinates. Notify the platform only when the
+                                // caret anchor moves, like gpui-base's input.
+                                if let Some(bounds) = caret_bounds {
+                                    if state.update_ime_bounds(bounds) {
+                                        window.invalidate_character_coordinates();
+                                    }
+                                } else {
+                                    state.clear_ime_bounds();
+                                }
+                            } else {
+                                // Focus must report a fresh anchor next time.
+                                state.clear_ime_bounds();
                             }
                         }
                     },
@@ -1877,6 +1906,31 @@ mod tests {
         assert!(!caret_visible(true, false, true));
     }
 
+    #[gpui::test]
+    fn ime_anchor_updates_only_when_the_caret_moves(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            state: gpui::Entity<InputState>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div()
+            }
+        }
+        let (harness, view) = cx.add_window_view(|window, cx| Harness {
+            state: cx.new(|cx| InputState::new(window, cx)),
+        });
+        let first = gpui::Bounds::new(gpui::point(px(100.), px(50.)), gpui::size(px(1.5), px(21.)));
+        let moved = gpui::Bounds::new(gpui::point(px(110.), px(50.)), gpui::size(px(1.5), px(21.)));
+        view.update(|_, cx| {
+            let state = &harness.read(cx).state;
+            assert!(state.read(cx).update_ime_bounds(first));
+            assert!(!state.read(cx).update_ime_bounds(first));
+            assert!(state.read(cx).update_ime_bounds(moved));
+            state.read(cx).clear_ime_bounds();
+            assert!(state.read(cx).update_ime_bounds(moved));
+        });
+    }
+
     #[test]
     fn radius_profiles_match_the_requested_native_scale() {
         assert_eq!(InputRadius::Off.pixels(32.), 0.);
@@ -1908,6 +1962,90 @@ mod tests {
         assert!(input.readonly);
         assert!(input.textarea);
         assert_eq!(input.rows, 4);
+    }
+
+    #[gpui::test]
+    fn ime_bounds_use_window_coordinates_and_points_round_trip(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            state: gpui::Entity<InputState>,
+            text: Option<gpui::StyledText>,
+            layout: TextLayout,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div().p(px(100.)).child(self.text.take().unwrap())
+            }
+        }
+        let (harness, view) = cx.add_window_view(|window, cx| {
+            let text = gpui::StyledText::new("abc");
+            let layout = text.layout().clone();
+            Harness {
+                state: cx.new(|cx| InputState::new(window, cx)),
+                text: Some(text),
+                layout,
+            }
+        });
+        view.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            let state = harness.read(cx).state.clone();
+            let layout = harness.read(cx).layout.clone();
+            state.update(cx, |state, _| {
+                *state.props.borrow_mut() = InputProps {
+                    value: "abc".into(),
+                    maxlength: None,
+                    readonly: false,
+                    disabled: false,
+                };
+                *state.layout.borrow_mut() = layout.clone();
+            });
+            let start = layout.position_for_index(1).unwrap();
+            let end = layout.position_for_index(2).unwrap();
+
+            use gpui::InputHandler as _;
+            let mut handler = InputHandlerImpl {
+                state: state.clone(),
+            };
+            let range = handler.bounds_for_range(1..2, window, cx).unwrap();
+            assert_eq!(range.origin, start);
+            assert!(start.x >= px(100.));
+            assert_eq!(
+                handler.character_index_for_point(end + gpui::point(px(1.), px(0.)), window, cx),
+                Some(2)
+            );
+        });
+    }
+
+    #[gpui::test]
+    fn prefixed_input_maps_window_clicks_to_text_offsets(cx: &mut gpui::TestAppContext) {
+        struct Harness(Rc<RefCell<String>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let value = self.0.clone();
+                let current = value.borrow().clone();
+                div().p(px(40.)).w(px(400.)).child(
+                    el_input()
+                        .id("prefixed-input")
+                        .value(current)
+                        .prefix(div().w(px(24.)).child("P"))
+                        .oninput(move |reported, _, _| *value.borrow_mut() = reported.to_string()),
+                )
+            }
+        }
+        let value = Rc::new(RefCell::new("abc".into()));
+        let (_, view) = cx.add_window_view({
+            let value = value.clone();
+            move |_, _| Harness(value)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // The text starts after the 40 px page offset, 12 px field padding,
+        // and the 24 px prefix plus its 8 px margin. Click inside "b".
+        view.simulate_mouse_down(
+            gpui::point(px(100.), px(56.)),
+            MouseButton::Left,
+            Modifiers::default(),
+        );
+        type_text(view, "X");
+        assert_eq!(value.borrow().as_str(), "aXbc");
     }
 
     #[gpui::test]
