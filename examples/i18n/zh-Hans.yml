@@ -100,7 +100,7 @@ layout_main: 主内容
 layout_footer: 底栏
 show_loading: 显示加载遮罩
 hide_loading: 关闭加载遮罩
-loading_vertical: Element Plus 官方 Loading 图标 · 文字在下
+loading_vertical: Element Plus 官方 Loading 图标 · 成功色 · 文字在下
 loading_horizontal: 大小渐变圆点 · 加速旋转 · 文字在右
 loading_clear: 自定义旋转图标 · 透明遮罩
 loading_text: 正在加载数据

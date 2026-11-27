@@ -33,8 +33,9 @@ impl Gallery {
 
 el_loading().id("element-plus-mask").active(masked)
     .spinner(LoadingSpinner::Spokes)
+    .color(rgb(0x67c23a))
     .v_text("Loading data")
-    .child("Element Plus Loading icon · text below");
+    .child("Element Plus Loading icon · success color · text below");
 
 el_loading().id("dots-mask").active(masked)
     .h_text("Loading data")
@@ -75,6 +76,7 @@ el_loading().id("custom-icon-mask").active(masked)
                     el_loading()
                         .id("element-plus-mask")
                         .spinner(LoadingSpinner::Spokes)
+                        .color(rgb(0x67c23a))
                         .v_text(s.loading_text.as_str())
                         .active(self.loading.masked)
                         .child(panel(s.loading_vertical.as_str())),

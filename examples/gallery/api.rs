@@ -727,6 +727,12 @@ const LOADING: &[Row] = &[
         "设置提示文字；v_text 在指示器下方，h_text 在指示器右侧。",
     ),
     (
+        "color",
+        "Hsla · primary",
+        "Override the spinner and text foreground color; custom indicators inherit unless they set their own.",
+        "覆盖指示器和文字前景色；自定义指示器未单独设色时继承该颜色。",
+    ),
+    (
         "spinner",
         "LoadingSpinner · Circle",
         "Circle is the default mask arc; Spokes uses the official SVG; Dots uses 14 graduated dots.",

@@ -100,7 +100,7 @@ layout_main: Main
 layout_footer: Footer
 show_loading: Show loading mask
 hide_loading: Hide loading mask
-loading_vertical: Element Plus Loading icon · text below
+loading_vertical: Element Plus Loading icon · success color · text below
 loading_horizontal: Graduated dots · accelerating rotation · text to the right
 loading_clear: Custom rotating icon · transparent mask
 loading_text: Loading data

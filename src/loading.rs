@@ -75,6 +75,7 @@ pub struct Loading {
     motion: LoadingMotion,
     speed: Option<MotionSpeed>,
     opacity: Option<f32>,
+    color: Option<Hsla>,
     background: Option<Hsla>,
     indicator: Option<Indicator>,
     children: Vec<AnyElement>,
@@ -158,6 +159,12 @@ impl Loading {
         self.text = Some(text.into());
         self
     }
+    /// Overrides the foreground color of the built-in spinner and loading text.
+    /// Custom indicators inherit it unless they set their own color.
+    pub fn color(mut self, color: impl Into<Hsla>) -> Self {
+        self.color = Some(color.into());
+        self
+    }
     pub fn background(mut self, color: impl Into<Hsla>) -> Self {
         self.background = Some(color.into());
         self
@@ -211,6 +218,7 @@ impl RenderOnce for Loading {
         let background = self
             .background
             .unwrap_or_else(|| mask_background(&theme, self.opacity));
+        let color = self.color.unwrap_or_else(|| rgb(PRIMARY).into());
         let indicator = match self.indicator {
             Some(Indicator::Element(element)) => element,
             Some(Indicator::Icon(icon)) => icon
@@ -242,7 +250,7 @@ impl RenderOnce for Loading {
                     .id("loading-mask")
                     .role(gpui::Role::Status)
                     .aria_label(aria)
-                    .text_color(rgb(PRIMARY))
+                    .text_color(color)
                     .child(
                         div()
                             .absolute()
@@ -454,6 +462,40 @@ mod tests {
         let indicator = bounds.get().expect("indicator laid out");
         assert!(indicator.center().x < px(120.));
         assert_eq!(indicator.center().y, px(50.));
+    }
+
+    #[gpui::test]
+    fn color_override_reaches_the_indicator(cx: &mut gpui::TestAppContext) {
+        use std::{cell::Cell, rc::Rc};
+
+        struct Harness(Rc<Cell<Option<Hsla>>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let color = self.0.clone();
+                div().w(px(240.)).child(
+                    el_loading()
+                        .active(true)
+                        .color(rgb(0x67c23a))
+                        .indicator(
+                            gpui::canvas(
+                                move |_, window, _| color.set(Some(window.text_style().color)),
+                                |_, _, _, _| {},
+                            )
+                            .size(px(42.))
+                            .flex_none(),
+                        )
+                        .child(div().h(px(100.))),
+                )
+            }
+        }
+
+        let color = Rc::new(Cell::new(None));
+        let (_, view) = cx.add_window_view({
+            let color = color.clone();
+            move |_, _| Harness(color)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(color.get(), Some(rgb(0x67c23a).into()));
     }
 
     #[test]
