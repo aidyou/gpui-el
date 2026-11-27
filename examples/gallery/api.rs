@@ -1,6 +1,6 @@
 use super::{Locale, Page};
 use gpui::{Div, div, prelude::*, px};
-use gpui_el::{Column, Table};
+use gpui_el::{Column, el_table};
 
 // Each row has a Rust name, type/default, and matching localized descriptions.
 type Row = (&'static str, &'static str, &'static str, &'static str);
@@ -1257,7 +1257,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Rate => (RATE, RATE_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
-        Table::new(rows.iter().copied())
+        el_table(rows.iter().copied())
             .id(key)
             .border(true)
             .column(

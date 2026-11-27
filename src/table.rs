@@ -354,6 +354,13 @@ pub struct Table<T: 'static> {
     selectable: bool,
 }
 
+/// Creates a table with the given rows, mirroring the other `el_*`
+/// constructors.
+#[track_caller]
+pub fn el_table<T: 'static>(rows: impl IntoIterator<Item = T>) -> Table<T> {
+    Table::new(rows)
+}
+
 impl<T: 'static> Table<T> {
     /// Creates a table with the given rows.
     ///

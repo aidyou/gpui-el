@@ -223,7 +223,7 @@ pub use splitter::{
     SplitterSide, SplitterSizes, el_splitter, el_splitter_panel,
 };
 pub use switch::{Switch, SwitchSize, el_switch};
-pub use table::{Column, Table, TableAlign, TableSize};
+pub use table::{Column, Table, TableAlign, TableSize, el_table};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};

@@ -1,5 +1,5 @@
 use gpui::{Context, Div, div, prelude::*, px, rgba};
-use gpui_el::{Column, Table};
+use gpui_el::{Column, el_table};
 
 use crate::{Gallery, copy::Copy};
 
@@ -15,12 +15,34 @@ const ROWS: &[Row] = &[
     ("2016-05-07", "Linda", "No. 189, Grove St, Los Angeles"),
 ];
 
+/// The shared snippet prologue: the row type and the data every demo below
+/// feeds into `el_table`. Shown once, then referenced by the later demos.
+const ROWS_SNIPPET: &str = r#"// A table renders any row type; columns read the fields out of it.
+type Row = (&'static str, &'static str, &'static str);
+
+let rows: Vec<Row> = vec![
+    ("2016-05-03", "Tom", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-02", "Tom", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-04", "Linda", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-01", "Tom", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-08", "Linda", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-06", "Tom", "No. 189, Grove St, Los Angeles"),
+    ("2016-05-07", "Linda", "No. 189, Grove St, Los Angeles"),
+];
+
+fn columns(rows: Vec<Row>) -> Table<Row> {
+    el_table(rows)
+        .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
+        .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
+        .column(Column::new("Address").text(|row, _| row.2.into()))
+}"#;
+
 impl Gallery {
     pub(crate) fn tables(&self, s: &'static Copy, cx: &Context<Self>) -> Div {
         let section =
             |id, title, code: &str, controls| self.section(cx, id, title, || code.into(), controls);
         let columns = |key: &'static str, size_rows: &[Row]| {
-            Table::new(size_rows.iter().copied())
+            el_table(size_rows.iter().copied())
                 .id(key)
                 .column(
                     Column::new(s.table_date.as_str())
@@ -51,20 +73,14 @@ impl Gallery {
             .child(section(
                 "table-basic",
                 &s.table_basic,
-                r#"Table::new(rows)
-    .id("table-basic")
-    .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
-    .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
-    .column(Column::new("Address").text(|row, _| row.2.into()));"#,
+                &format!("{ROWS_SNIPPET}\n\ncolumns(rows).id(\"table-basic\");"),
                 basic.into_any_element(),
             ))
             .child(section(
                 "table-stripe",
                 &s.table_stripe,
-                r#"Table::new(rows).id("table-stripe").stripe(true).border(true)
-    .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
-    .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
-    .column(Column::new("Address").text(|row, _| row.2.into()));"#,
+                r#"// `rows` and `columns` come from the first example.
+columns(rows).id("table-stripe").stripe(true).border(true);"#,
                 striped.into_any_element(),
             ))
             .child(section(
@@ -72,17 +88,14 @@ impl Gallery {
                 &s.table_fixed,
                 r#"// A fixed height keeps the header visible while the body scrolls; the
 // body also consumes wheel deltas so the page never scrolls with it.
-Table::new(rows).id("table-fixed").height(220.)
-    .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
-    .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
-    .column(Column::new("Address").text(|row, _| row.2.into()));"#,
+columns(rows).id("table-fixed").height(220.);"#,
                 fixed.into_any_element(),
             ))
             .child(section(
                 "table-status",
                 &s.table_status,
                 r#"// row_background replaces the upstream row-class-name status classes.
-Table::new(rows).id("table-status")
+el_table(rows).id("table-status")
     .row_background(|_, index| match index {
         1 => Some(rgba(0xf56c6c1a).into()),
         2 => Some(rgba(0xe6a23c1a).into()),
@@ -97,12 +110,8 @@ Table::new(rows).id("table-status")
             .child(section(
                 "table-empty",
                 &s.table_empty_section,
-                r#"Table::new(Vec::new())
-    .id("table-empty")
-    .empty_text("No Data")
-    .column(Column::new("Date").width(120.).text(|row, _| row.0.into()))
-    .column(Column::new("Name").width(100.).text(|row, _| row.1.into()))
-    .column(Column::new("Address").text(|row, _| row.2.into()));"#,
+                r#"// The same columns over no rows at all.
+columns(Vec::new()).id("table-empty").empty_text("No Data");"#,
                 empty.into_any_element(),
             ))
     }

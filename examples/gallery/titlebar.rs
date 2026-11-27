@@ -92,13 +92,13 @@ impl Gallery {
         let tools = el_space()
             .gap(4., 0.)
             .child(
-                // `文/A` reads as a language switch without a glyph ambiguity.
+                // The translate glyph reads as a language switch at every size.
                 el_button()
                     .id("language")
                     .text()
                     .circle()
-                    .font_size(12.0)
-                    .label("文/A")
+                    .font_size(15.0)
+                    .icon(Icon::from_svg(include_bytes!("assets/translate.svg")).size(16.))
                     .accessibility_label(s.language.as_str())
                     .tooltip(s.language.as_str())
                     .onclick(move |_, _, cx| {
