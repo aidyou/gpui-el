@@ -177,6 +177,7 @@ mod auto_complete;
 mod button;
 mod capsule;
 mod checkbox;
+mod color_picker;
 mod error;
 mod grid;
 mod icon;
@@ -208,6 +209,7 @@ pub use button::{
 };
 pub use capsule::{CapsuleOption, CapsuleSegments, el_capsule_segments};
 pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
+pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use error::{Error, Result};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};

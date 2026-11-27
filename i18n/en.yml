@@ -18,3 +18,7 @@ select:
   placeholder: Select
 auto_complete:
   loading: Loading
+color_picker:
+  clear: Clear
+  confirm: Confirm
+  default_label: Color picker

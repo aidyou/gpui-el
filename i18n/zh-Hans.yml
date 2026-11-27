@@ -18,3 +18,7 @@ select:
   placeholder: 请选择
 auto_complete:
   loading: 加载中
+color_picker:
+  clear: 清空
+  confirm: 确定
+  default_label: 颜色选择器

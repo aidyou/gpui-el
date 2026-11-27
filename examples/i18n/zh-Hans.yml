@@ -343,6 +343,14 @@ auto_complete_gpui: GPUI
 auto_complete_element: Element Plus
 auto_complete_header: 建议值
 auto_complete_footer: 使用 ↑/↓ 与 Enter 选择
+color_picker_intro: 通过饱和度/明度、色相、Alpha、预设与清空/确认操作选择颜色。
+color_picker_page: ColorPicker 颜色选择器
+color_picker_basic: 基本用法
+color_picker_alpha: Alpha 通道
+color_picker_format: RGB 输出格式
+color_picker_sizes: 尺寸
+color_picker_disabled: 禁用
+color_picker_clear: 隐藏清空操作
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

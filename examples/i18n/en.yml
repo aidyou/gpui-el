@@ -343,6 +343,14 @@ auto_complete_gpui: GPUI
 auto_complete_element: Element Plus
 auto_complete_header: Suggested values
 auto_complete_footer: Use ↑/↓ and Enter to select
+color_picker_intro: Pick a color with saturation/value, hue, alpha, presets, and clear/confirm actions.
+color_picker_page: ColorPicker 颜色选择器
+color_picker_basic: Basic usage
+color_picker_alpha: Alpha channel
+color_picker_format: RGB output format
+color_picker_sizes: Sizes
+color_picker_disabled: Disabled
+color_picker_clear: Hide the clear action
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

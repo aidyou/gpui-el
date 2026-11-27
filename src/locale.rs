@@ -24,6 +24,7 @@ struct Messages {
     input_number: InputNumberMessages,
     select: SelectMessages,
     auto_complete: AutoCompleteMessages,
+    color_picker: ColorPickerMessages,
 }
 
 #[derive(Deserialize)]
@@ -74,6 +75,14 @@ struct AutoCompleteMessages {
     loading: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ColorPickerMessages {
+    clear: String,
+    confirm: String,
+    default_label: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -106,6 +115,11 @@ impl Messages {
             },
             auto_complete: AutoCompleteMessages {
                 loading: "Loading".into(),
+            },
+            color_picker: ColorPickerMessages {
+                clear: "Clear".into(),
+                confirm: "Confirm".into(),
+                default_label: "Color picker".into(),
             },
         }
     }
@@ -162,6 +176,15 @@ impl Locale {
     pub(crate) fn auto_complete_loading(self) -> &'static str {
         &self.messages().auto_complete.loading
     }
+    pub(crate) fn color_picker_clear(self) -> &'static str {
+        &self.messages().color_picker.clear
+    }
+    pub(crate) fn color_picker_confirm(self) -> &'static str {
+        &self.messages().color_picker.confirm
+    }
+    pub(crate) fn color_picker_default_label(self) -> &'static str {
+        &self.messages().color_picker.default_label
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -206,6 +229,18 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.select_placeholder(), "请选择");
         assert_eq!(Locale::default().auto_complete_loading(), "Loading");
         assert_eq!(Locale::SimplifiedChinese.auto_complete_loading(), "加载中");
+        assert_eq!(Locale::default().color_picker_clear(), "Clear");
+        assert_eq!(Locale::SimplifiedChinese.color_picker_clear(), "清空");
+        assert_eq!(Locale::default().color_picker_confirm(), "Confirm");
+        assert_eq!(Locale::SimplifiedChinese.color_picker_confirm(), "确定");
+        assert_eq!(
+            Locale::default().color_picker_default_label(),
+            "Color picker"
+        );
+        assert_eq!(
+            Locale::SimplifiedChinese.color_picker_default_label(),
+            "颜色选择器"
+        );
     }
 
     #[test]
@@ -234,6 +269,12 @@ mod tests {
         assert_eq!(
             fallback.auto_complete.loading,
             embedded.auto_complete.loading
+        );
+        assert_eq!(fallback.color_picker.clear, embedded.color_picker.clear);
+        assert_eq!(fallback.color_picker.confirm, embedded.color_picker.confirm);
+        assert_eq!(
+            fallback.color_picker.default_label,
+            embedded.color_picker.default_label
         );
     }
 }

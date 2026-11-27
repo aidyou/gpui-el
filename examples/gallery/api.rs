@@ -1311,6 +1311,82 @@ const AUTO_COMPLETE_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const COLOR_PICKER: &[Row] = &[
+    (
+        "el_color_picker(), ColorPicker::new, id",
+        "ElementId · call site",
+        "Create a square color swatch with a stable sibling-unique ID.",
+        "创建方形颜色色块；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "Option<SharedString> · None",
+        "Control the committed color string; invalid strings fall back to primary.",
+        "控制提交的颜色字符串；非法字符串回退到主色。",
+    ),
+    (
+        "format",
+        "ColorFormat · Hex",
+        "Choose Hex, Rgb, or Rgba output.",
+        "选择 Hex、Rgb 或 Rgba 输出。",
+    ),
+    (
+        "show_alpha",
+        "bool · false",
+        "Show the alpha slider, checkerboard, and alpha in Hex output.",
+        "显示 Alpha 滑块、棋盘格，并在 Hex 输出中包含 Alpha。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use 40/32/24 px square swatches.",
+        "使用 40/32/24 px 方形色块。",
+    ),
+    (
+        "disabled, clearable",
+        "bool · false / true",
+        "Block interaction and optionally show the panel's clear action.",
+        "阻止交互，并可显示面板中的清空操作。",
+    ),
+    (
+        "predefine",
+        "IntoIterator<SharedString> · empty",
+        "Set the preset color swatches; invalid entries are skipped.",
+        "设置预设颜色色块；非法条目被跳过。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · locale",
+        "Name the trigger for assistive technology.",
+        "为触发器提供无障碍名称。",
+    ),
+];
+const COLOR_PICKER_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "Option<SharedString>, &mut Window, &mut App",
+        "Confirm commits the draft color; clear commits None.",
+        "确认提交草稿颜色；清空提交 None。",
+    ),
+    (
+        "onactivechange",
+        "Option<SharedString>, &mut Window, &mut App",
+        "A panel drag or preset changes the draft color.",
+        "面板拖动或预设改变草稿颜色。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The panel's clear action was activated.",
+        "面板中的清空操作被激活。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The trigger gained or lost focus.",
+        "触发器获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1847,6 +1923,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Capsule => (CAPSULE, CAPSULE_EVENTS),
         Page::Select => (SELECT, SELECT_EVENTS),
         Page::AutoComplete => (AUTO_COMPLETE, AUTO_COMPLETE_EVENTS),
+        Page::ColorPicker => (COLOR_PICKER, COLOR_PICKER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1905,6 +1982,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))
         .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))
         .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、选项分组、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, option groups, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
         .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
