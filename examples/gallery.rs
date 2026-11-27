@@ -44,6 +44,7 @@ struct Gallery {
     page: Page,
     expanded: HashSet<&'static str>,
     button: pages::button::State,
+    auto_complete: pages::auto_complete::State,
     capsule: pages::capsule::State,
     select: pages::select::State,
     icon: pages::icon::State,
@@ -117,10 +118,11 @@ enum Page {
     InputNumber,
     Capsule,
     Select,
+    AutoComplete,
 }
 
 impl Page {
-    const ALL: [Self; 23] = [
+    const ALL: [Self; 24] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -144,6 +146,7 @@ impl Page {
         Self::InputNumber,
         Self::Capsule,
         Self::Select,
+        Self::AutoComplete,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -171,6 +174,7 @@ impl Page {
             Self::InputNumber => &s.input_number_intro,
             Self::Capsule => &s.capsule_intro,
             Self::Select => &s.select_intro,
+            Self::AutoComplete => &s.auto_complete_intro,
         }
     }
 
@@ -199,6 +203,7 @@ impl Page {
             Self::InputNumber => "input-number",
             Self::Capsule => "capsule",
             Self::Select => "select",
+            Self::AutoComplete => "auto-complete",
         }
     }
 
@@ -227,6 +232,7 @@ impl Page {
             Self::InputNumber => &s.input_number_page,
             Self::Capsule => &s.capsule_page,
             Self::Select => &s.select_page,
+            Self::AutoComplete => &s.auto_complete_page,
         }
     }
 
@@ -266,6 +272,7 @@ impl Page {
             Self::InputNumber => &["el-input-number"],
             Self::Capsule => &[],
             Self::Select => &["el-select", "el-option"],
+            Self::AutoComplete => &["el-autocomplete"],
         }
     }
 }
@@ -381,7 +388,8 @@ impl Render for Gallery {
                                         .entry(item(Page::Input))
                                         .entry(item(Page::InputNumber))
                                         .entry(item(Page::Capsule))
-                                        .entry(item(Page::Select)),
+                                        .entry(item(Page::Select))
+                                        .entry(item(Page::AutoComplete)),
                                 ),
                         ),
                 )
@@ -411,6 +419,7 @@ impl Render for Gallery {
             Page::InputNumber => self.input_numbers(s, cx),
             Page::Capsule => self.capsules(s, cx),
             Page::Select => self.selects(s, cx),
+            Page::AutoComplete => self.auto_completes(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

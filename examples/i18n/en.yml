@@ -329,6 +329,20 @@ select_weekdays: Weekdays
 select_no_data: No data
 select_header: Choose an execution frequency
 select_footer: Selection is controlled by the application
+auto_complete_intro: Get suggestions from the current input with local or caller-driven filtering, loading states, and keyboard selection.
+auto_complete_page: AutoComplete 自动补全
+auto_complete_basic: Basic usage
+auto_complete_remote: Caller-driven suggestions
+auto_complete_clearable: Clearable
+auto_complete_unmatched: Select unmatched text
+auto_complete_loading: Loading
+auto_complete_disabled: Disabled
+auto_complete_custom: Prefix, suffix, header, and footer
+auto_complete_rust: Rust
+auto_complete_gpui: GPUI
+auto_complete_element: Element Plus
+auto_complete_header: Suggested values
+auto_complete_footer: Use ↑/↓ and Enter to select
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

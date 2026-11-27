@@ -1211,6 +1211,106 @@ const SELECT_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const AUTO_COMPLETE: &[Row] = &[
+    (
+        "el_auto_complete(), AutoComplete::new, id",
+        "ElementId · call site",
+        "Create an autocomplete input with a stable sibling-unique ID.",
+        "创建自动补全输入框；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value, options",
+        "SharedString / IntoIterator<AutoCompleteOption> · empty",
+        "Control the input text and suggestion list.",
+        "控制输入文本与建议列表。",
+    ),
+    (
+        "fetch_method",
+        "Fn(&str, &mut Window, &mut App) · none",
+        "Fetch caller-driven suggestions on input or focus; supplied options are shown without local filtering.",
+        "输入或聚焦时获取调用方建议；提供的选项不经过本地过滤。",
+    ),
+    (
+        "trigger_on_focus, highlight_first",
+        "bool · true / false",
+        "Open suggestions on focus and optionally highlight the first item.",
+        "聚焦时打开建议，并可默认高亮第一项。",
+    ),
+    (
+        "select_when_unmatched, loop_navigation",
+        "bool · false / true",
+        "Allow Enter to select raw unmatched text and control keyboard wrapping.",
+        "允许 Enter 选择未匹配的原始文本，并控制键盘循环导航。",
+    ),
+    (
+        "clearable, disabled, loading",
+        "bool · false",
+        "Show the Input clear control, block interaction, or show the loading row.",
+        "显示 Input 清空控件、阻止交互，或显示加载行。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights and 14/14/12 px type sizes.",
+        "使用 Input 字段的 40/32/24 px 外高与 14/14/12 px 字号。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · empty / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+    (
+        "prefix, suffix, header, footer",
+        "IntoElement · none",
+        "Add field adornments and suggestion header/footer content.",
+        "添加字段前后缀与建议列表页眉/页脚。",
+    ),
+    (
+        "loading_text",
+        "SharedString · locale",
+        "Override the built-in loading message.",
+        "覆盖内置加载文案。",
+    ),
+];
+const AUTO_COMPLETE_EVENTS: &[Row] = &[
+    (
+        "oninput",
+        "SharedString, &mut Window, &mut App",
+        "Every edit or accepted suggestion reports the input text.",
+        "每次编辑或接受建议报告输入文本。",
+    ),
+    (
+        "onchange",
+        "SharedString, &mut Window, &mut App",
+        "The Input commits a changed value on blur or clear.",
+        "Input 在失焦或清空时报告提交值。",
+    ),
+    (
+        "onselect",
+        "AutoCompleteOption, &mut Window, &mut App",
+        "A suggestion was accepted by pointer or keyboard.",
+        "指针或键盘接受了建议。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The Input clear control emptied the value.",
+        "Input 清空控件清空了值。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The suggestion popup opened or closed.",
+        "建议列表打开或关闭。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1746,6 +1846,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::InputNumber => (INPUT_NUMBER, INPUT_NUMBER_EVENTS),
         Page::Capsule => (CAPSULE, CAPSULE_EVENTS),
         Page::Select => (SELECT, SELECT_EVENTS),
+        Page::AutoComplete => (AUTO_COMPLETE, AUTO_COMPLETE_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1804,6 +1905,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))
         .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、选项分组、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, option groups, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
         .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
         .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))

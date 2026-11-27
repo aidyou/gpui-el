@@ -23,6 +23,7 @@ struct Messages {
     table: TableMessages,
     input_number: InputNumberMessages,
     select: SelectMessages,
+    auto_complete: AutoCompleteMessages,
 }
 
 #[derive(Deserialize)]
@@ -67,6 +68,12 @@ struct SelectMessages {
     placeholder: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AutoCompleteMessages {
+    loading: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -96,6 +103,9 @@ impl Messages {
                 no_match: "No matching data".into(),
                 clear: "Clear selection".into(),
                 placeholder: "Select".into(),
+            },
+            auto_complete: AutoCompleteMessages {
+                loading: "Loading".into(),
             },
         }
     }
@@ -149,6 +159,9 @@ impl Locale {
     pub(crate) fn select_placeholder(self) -> &'static str {
         &self.messages().select.placeholder
     }
+    pub(crate) fn auto_complete_loading(self) -> &'static str {
+        &self.messages().auto_complete.loading
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -191,6 +204,8 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.select_clear(), "清空选择");
         assert_eq!(Locale::default().select_placeholder(), "Select");
         assert_eq!(Locale::SimplifiedChinese.select_placeholder(), "请选择");
+        assert_eq!(Locale::default().auto_complete_loading(), "Loading");
+        assert_eq!(Locale::SimplifiedChinese.auto_complete_loading(), "加载中");
     }
 
     #[test]
@@ -216,5 +231,9 @@ mod tests {
         assert_eq!(fallback.select.no_match, embedded.select.no_match);
         assert_eq!(fallback.select.clear, embedded.select.clear);
         assert_eq!(fallback.select.placeholder, embedded.select.placeholder);
+        assert_eq!(
+            fallback.auto_complete.loading,
+            embedded.auto_complete.loading
+        );
     }
 }

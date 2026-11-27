@@ -173,6 +173,7 @@
     )
 )]
 
+mod auto_complete;
 mod button;
 mod capsule;
 mod checkbox;
@@ -200,6 +201,7 @@ mod text;
 mod theme;
 mod transition;
 
+pub use auto_complete::{AutoComplete, AutoCompleteOption, el_auto_complete};
 pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
     el_button_group,

@@ -16,3 +16,5 @@ select:
   no_match: No matching data
   clear: Clear selection
   placeholder: Select
+auto_complete:
+  loading: Loading

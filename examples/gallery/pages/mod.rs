@@ -1,3 +1,4 @@
+pub(super) mod auto_complete;
 pub(super) mod button;
 pub(super) mod capsule;
 pub(super) mod checkbox;

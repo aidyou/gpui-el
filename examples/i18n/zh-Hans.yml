@@ -329,6 +329,20 @@ select_weekdays: 工作日
 select_no_data: 暂无数据
 select_header: 选择执行频率
 select_footer: 选中值由应用控制
+auto_complete_intro: 根据当前输入获取建议，支持本地或调用方过滤、加载状态与键盘选择。
+auto_complete_page: AutoComplete 自动补全
+auto_complete_basic: 基本用法
+auto_complete_remote: 调用方驱动建议
+auto_complete_clearable: 可清空
+auto_complete_unmatched: 选择未匹配文本
+auto_complete_loading: 加载中
+auto_complete_disabled: 禁用
+auto_complete_custom: 前缀、后缀、页眉与页脚
+auto_complete_rust: Rust
+auto_complete_gpui: GPUI
+auto_complete_element: Element Plus
+auto_complete_header: 建议值
+auto_complete_footer: 使用 ↑/↓ 与 Enter 选择
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般
