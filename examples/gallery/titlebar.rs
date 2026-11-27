@@ -16,7 +16,7 @@ impl Gallery {
     ) -> Div {
         let border = rgb(if self.dark { 0x2a2b2c } else { 0xe4e7ed });
         let muted = rgb(if self.dark { 0x8d9095 } else { 0x909399 });
-        let icon_button = |id, name, label| {
+        let icon_button = |id, name, label, show_tooltip| {
             el_button()
                 .id(id)
                 .text()
@@ -24,7 +24,7 @@ impl Gallery {
                 .font_size(15.0)
                 .icon(Icon::from_pack(IconPack::ElementPlus, name).size(16.))
                 .accessibility_label(label)
-                .tooltip(label)
+                .when(show_tooltip, |el| el.tooltip(label))
         };
         // Desktop title bar: drag to move, double-click to zoom, right-click for
         // the window menu. Starting a compositor move on the first click would
@@ -119,6 +119,7 @@ impl Gallery {
                     } else {
                         s.dark.as_str()
                     },
+                    true,
                 )
                 .onclick(cx.listener(|this, _, _, cx| {
                     this.dark = !this.dark;
@@ -141,6 +142,7 @@ impl Gallery {
                     } else {
                         s.reduce_motion.as_str()
                     },
+                    true,
                 )
                 .onclick(cx.listener(|this, _, _, cx| {
                     this.reduced_motion = !this.reduced_motion;
@@ -174,7 +176,7 @@ impl Gallery {
                             .border_l_1()
                             .border_color(border)
                             .child(
-                                icon_button("minimize", "Minus", s.window_minimize.as_str())
+                                icon_button("minimize", "Minus", s.window_minimize.as_str(), false)
                                     .onclick(|_, w, _| w.minimize_window()),
                             )
                             .child(
@@ -186,11 +188,12 @@ impl Gallery {
                                         "FullScreen"
                                     },
                                     s.window_zoom.as_str(),
+                                    false,
                                 )
                                 .onclick(|_, w, _| w.zoom_window()),
                             )
                             .child(
-                                icon_button("close", "Close", s.window_close.as_str())
+                                icon_button("close", "Close", s.window_close.as_str(), false)
                                     .onclick(|_, w, _| w.remove_window()),
                             ),
                     )
