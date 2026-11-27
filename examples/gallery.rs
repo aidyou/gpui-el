@@ -252,6 +252,8 @@ impl Render for Gallery {
             })
             .menu_trigger(MenuTrigger::Click)
             .close_on_click_outside(true)
+            // Accordion: opening one group folds the others shut.
+            .unique_opened(true)
             .onselect(cx.listener(|this, event: &MenuEvent, _, cx| {
                 if let Some(page) = Page::ALL
                     .into_iter()
