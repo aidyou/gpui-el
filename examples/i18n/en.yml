@@ -274,6 +274,9 @@ input_limited: Character limit
 input_clearable: Clearable
 input_password: Password
 input_prefix: Prefix slot
+input_radius: Corner profiles
+input_styled: Focus border, outline, and text color
+input_textarea: Multiline textarea and IME composition
 input_readonly: Read-only
 input_disabled: Disabled
 input_basic_placeholder: Type something

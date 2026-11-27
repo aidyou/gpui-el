@@ -1,30 +1,32 @@
-//! Element Plus Input, single-line.
+//! Element Plus Input and Textarea.
 //!
 //! Follows `input.md`, `components/input/src/input.vue`, and Theme Chalk
-//! `input.scss`: a 4 px rounded box in three outer heights (40/32/24 px) with
-//! horizontal padding 16/12/8 px, a placeholder, prefix and suffix slots, a
-//! clear button, a password mask with a reveal toggle, and a character count
-//! against `maxlength`. Typing, caret movement, selection, word operations,
-//! clipboard shortcuts, and IME composition are all native: the field draws
-//! its own caret and selection highlight, maps clicks to text positions, and
-//! implements GPUI's `InputHandler` so platform IMEs can compose into it.
+//! `input.scss`: three outer heights (40/32/24 px) with horizontal padding
+//! 16/12/8 px, a placeholder, prefix and suffix slots, a clear button, a
+//! password mask with a reveal toggle, and a character count against
+//! `maxlength`. The single-line field and the multi-line textarea share native
+//! caret movement, selection, word operations, clipboard shortcuts, and IME
+//! composition: the field draws its own caret and selection highlight, maps
+//! clicks to text positions, and implements GPUI's `InputHandler` so platform
+//! IMEs can compose into it.
 //!
-//! Native differences: `type="textarea"` is not reproduced (GPUI has no
-//! multi-line text element), so `password` replaces `type="password"`; there
-//! are no `formatter`/`parser` props, no native undo stack, and no `change`
-//! on Enter — upstream emits `change` on blur and on clear, and so does this.
-//! The caret does not blink, since GPUI has no CSS animation and a per-field
-//! timer is not worth the cost. Drag selection tracks the pointer only inside
-//! the field, with no auto-scroll past the edges, and the clear button
-//! reveals on field focus or by hovering the button itself rather than
-//! anywhere in the field.
+//! Native differences: `password` replaces `type="password"`, and `textarea`
+//! replaces `type="textarea"`; there are no `formatter`/`parser` props, no
+//! native undo stack, and no `change` on Enter — upstream emits `change` on
+//! blur and on clear, and so does this. The caret does not blink, since GPUI
+//! has no CSS animation and a per-field timer is not worth the cost. Drag
+//! selection tracks the pointer only inside the field, with no auto-scroll
+//! past the edges, and the clear button reveals on field focus or by hovering
+//! the button itself rather than anywhere in the field. The radius defaults to
+//! the requested native 8 px profile rather than upstream's 4 px;
+//! [`InputRadius`] exposes 0/4/8/12 px and a capsule shape.
 
 use std::{cell::RefCell, ops::Range, rc::Rc, sync::Arc};
 
 use gpui::{
     AnyElement, App, ClipboardItem, ElementId, FocusHandle, IntoElement, KeyDownEvent, MouseButton,
-    MouseDownEvent, MouseMoveEvent, Pixels, RenderOnce, SharedString, Subscription, TextLayout,
-    UnderlineStyle, Window, div, prelude::*, px, rgb,
+    MouseDownEvent, MouseMoveEvent, Pixels, RenderOnce, ScrollHandle, SharedString, Subscription,
+    TextLayout, UnderlineStyle, Window, div, prelude::*, px, rgb,
 };
 
 use crate::{Theme, el_icon, tokens};
@@ -64,6 +66,31 @@ impl InputSize {
     }
 }
 
+/// The field's corner profile. This is a native extension requested for the
+/// gallery: upstream Input uses a fixed 4 px radius, while the default here is
+/// the 8 px `Default` profile.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum InputRadius {
+    Off,
+    Small,
+    #[default]
+    Default,
+    Large,
+    Round,
+}
+
+impl InputRadius {
+    fn pixels(self, height: f32) -> f32 {
+        match self {
+            InputRadius::Off => 0.,
+            InputRadius::Small => 4.,
+            InputRadius::Default => 8.,
+            InputRadius::Large => 12.,
+            InputRadius::Round => tokens::radius::capsule(height, height),
+        }
+    }
+}
+
 /// Per-render props and handlers, kept where the focus and blur subscriptions
 /// can reach them; those subscriptions outlive any single render.
 #[derive(Clone)]
@@ -80,6 +107,9 @@ struct InputHandlers {
     onfocus: Option<FocusHandler>,
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
+    oncompositionstart: Option<FocusHandler>,
+    oncompositionupdate: Option<InputHandler>,
+    oncompositionend: Option<InputHandler>,
 }
 
 /// Caret, selection, composition, and measured text, keyed per field. The
@@ -98,6 +128,9 @@ struct InputState {
     /// hear about.
     layout: RefCell<TextLayout>,
     password_visible: bool,
+    /// Textarea scrolling, kept with the field so caret visibility can be
+    /// maintained without making callers own another handle.
+    scroll: ScrollHandle,
     props: Rc<RefCell<InputProps>>,
     handlers: Rc<RefCell<Option<Rc<InputHandlers>>>>,
     _subscriptions: Vec<Subscription>,
@@ -160,6 +193,7 @@ impl InputState {
             marked: None,
             layout: RefCell::new(TextLayout::default()),
             password_visible: false,
+            scroll: ScrollHandle::new(),
             props,
             handlers,
             _subscriptions: subscriptions,
@@ -183,6 +217,12 @@ pub struct Input {
     value: SharedString,
     placeholder: SharedString,
     size: InputSize,
+    radius: InputRadius,
+    active_border_color: Option<gpui::Rgba>,
+    outline: bool,
+    text_color: Option<gpui::Rgba>,
+    textarea: bool,
+    rows: usize,
     disabled: bool,
     readonly: bool,
     clearable: bool,
@@ -197,6 +237,9 @@ pub struct Input {
     onfocus: Option<FocusHandler>,
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
+    oncompositionstart: Option<FocusHandler>,
+    oncompositionupdate: Option<InputHandler>,
+    oncompositionend: Option<InputHandler>,
 }
 
 /// Creates an input field, mirroring the other `el_*` constructors.
@@ -212,6 +255,12 @@ impl Default for Input {
             value: "".into(),
             placeholder: "".into(),
             size: InputSize::Default,
+            radius: InputRadius::Default,
+            active_border_color: None,
+            outline: false,
+            text_color: None,
+            textarea: false,
+            rows: 2,
             disabled: false,
             readonly: false,
             clearable: false,
@@ -226,6 +275,9 @@ impl Default for Input {
             onfocus: None,
             onblur: None,
             onclear: None,
+            oncompositionstart: None,
+            oncompositionupdate: None,
+            oncompositionend: None,
         }
     }
 }
@@ -265,6 +317,58 @@ impl Input {
     }
     pub fn small(self) -> Self {
         self.size(InputSize::Small)
+    }
+
+    /// Sets the corner profile. The default is the native 8 px `Default`
+    /// profile; `Round` uses half the field height for capsule ends.
+    pub fn radius(mut self, radius: InputRadius) -> Self {
+        self.radius = radius;
+        self
+    }
+    pub fn radius_off(self) -> Self {
+        self.radius(InputRadius::Off)
+    }
+    pub fn radius_small(self) -> Self {
+        self.radius(InputRadius::Small)
+    }
+    pub fn radius_large(self) -> Self {
+        self.radius(InputRadius::Large)
+    }
+    pub fn round(self) -> Self {
+        self.radius(InputRadius::Round)
+    }
+
+    /// Sets the focused border color; primary by default.
+    pub fn active_border_color(mut self, color: gpui::Rgba) -> Self {
+        self.active_border_color = Some(color);
+        self
+    }
+
+    /// Shows a 2 px focus ring outside the field; off by default, matching
+    /// upstream's `outline: none`.
+    pub fn outline(mut self, outline: bool) -> Self {
+        self.outline = outline;
+        self
+    }
+
+    /// Sets the normal text and caret color; the theme's regular text color by
+    /// default. Disabled fields keep the disabled text token.
+    pub fn text_color(mut self, color: gpui::Rgba) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
+    /// Switches to a multi-line textarea, like `type="textarea"`.
+    pub fn textarea(mut self, textarea: bool) -> Self {
+        self.textarea = textarea;
+        self
+    }
+
+    /// Sets the textarea's visible row count, 2 by default. Single-line fields
+    /// ignore it.
+    pub fn rows(mut self, rows: usize) -> Self {
+        self.rows = rows;
+        self
     }
 
     /// Makes the field read-only, like upstream's `disabled`.
@@ -370,6 +474,41 @@ impl Input {
         handler: impl Fn(SharedString, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.onclear = Some(Rc::new(handler));
+        self.ensure_id();
+        self
+    }
+
+    /// Reports the start of an IME composition, like upstream's
+    /// `compositionstart` event.
+    #[track_caller]
+    pub fn oncompositionstart(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+        self.oncompositionstart = Some(Rc::new(handler));
+        self.ensure_id();
+        self
+    }
+
+    /// Reports each IME preedit update with the composing text, like
+    /// upstream's `compositionupdate` event. `oninput` stays silent until the
+    /// composition commits.
+    #[track_caller]
+    pub fn oncompositionupdate(
+        mut self,
+        handler: impl Fn(SharedString, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.oncompositionupdate = Some(Rc::new(handler));
+        self.ensure_id();
+        self
+    }
+
+    /// Reports the end of an IME composition with its final composing text,
+    /// like upstream's `compositionend` event. The committed value follows
+    /// through `oninput`.
+    #[track_caller]
+    pub fn oncompositionend(
+        mut self,
+        handler: impl Fn(SharedString, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.oncompositionend = Some(Rc::new(handler));
         self.ensure_id();
         self
     }
@@ -604,17 +743,17 @@ fn move_caret(
 fn position_index(
     state: &gpui::Entity<InputState>,
     position: gpui::Point<Pixels>,
+    display: &SharedString,
     cx: &App,
 ) -> usize {
     let state = state.read(cx);
     let value = state.props.borrow().value.clone();
-    let display = display_text(&value, false, true);
     let byte = state
         .layout
         .borrow()
         .index_for_position(position)
         .unwrap_or_else(|err| err);
-    display_byte_to_value(&value, &display, byte)
+    display_byte_to_value(&value, display, byte)
 }
 
 /// Sets a selection from a click or drag: the nearest text position to the
@@ -623,16 +762,157 @@ fn click_position(
     state: &gpui::Entity<InputState>,
     position: gpui::Point<Pixels>,
     extend: bool,
+    display: &SharedString,
     window: &mut Window,
     cx: &mut App,
 ) {
     move_caret(
         state,
-        position_index(state, position, cx),
+        position_index(state, position, display, cx),
         extend,
         window,
         cx,
     );
+}
+
+/// Returns the first and last byte offsets painted on the visual line at `y`.
+fn visual_line_extrema(layout: &TextLayout, text: &str, y: Pixels) -> Option<(usize, usize)> {
+    let mut first = None;
+    let mut last = None;
+    for byte in text
+        .char_indices()
+        .map(|(byte, _)| byte)
+        .chain(std::iter::once(text.len()))
+    {
+        if let Some(position) = layout.position_for_index(byte)
+            && (position.y - y).abs() <= px(0.5)
+        {
+            first.get_or_insert(byte);
+            last = Some(byte);
+        }
+    }
+    first.zip(last)
+}
+
+/// Returns the byte offset on the visual line at `y` whose x position is
+/// closest to `x`.
+fn closest_index_on_line(layout: &TextLayout, text: &str, y: Pixels, x: Pixels) -> Option<usize> {
+    let mut best = None;
+    let mut best_distance = f32::INFINITY;
+    for byte in text
+        .char_indices()
+        .map(|(byte, _)| byte)
+        .chain(std::iter::once(text.len()))
+    {
+        if let Some(position) = layout.position_for_index(byte)
+            && (position.y - y).abs() <= px(0.5)
+        {
+            let distance = (position.x - x).abs().as_f32();
+            if distance < best_distance {
+                best_distance = distance;
+                best = Some(byte);
+            }
+        }
+    }
+    best
+}
+
+/// Moves the caret one visual line up or down in a textarea, preserving its
+/// horizontal position where the target line has a matching glyph.
+fn move_vertical(
+    state: &gpui::Entity<InputState>,
+    caret: usize,
+    down: bool,
+    extend: bool,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let layout = state.read(cx).layout.borrow().clone();
+    let value = state.read(cx).props.borrow().value.clone();
+    let Some(origin) = layout.position_for_index(caret) else {
+        return;
+    };
+    let target_y = if down {
+        origin.y + layout.line_height()
+    } else {
+        origin.y - layout.line_height()
+    };
+    let target = closest_index_on_line(&layout, &value, target_y, origin.x).unwrap_or(if down {
+        value.len()
+    } else {
+        0
+    });
+    move_caret(state, target, extend, window, cx);
+}
+
+/// Moves the caret to the start or end of the current visual line in a
+/// textarea, including wrapped lines.
+fn move_line_edge(
+    state: &gpui::Entity<InputState>,
+    caret: usize,
+    end: bool,
+    extend: bool,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let layout = state.read(cx).layout.borrow().clone();
+    let value = state.read(cx).props.borrow().value.clone();
+    let Some(origin) = layout.position_for_index(caret) else {
+        return;
+    };
+    let target = visual_line_extrema(&layout, &value, origin.y)
+        .map(|(start, last)| if end { last } else { start })
+        .unwrap_or(if end { value.len() } else { 0 });
+    move_caret(state, target, extend, window, cx);
+}
+
+/// The range an IME call should replace. Linux and Wayland pass `None` for
+/// both preedit updates and the final commit, so an existing marked range
+/// takes precedence over the caret selection.
+fn ime_replacement_range(
+    state: &gpui::Entity<InputState>,
+    range_utf16: Option<Range<usize>>,
+    cx: &App,
+) -> Range<usize> {
+    if let Some(range_utf16) = range_utf16 {
+        let value = state.read(cx).props.borrow().value.clone();
+        return utf16_to_utf8(&value, range_utf16.start)..utf16_to_utf8(&value, range_utf16.end);
+    }
+    let state = state.read(cx);
+    state.marked.clone().unwrap_or_else(|| state.selection())
+}
+
+/// Ends an IME composition and emits `compositionend` once. `final_text` is
+/// supplied by commit calls; unmark-only paths report the marked text.
+fn finish_composition(
+    state: &gpui::Entity<InputState>,
+    final_text: Option<&str>,
+    window: &mut Window,
+    cx: &mut App,
+) -> bool {
+    let (value, marked) = {
+        let state = state.read(cx);
+        (state.props.borrow().value.clone(), state.marked.clone())
+    };
+    let Some(marked) = marked else {
+        return false;
+    };
+    let text = final_text
+        .map(SharedString::from)
+        .or_else(|| value.get(marked).map(SharedString::from));
+    state.update(cx, |state, cx| {
+        state.marked = None;
+        cx.notify();
+    });
+    if let Some(text) = text {
+        let handlers = state.read(cx).handlers.borrow().clone();
+        if let Some(handlers) = handlers
+            && let Some(oncompositionend) = &handlers.oncompositionend
+        {
+            oncompositionend(text, window, cx);
+        }
+    }
+    true
 }
 
 /// The GPUI `InputHandler` for a field, so platform IMEs can compose into it.
@@ -686,13 +966,10 @@ impl gpui::InputHandler for InputHandlerImpl {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let range = match range_utf16 {
-            Some(range_utf16) => {
-                let value = self.state.read(cx).props.borrow().value.clone();
-                utf16_to_utf8(&value, range_utf16.start)..utf16_to_utf8(&value, range_utf16.end)
-            }
-            None => self.state.read(cx).selection(),
-        };
+        // Linux and Wayland commit with `None`; replace the marked preedit
+        // range rather than inserting after it.
+        let range = ime_replacement_range(&self.state, range_utf16, cx);
+        finish_composition(&self.state, Some(text), window, cx);
         replace_range(&self.state, range, text, window, cx);
     }
 
@@ -705,12 +982,8 @@ impl gpui::InputHandler for InputHandlerImpl {
         cx: &mut App,
     ) {
         let value = self.state.read(cx).props.borrow().value.clone();
-        let range = match range_utf16 {
-            Some(range_utf16) => {
-                utf16_to_utf8(&value, range_utf16.start)..utf16_to_utf8(&value, range_utf16.end)
-            }
-            None => self.state.read(cx).selection(),
-        };
+        let was_marked = self.state.read(cx).marked.is_some();
+        let range = ime_replacement_range(&self.state, range_utf16, cx);
         let props = self.state.read(cx).props.borrow().clone();
         let mut new_value = String::with_capacity(value.len() + new_text.len());
         new_value.push_str(&value[..range.start.min(value.len())]);
@@ -739,14 +1012,20 @@ impl gpui::InputHandler for InputHandlerImpl {
             cx.notify();
         });
         *self.state.read(cx).props.borrow_mut() = InputProps {
-            value: new_value.clone(),
+            value: new_value,
             ..props
         };
+        // Upstream suppresses `input` while an IME composition is in progress;
+        // the committed value is reported by `unmark_text` or the final
+        // `replace_text_in_range` call.
         let handlers = self.state.read(cx).handlers.borrow().clone();
-        if let Some(handlers) = handlers
-            && let Some(oninput) = &handlers.oninput
-        {
-            oninput(new_value, window, cx);
+        if let Some(handlers) = handlers {
+            if !was_marked && let Some(oncompositionstart) = &handlers.oncompositionstart {
+                oncompositionstart(window, cx);
+            }
+            if let Some(oncompositionupdate) = &handlers.oncompositionupdate {
+                oncompositionupdate(SharedString::from(new_text), window, cx);
+            }
         }
         window.notify_text_input_changed(&focus);
         window.notify_text_selection_changed(&focus);
@@ -754,10 +1033,16 @@ impl gpui::InputHandler for InputHandlerImpl {
 
     fn unmark_text(&mut self, window: &mut Window, cx: &mut App) {
         let focus = self.state.read(cx).focus.clone();
-        self.state.update(cx, |state, cx| {
-            state.marked = None;
-            cx.notify();
-        });
+        if finish_composition(&self.state, None, window, cx) {
+            let value = self.state.read(cx).props.borrow().value.clone();
+            let handlers = self.state.read(cx).handlers.borrow().clone();
+            if let Some(handlers) = handlers
+                && let Some(oninput) = &handlers.oninput
+            {
+                oninput(value, window, cx);
+            }
+            window.notify_text_input_changed(&focus);
+        }
         window.notify_text_selection_changed(&focus);
     }
 
@@ -804,9 +1089,15 @@ impl RenderOnce for Input {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Input {
             id,
-            value,
+            value: prop_value,
             placeholder,
             size,
+            radius,
+            active_border_color,
+            outline,
+            text_color: configured_text_color,
+            textarea,
+            rows,
             disabled,
             readonly,
             clearable,
@@ -821,6 +1112,9 @@ impl RenderOnce for Input {
             onfocus,
             onblur,
             onclear,
+            oncompositionstart,
+            oncompositionupdate,
+            oncompositionend,
         } = self;
         let theme = Theme::current(cx);
         let Some(id) = id else {
@@ -829,9 +1123,16 @@ impl RenderOnce for Input {
         let state = window.use_keyed_state(id.clone(), cx, InputState::new);
 
         // Refresh the props and handlers the focus subscriptions read, without
-        // notifying: this runs on every render.
+        // notifying: this runs on every render. While an IME composition is
+        // active, keep the optimistic composing text instead of replacing it
+        // with the last committed prop value.
         {
             let state = state.read(cx);
+            let value = if state.marked.is_some() {
+                state.props.borrow().value.clone()
+            } else {
+                prop_value.clone()
+            };
             *state.props.borrow_mut() = InputProps {
                 value: value.clone(),
                 maxlength,
@@ -844,8 +1145,17 @@ impl RenderOnce for Input {
                 onfocus,
                 onblur,
                 onclear,
+                oncompositionstart,
+                oncompositionupdate,
+                oncompositionend,
             }));
         }
+        let value = prop_value;
+        let value = if state.read(cx).marked.is_some() {
+            state.read(cx).props.borrow().value.clone()
+        } else {
+            value
+        };
 
         let focused = state.read(cx).focus.is_focused(window);
         let password_visible = state.read(cx).password_visible;
@@ -855,13 +1165,18 @@ impl RenderOnce for Input {
         let anchor = state.read(cx).anchor.min(len);
         let selection = caret.min(anchor)..caret.max(anchor);
 
-        let display = display_text(&value, password, password_visible);
+        let display = if textarea {
+            value.clone()
+        } else {
+            display_text(&value, password, password_visible)
+        };
         let showing_placeholder = value.is_empty() && !placeholder.is_empty();
 
+        let active_border = active_border_color.unwrap_or(rgb(crate::theme::PRIMARY));
         let border = if disabled {
             rgb(theme.border(true))
         } else if focused {
-            rgb(crate::theme::PRIMARY)
+            active_border
         } else {
             rgb(theme.border(false))
         };
@@ -886,10 +1201,18 @@ impl RenderOnce for Input {
         let text_color = if disabled {
             rgb(theme.disabled_text())
         } else {
-            rgb(theme.regular_text())
+            configured_text_color.unwrap_or(rgb(theme.regular_text()))
         };
+        let caret_color = text_color;
         let placeholder_color = rgb(theme.disabled_text());
         let icon_color = rgb(theme.disabled_text());
+        let line_height = size.font_size() * 1.5;
+        let root_height = if textarea {
+            rows.max(1) as f32 * line_height + 10. + tokens::BORDER_WIDTH * 2.
+        } else {
+            size.height()
+        };
+        let corner_radius = radius.pixels(root_height);
 
         // The text itself: laid out by the child, measured for the caret and
         // hit testing through the shared layout.
@@ -963,6 +1286,7 @@ impl RenderOnce for Input {
                     .id(ElementId::NamedChild(Arc::new(id.clone()), "clear".into()))
                     .flex()
                     .items_center()
+                    .cursor_pointer()
                     .child(el_icon("circle-close").size(size.font_size()))
                     .text_color(icon_color)
                     .hover(|style| style.text_color(rgb(theme.secondary_text())))
@@ -1014,6 +1338,7 @@ impl RenderOnce for Input {
                     ))
                     .flex()
                     .items_center()
+                    .cursor_pointer()
                     .child(el_icon(if visible { "view" } else { "hide" }).size(size.font_size()))
                     .text_color(icon_color)
                     .hover(|style| style.text_color(rgb(theme.secondary_text())))
@@ -1034,6 +1359,7 @@ impl RenderOnce for Input {
         if let Some(suffix) = suffix {
             suffix_items.push(suffix);
         }
+        let has_suffix = !suffix_items.is_empty();
 
         let handler_state = state.clone();
         let root = div()
@@ -1042,22 +1368,35 @@ impl RenderOnce for Input {
             .tab_stop(true)
             .flex()
             .items_center()
-            .h(px(size.height()))
+            .when(textarea, |el| el.items_stretch())
+            .h(px(root_height))
             .w_full()
             .px(px(size.padding() - tokens::BORDER_WIDTH))
-            .rounded(px(4.))
+            .when(textarea, |el| el.py(px(5.)))
+            .rounded(px(corner_radius))
             .border_1()
             .border_color(border)
             .bg(bg)
             .overflow_hidden()
             .text_size(px(size.font_size()))
+            .when(focused && outline && !disabled, |el| {
+                el.shadow(vec![gpui::BoxShadow {
+                    color: gpui::Hsla::from(border),
+                    offset: gpui::point(px(0.), px(0.)),
+                    blur_radius: px(0.),
+                    spread_radius: px(2.),
+                    inset: false,
+                }])
+            })
             .when(!disabled && !readonly, |el| {
-                el.cursor_text()
-                    .hover(|style| style.border_color(hover_border))
+                el.cursor_text().when(!focused, |el| {
+                    el.hover(|style| style.border_color(hover_border))
+                })
             })
             .when(disabled, |el| el.cursor_not_allowed())
             .on_mouse_down(MouseButton::Left, {
                 let state = state.clone();
+                let display = display.clone();
                 move |event: &MouseDownEvent, window, cx| {
                     if disabled {
                         return;
@@ -1070,7 +1409,7 @@ impl RenderOnce for Input {
                         // native field; triple-click selects everything.
                         2 => {
                             let value = state.read(cx).props.borrow().value.clone();
-                            let position = position_index(&state, event.position, cx);
+                            let position = position_index(&state, event.position, &display, cx);
                             let start = word_boundary(&value, position, false);
                             let end = word_boundary(&value, position, true);
                             let focus = state.read(cx).focus.clone();
@@ -1091,19 +1430,20 @@ impl RenderOnce for Input {
                             });
                             window.notify_text_selection_changed(&focus);
                         }
-                        _ => click_position(&state, event.position, extend, window, cx),
+                        _ => click_position(&state, event.position, extend, &display, window, cx),
                     }
                     cx.stop_propagation();
                 }
             })
             .on_mouse_move({
                 let state = state.clone();
+                let display = display.clone();
                 move |event: &MouseMoveEvent, window, cx| {
                     if disabled || event.pressed_button != Some(MouseButton::Left) {
                         return;
                     }
                     // A drag extends the selection from the press anchor.
-                    click_position(&state, event.position, true, window, cx);
+                    click_position(&state, event.position, true, &display, window, cx);
                 }
             })
             .on_key_down({
@@ -1161,12 +1501,32 @@ impl RenderOnce for Input {
                             move_caret(&state, target, modifiers.shift, window, cx);
                             true
                         }
+                        "up" if textarea => {
+                            move_vertical(&state, caret, false, modifiers.shift, window, cx);
+                            true
+                        }
+                        "down" if textarea => {
+                            move_vertical(&state, caret, true, modifiers.shift, window, cx);
+                            true
+                        }
                         "home" => {
-                            move_caret(&state, 0, modifiers.shift, window, cx);
+                            if textarea {
+                                move_line_edge(&state, caret, false, modifiers.shift, window, cx);
+                            } else {
+                                move_caret(&state, 0, modifiers.shift, window, cx);
+                            }
                             true
                         }
                         "end" => {
-                            move_caret(&state, value.len(), modifiers.shift, window, cx);
+                            if textarea {
+                                move_line_edge(&state, caret, true, modifiers.shift, window, cx);
+                            } else {
+                                move_caret(&state, value.len(), modifiers.shift, window, cx);
+                            }
+                            true
+                        }
+                        "enter" if textarea && editable => {
+                            replace_range(&state, selection, "\n", window, cx);
                             true
                         }
                         "a" if modifiers.control => {
@@ -1261,60 +1621,117 @@ impl RenderOnce for Input {
                     .flex_1()
                     .min_w_0()
                     .h_full()
-                    .flex()
-                    .items_center()
-                    .whitespace_nowrap()
+                    .when(textarea, |el| {
+                        el.flex()
+                            .flex_col()
+                            .justify_start()
+                            .whitespace_normal()
+                            .line_height(px(line_height))
+                            .overflow_scroll()
+                            .track_scroll(&state.read(cx).scroll)
+                            .on_scroll(|_, _, cx| cx.stop_propagation())
+                            .when(has_suffix, |el| el.pr(px(24.)))
+                    })
+                    .when(!textarea, |el| el.flex().items_center().whitespace_nowrap())
                     .text_color(text_color)
                     .child(text),
             )
-            .children(
-                suffix_items
-                    .into_iter()
-                    .map(|item| div().flex().items_center().ml(px(8.)).child(item)),
-            )
+            .children({
+                let suffix = div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.))
+                    .children(suffix_items)
+                    .when(textarea, |el| {
+                        el.absolute()
+                            .right(px(11.))
+                            .top(px(5.))
+                            .flex_col()
+                            .items_end()
+                    })
+                    .when(!textarea, |el| el.ml(px(8.)));
+                if has_suffix { Some(suffix) } else { None }
+            })
             .child(
-                // Paints the caret and registers the IME handler. Both run
-                // after the text child has measured itself.
-                gpui::canvas(|_, _, _| {}, {
-                    let state = state.clone();
-                    move |bounds, _, window, cx| {
-                        let state = state.read(cx);
-                        let focused = state.focus.is_focused(window);
-                        let props = state.props.borrow().clone();
-                        let display = display_text(&props.value, password, state.password_visible);
-                        if focused && !props.disabled {
+                // Keeps the textarea caret visible, paints the caret, and
+                // registers the IME handler after the text child has measured
+                // itself.
+                gpui::canvas(
+                    {
+                        let state = state.clone();
+                        move |_, window, cx| {
+                            if !textarea {
+                                return;
+                            }
+                            let state = state.read(cx);
+                            if !state.focus.is_focused(window) {
+                                return;
+                            }
+                            let props = state.props.borrow().clone();
+                            if props.disabled {
+                                return;
+                            }
                             let layout = state.layout.borrow().clone();
-                            let caret = value_byte_to_display(
-                                &props.value,
-                                &display,
-                                state.caret.min(props.value.len()),
-                            );
-                            if let Some(origin) = layout.position_for_index(caret) {
-                                window.paint_quad(gpui::fill(
-                                    gpui::Bounds::new(
-                                        gpui::point(origin.x, layout.bounds().top()),
-                                        gpui::size(px(1.5), layout.line_height()),
-                                    ),
-                                    if props.readonly {
-                                        rgb(theme.disabled_text())
-                                    } else {
-                                        rgb(theme.regular_text())
-                                    },
-                                ));
+                            let caret = state.caret.min(props.value.len());
+                            let Some(origin) = layout.position_for_index(caret) else {
+                                return;
+                            };
+                            let scroll = state.scroll.clone();
+                            let viewport = scroll.bounds();
+                            let max_offset = scroll.max_offset();
+                            let mut offset = scroll.offset();
+                            let line_height = layout.line_height();
+                            if origin.y < viewport.top() {
+                                offset.y += viewport.top() - origin.y;
+                            } else if origin.y + line_height > viewport.bottom() {
+                                offset.y += viewport.bottom() - origin.y - line_height;
+                            }
+                            offset.y = offset.y.clamp(-max_offset.y, px(0.));
+                            if offset != scroll.offset() {
+                                scroll.set_offset(offset);
                             }
                         }
-                        if focused && !props.disabled && !props.readonly {
-                            window.handle_input(
-                                &state.focus,
-                                InputHandlerImpl {
-                                    state: handler_state.clone(),
-                                },
-                                cx,
-                            );
+                    },
+                    {
+                        let state = state.clone();
+                        move |_bounds, _, window, cx| {
+                            let state = state.read(cx);
+                            let focused = state.focus.is_focused(window);
+                            let props = state.props.borrow().clone();
+                            let display = if textarea {
+                                props.value.clone()
+                            } else {
+                                display_text(&props.value, password, state.password_visible)
+                            };
+                            if focused && !props.disabled {
+                                let layout = state.layout.borrow().clone();
+                                let caret = value_byte_to_display(
+                                    &props.value,
+                                    &display,
+                                    state.caret.min(props.value.len()),
+                                );
+                                if let Some(origin) = layout.position_for_index(caret) {
+                                    window.paint_quad(gpui::fill(
+                                        gpui::Bounds::new(
+                                            origin,
+                                            gpui::size(px(1.5), layout.line_height()),
+                                        ),
+                                        caret_color,
+                                    ));
+                                }
+                            }
+                            if focused && !props.disabled && !props.readonly {
+                                window.handle_input(
+                                    &state.focus,
+                                    InputHandlerImpl {
+                                        state: handler_state.clone(),
+                                    },
+                                    cx,
+                                );
+                            }
                         }
-                        let _ = bounds;
-                    }
-                })
+                    },
+                )
                 .absolute()
                 .inset_0(),
             );
@@ -1444,6 +1861,207 @@ mod tests {
             disabled: false,
         };
         assert!(clamped_edit(&readonly, "a").is_none());
+    }
+
+    #[test]
+    fn radius_profiles_match_the_requested_native_scale() {
+        assert_eq!(InputRadius::Off.pixels(32.), 0.);
+        assert_eq!(InputRadius::Small.pixels(32.), 4.);
+        assert_eq!(InputRadius::Default.pixels(32.), 8.);
+        assert_eq!(InputRadius::Large.pixels(32.), 12.);
+        assert_eq!(InputRadius::Round.pixels(32.), 16.);
+        assert_eq!(InputRadius::Round.pixels(54.), 27.);
+    }
+
+    #[test]
+    fn style_and_mode_setters_are_independent() {
+        let active = rgb(0x67c23a);
+        let text = rgb(0x303133);
+        let input = el_input()
+            .small()
+            .radius_off()
+            .active_border_color(active)
+            .outline(true)
+            .text_color(text)
+            .readonly(true)
+            .textarea(true)
+            .rows(4);
+        assert_eq!(input.size, InputSize::Small);
+        assert_eq!(input.radius, InputRadius::Off);
+        assert_eq!(input.active_border_color, Some(active));
+        assert!(input.outline);
+        assert_eq!(input.text_color, Some(text));
+        assert!(input.readonly);
+        assert!(input.textarea);
+        assert_eq!(input.rows, 4);
+    }
+
+    #[gpui::test]
+    fn ime_composition_is_optimistic_and_commits_once(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            state: gpui::Entity<InputState>,
+            reported: Rc<RefCell<Vec<String>>>,
+            events: Rc<RefCell<Vec<String>>>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div()
+            }
+        }
+        let reported = Rc::new(RefCell::new(Vec::new()));
+        let events = Rc::new(RefCell::new(Vec::new()));
+        let (harness, view) = cx.add_window_view({
+            let reported = reported.clone();
+            let events = events.clone();
+            move |window, cx| {
+                let reported_for_handler = reported.clone();
+                let events_for_handler = events.clone();
+                let state = cx.new(|cx| InputState::new(window, cx));
+                state.update(cx, |state, _| {
+                    *state.props.borrow_mut() = InputProps {
+                        value: "".into(),
+                        maxlength: None,
+                        readonly: false,
+                        disabled: false,
+                    };
+                    *state.handlers.borrow_mut() = Some(Rc::new(InputHandlers {
+                        oninput: Some(Rc::new(move |value, _, _| {
+                            reported_for_handler.borrow_mut().push(value.to_string());
+                        })),
+                        onchange: None,
+                        onfocus: None,
+                        onblur: None,
+                        onclear: None,
+                        oncompositionstart: Some(Rc::new({
+                            let events = events_for_handler.clone();
+                            move |_, _| {
+                                events.borrow_mut().push("start".into());
+                            }
+                        })),
+                        oncompositionupdate: Some(Rc::new({
+                            let events = events_for_handler.clone();
+                            move |value, _, _| {
+                                events.borrow_mut().push(format!("update:{value}"));
+                            }
+                        })),
+                        oncompositionend: Some(Rc::new({
+                            let events = events_for_handler.clone();
+                            move |value, _, _| {
+                                events.borrow_mut().push(format!("end:{value}"));
+                            }
+                        })),
+                    }));
+                });
+                Harness {
+                    state,
+                    reported,
+                    events,
+                }
+            }
+        });
+        use gpui::InputHandler as _;
+        view.update(|window, cx| {
+            let state = harness.read(cx).state.clone();
+            let reported = harness.read(cx).reported.clone();
+            let events = harness.read(cx).events.clone();
+            let mut handler = InputHandlerImpl {
+                state: state.clone(),
+            };
+            handler.replace_and_mark_text_in_range(Some(0..0), "你", None, window, cx);
+            assert!(reported.borrow().is_empty());
+            assert_eq!(state.read(cx).props.borrow().value.as_ref(), "你");
+            assert_eq!(state.read(cx).marked, Some(0..3));
+
+            // Linux and Wayland pass None again: replace the marked preedit,
+            // not insert a second copy after it.
+            handler.replace_and_mark_text_in_range(None, "你好", None, window, cx);
+            assert!(reported.borrow().is_empty());
+            assert_eq!(state.read(cx).props.borrow().value.as_ref(), "你好");
+            assert_eq!(state.read(cx).marked, Some(0..6));
+            assert_eq!(
+                events.borrow().as_slice(),
+                ["start", "update:你", "update:你好"]
+            );
+
+            handler.unmark_text(window, cx);
+            assert_eq!(reported.borrow().as_slice(), ["你好"]);
+            assert_eq!(events.borrow().last().map(String::as_str), Some("end:你好"));
+            // A later unmark cannot report the same composition twice.
+            handler.unmark_text(window, cx);
+            assert_eq!(reported.borrow().len(), 1);
+
+            // The platform's normal commit path is replace_text_in_range with
+            // None, followed by unmark. It must replace the preedit and emit
+            // end -> input exactly once.
+            handler.replace_and_mark_text_in_range(None, "世", None, window, cx);
+            handler.replace_text_in_range(None, "世界", window, cx);
+            assert_eq!(state.read(cx).props.borrow().value.as_ref(), "你好世界");
+            assert_eq!(state.read(cx).marked, None);
+            assert_eq!(reported.borrow().as_slice(), ["你好", "你好世界"]);
+            assert_eq!(events.borrow().last().map(String::as_str), Some("end:世界"));
+            handler.unmark_text(window, cx);
+            assert_eq!(reported.borrow().len(), 2);
+        });
+    }
+
+    #[gpui::test]
+    fn textarea_handles_newlines_and_visual_line_navigation(cx: &mut gpui::TestAppContext) {
+        use std::cell::RefCell as StdCell;
+        struct Harness(Rc<StdCell<String>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let value = self.0.clone();
+                let current = value.borrow().clone();
+                div().w(px(300.)).child(
+                    el_input()
+                        .id("textarea")
+                        .value(current)
+                        .textarea(true)
+                        .rows(3)
+                        .oninput(move |reported, _, _| {
+                            *value.borrow_mut() = reported.to_string();
+                        }),
+                )
+            }
+        }
+        let value = Rc::new(StdCell::new("ab\ncd".into()));
+        let (_, view) = cx.add_window_view({
+            let value = value.clone();
+            move |_, _| Harness(value)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.simulate_mouse_down(
+            gpui::point(px(20.), px(10.)),
+            MouseButton::Left,
+            Modifiers::default(),
+        );
+        press_key(view, "ctrl-a");
+        press_key(view, "end");
+        press_key(view, "up");
+        type_text(view, "X");
+        assert_eq!(value.borrow().as_str(), "abX\ncd");
+
+        press_key(view, "down");
+        type_text(view, "Y");
+        assert_eq!(value.borrow().as_str(), "abX\ncdY");
+
+        press_key(view, "home");
+        type_text(view, "Z");
+        assert_eq!(value.borrow().as_str(), "abX\nZcdY");
+
+        press_key(view, "enter");
+        assert_eq!(value.borrow().as_str(), "abX\nZ\ncdY");
+    }
+
+    fn press_key(view: &mut gpui::VisualTestContext, key: &str) {
+        let keystroke = view
+            .update(|_, cx| gpui::Keystroke::parse_with_os(key, cx.platform_info().os).unwrap());
+        view.simulate_event(gpui::KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        view.simulate_event(gpui::KeyUpEvent { keystroke });
     }
 
     #[gpui::test]

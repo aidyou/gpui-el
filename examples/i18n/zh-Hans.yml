@@ -274,6 +274,9 @@ input_limited: 字符限制
 input_clearable: 可清空
 input_password: 密码
 input_prefix: 前缀插槽
+input_radius: 圆角配置
+input_styled: 激活边框、outline 与文字颜色
+input_textarea: 多行文本与输入法组合
 input_readonly: 只读
 input_disabled: 禁用
 input_basic_placeholder: 请输入内容

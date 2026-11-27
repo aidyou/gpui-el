@@ -857,6 +857,18 @@ const INPUT: &[Row] = &[
         "Large 为 40 px，Small 为 24 px；字号为 14 px，Small 为 12 px，水平内边距 16/12/8 px。",
     ),
     (
+        "radius, radius_off, radius_small, radius_large, round",
+        "InputRadius · Default (8 px)",
+        "Native corner profiles: Off 0 px, Small 4 px, Default 8 px, Large 12 px, and Round capsule ends.",
+        "原生圆角配置：Off 0 px、Small 4 px、Default 8 px、Large 12 px，Round 为胶囊两端。",
+    ),
+    (
+        "active_border_color, outline, text_color",
+        "Rgba / bool · primary / false / theme",
+        "Customize the focused border, optional 2 px focus ring, and normal text/caret color. Disabled text keeps its theme token.",
+        "自定义激活边框、可选 2 px 焦点环，以及正常文字与插入符号颜色；禁用文字仍使用主题令牌。",
+    ),
+    (
         "disabled, readonly",
         "bool · false",
         "disabled blocks all editing; readonly still moves the caret and selection and copies.",
@@ -882,17 +894,23 @@ const INPUT: &[Row] = &[
     ),
     (
         "prefix, suffix",
-        "AnyElement · none",
+        "IntoElement · none",
         "The leading and trailing slots, sized and colored like the field icons.",
         "前缀与后缀插槽，尺寸与颜色与字段图标一致。",
+    ),
+    (
+        "textarea, rows",
+        "bool / usize · false / 2",
+        "Switch to a multi-line textarea with a visible row count, soft wrapping, internal scrolling, and caret auto-scroll. Enter inserts a newline; arrows and Home/End move by visual line.",
+        "切换为多行文本域，可设置可见行数，支持软换行、内部滚动与插入符号自动滚动。Enter 插入换行，方向键与 Home/End 按视觉行移动。",
     ),
 ];
 const INPUT_EVENTS: &[Row] = &[
     (
         "oninput",
         "SharedString, &mut Window, &mut App",
-        "Every keystroke and IME composition step reports the value, like the web input event.",
-        "每次按键与输入法组合步骤都报告当前值，对应 Web 的 input 事件。",
+        "Every committed keystroke reports the value. IME preedit stays silent and reports once when the composition commits, like the web input event.",
+        "每次提交的按键报告当前值。输入法组合期间不触发，组合提交后只报告一次，对应 Web 的 input 事件。",
     ),
     (
         "onchange",
@@ -911,6 +929,24 @@ const INPUT_EVENTS: &[Row] = &[
         "SharedString, &mut Window, &mut App",
         "The clear button emptied the field.",
         "清空按钮清空了字段。",
+    ),
+    (
+        "oncompositionstart",
+        "&mut Window, &mut App",
+        "An IME composition started.",
+        "输入法组合开始。",
+    ),
+    (
+        "oncompositionupdate",
+        "SharedString, &mut Window, &mut App",
+        "An IME preedit update reports the composing text; oninput remains silent.",
+        "输入法组合更新报告组合文本；oninput 保持静默。",
+    ),
+    (
+        "oncompositionend",
+        "SharedString, &mut Window, &mut App",
+        "An IME composition ended with its final text; oninput follows with the committed field value.",
+        "输入法组合结束并报告最终文本；随后 oninput 报告提交后的字段值。",
     ),
 ];
 const SLIDER: &[Row] = &[
