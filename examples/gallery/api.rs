@@ -552,6 +552,12 @@ const TABLE: &[Row] = &[
         "Paints a status background for chosen rows, replacing upstream row-class-name.",
         "为指定行绘制状态底色，替代上游的 row-class-name。",
     ),
+    (
+        "Table::copyable",
+        "bool · false",
+        "A native addition: shows a control in the table's top-right corner while hovered. Its tooltip reads Copy as markdown, and the click puts the whole table on the clipboard as Markdown, confirming next to the icon for three seconds.",
+        "原生新增：指针经过表格时在右上角显示复制控件。悬停提示「复制为 Markdown」，点击把整张表格以 Markdown 写入剪贴板，并在图标旁显示三秒的复制成功提示。",
+    ),
 ];
 const TABLE_EVENTS: &[Row] = &[(
     "Table::onrowclick",

@@ -74,6 +74,7 @@ table_stripe: Striped and bordered table
 table_fixed: Fixed header
 table_status: Status rows
 table_empty_section: Empty state
+table_copy_section: Copy as markdown
 table_date: Date
 table_name: Name
 table_address: Address

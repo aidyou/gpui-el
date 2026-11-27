@@ -74,6 +74,7 @@ table_stripe: 条纹与边框
 table_fixed: 固定表头
 table_status: 状态行
 table_empty_section: 空状态
+table_copy_section: 复制为 Markdown
 table_date: 日期
 table_name: 姓名
 table_address: 地址

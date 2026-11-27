@@ -6,13 +6,16 @@
 //! status row backgrounds, row clicks, and an empty state. Text selection and
 //! wheel containment are native additions: dragging inside text cells selects
 //! and copies plain text, and the scrolling body never forwards wheel deltas to
-//! an outer scroll container. Headers use the bold face and the body text color
-//! instead of Theme Chalk's weight 600 on secondary text, which native font
-//! stacks render as plain, faded labels. Like the other components, the table
-//! renders in the theme's resolved font family, because a weight only reaches
-//! the screen when that family has a bold face. Sorting, row selection,
-//! filtering, fixed columns, tree data, lazy loading, and summary rows are not
-//! reproduced.
+//! an outer scroll container. `copyable` is another native addition: while the
+//! pointer is over the table, a control sits in the top-right corner, labels
+//! itself "Copy as markdown" on hover, and puts the whole table on the
+//! clipboard as Markdown, confirming next to the icon for three seconds.
+//! Headers use the bold face and the body text color instead of Theme Chalk's
+//! weight 600 on secondary text, which native font stacks render as plain,
+//! faded labels. Like the other components, the table renders in the theme's
+//! resolved font family, because a weight only reaches the screen when that
+//! family has a bold face. Sorting, row selection, filtering, fixed columns,
+//! tree data, lazy loading, and summary rows are not reproduced.
 
 use std::{
     cell::{Cell as BoundsCell, RefCell},
@@ -20,15 +23,16 @@ use std::{
     panic::Location,
     rc::Rc,
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use gpui::{
     AnyElement, App, Bounds, ClickEvent, Div, ElementId, Entity, FocusHandle, Hsla, IntoElement,
-    KeyDownEvent, MouseButton, Pixels, Point, RenderOnce, SharedString, StyledText, TextLayout,
-    Window, div, prelude::*, px, rgb, rgba,
+    KeyDownEvent, MouseButton, MouseMoveEvent, Pixels, Point, RenderOnce, SharedString, StyledText,
+    Task, TextLayout, Window, div, prelude::*, px, rgb, rgba,
 };
 
-use crate::{Theme, tokens};
+use crate::{Icon, Locale, Theme, tokens};
 
 /// Cell padding and font size, from `$table-padding` and `$table-font-size`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -195,6 +199,62 @@ impl Selection {
     }
 }
 
+/// Hover, copy feedback, and the pending auto-hide task for one table's
+/// Markdown copy control.
+struct CopyState {
+    hovered: bool,
+    /// When the copy happened; the "Copied" label hides three seconds later.
+    copied: Option<Instant>,
+    /// Bumped on every copy so a timer from an earlier click cannot hide a
+    /// newer label.
+    generation: u32,
+    /// The pending auto-hide, kept alive so dropping it never cancels the
+    /// timer.
+    task: Option<Task<()>>,
+}
+
+impl CopyState {
+    fn new() -> Self {
+        Self {
+            hovered: false,
+            copied: None,
+            generation: 0,
+            task: None,
+        }
+    }
+}
+
+/// The table as GitHub-flavored Markdown: a header row, a delimiter row, then
+/// one row per record. Pipes are escaped so a value can never split a column,
+/// and newlines become spaces because a Markdown row must stay on one line.
+/// Columns with custom `render` content have no text to export and come out
+/// empty.
+fn markdown<T>(columns: &[Column<T>], rows: &[T]) -> String {
+    fn cell(text: &str) -> String {
+        text.replace('|', "\\|").replace(['\n', '\r'], " ")
+    }
+    let headers = columns
+        .iter()
+        .map(|column| cell(&column.label))
+        .collect::<Vec<_>>()
+        .join(" | ");
+    let mut out = format!("| {headers} |\n|");
+    out.extend(columns.iter().map(|_| " --- |"));
+    out.push('\n');
+    for (index, row) in rows.iter().enumerate() {
+        let cells = columns
+            .iter()
+            .map(|column| match &column.text {
+                Some(text) => cell(&text(row, index)),
+                None => String::new(),
+            })
+            .collect::<Vec<_>>()
+            .join(" | ");
+        out.push_str(&format!("| {cells} |\n"));
+    }
+    out
+}
+
 /// Selected byte range inside one cell, or `None` when the cell is outside the
 /// selection.
 fn local_range(
@@ -335,8 +395,9 @@ impl<T: 'static> Column<T> {
 /// Native differences: there is no DOM, so `span-method`, `row-class-name`,
 /// and CSS class props become the `row_background` color hook; sorting,
 /// selection, filtering, fixed columns, tree data, lazy loading, and summary
-/// rows are not reproduced. `show-overflow-tooltip` is unnecessary because
-/// text cells clip with an ellipsis by default.
+/// rows are not reproduced. `copyable` has no upstream counterpart: it adds a
+/// top-right control that copies the table as Markdown. `show-overflow-tooltip`
+/// is unnecessary because text cells clip with an ellipsis by default.
 #[derive(IntoElement)]
 pub struct Table<T: 'static> {
     rows: Vec<T>,
@@ -352,6 +413,7 @@ pub struct Table<T: 'static> {
     onrowclick: Option<RowClick<T>>,
     key: ElementId,
     selectable: bool,
+    copyable: bool,
 }
 
 /// Creates a table with the given rows, mirroring the other `el_*`
@@ -383,6 +445,7 @@ impl<T: 'static> Table<T> {
             onrowclick: None,
             key: ElementId::CodeLocation(*Location::caller()),
             selectable: true,
+            copyable: false,
         }
     }
 
@@ -397,6 +460,15 @@ impl<T: 'static> Table<T> {
     /// Enabled by default; custom `render` cells are not selectable.
     pub fn selectable(mut self, selectable: bool) -> Self {
         self.selectable = selectable;
+        self
+    }
+
+    /// Shows a copy control at the table's top-right corner while the pointer
+    /// is over the table. Hovering it labels the action, and clicking it puts
+    /// the table on the clipboard as Markdown, then confirms next to the icon
+    /// for three seconds. Off by default.
+    pub fn copyable(mut self, copyable: bool) -> Self {
+        self.copyable = copyable;
         self
     }
 
@@ -636,6 +708,7 @@ impl<T: 'static> RenderOnce for Table<T> {
             onrowclick,
             key,
             selectable,
+            copyable,
         } = self;
         let theme = Theme::current(cx);
         let border = rgb(theme.border_lighter());
@@ -868,9 +941,150 @@ impl<T: 'static> RenderOnce for Table<T> {
                     }
                 });
         }
-        table
+        let copy = copyable.then(|| {
+            window.use_keyed_state(
+                ElementId::NamedChild(Arc::new(key.clone()), "copy".into()),
+                cx,
+                |_, _| CopyState::new(),
+            )
+        });
+        if let Some(copy) = copy.as_ref() {
+            // The badge follows the pointer over the whole table. gpui-fast
+            // only reports an element exit at the window edge, so leaving the
+            // table is detected by the window-level move listener armed from
+            // the canvas below, like the platform's own hover styling.
+            let entered = copy.clone();
+            table = table
+                .relative()
+                .on_mouse_move(move |_: &MouseMoveEvent, _, cx| {
+                    if !entered.read(cx).hovered {
+                        entered.update(cx, |state, cx| {
+                            state.hovered = true;
+                            cx.notify();
+                        });
+                    }
+                });
+        }
+        let mut table = table
             .when_some(header, |el, header| el.child(header))
-            .child(body)
+            .child(body);
+        if let Some(copy) = copy {
+            // Measures the surface and drops the hover once the pointer is
+            // outside it, so the badge disappears when the pointer leaves the
+            // table for another element.
+            let left = copy.clone();
+            table = table.child(
+                gpui::canvas(
+                    |_, _, _| {},
+                    move |bounds, _, window, _| {
+                        let state = left.clone();
+                        window.on_mouse_event(move |event: &MouseMoveEvent, phase, _, cx| {
+                            if phase == gpui::DispatchPhase::Bubble
+                                && !bounds.contains(&event.position)
+                                && state.read(cx).hovered
+                            {
+                                state.update(cx, |state, cx| {
+                                    state.hovered = false;
+                                    cx.notify();
+                                });
+                            }
+                        });
+                    },
+                )
+                .absolute()
+                .inset_0(),
+            );
+            let copied = copy.read(cx).copied.is_some();
+            if copy.read(cx).hovered {
+                let locale = Locale::current(cx);
+                let hint: SharedString = locale.table_copy().into();
+                let copied_label: SharedString = locale.table_copied().into();
+                let dark = theme.dark;
+                let md = markdown(&columns, &rows);
+                let clicking = copy.clone();
+                let icon = div()
+                    .id(ElementId::NamedChild(Arc::new(key.clone()), "copy".into()))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .size(px(24.))
+                    .rounded(px(tokens::radius::BASE))
+                    .cursor_pointer()
+                    .text_color(rgb(theme.secondary_text()))
+                    .hover(move |style| style.bg(hover).text_color(rgb(crate::theme::PRIMARY)))
+                    .child(Icon::named("document-copy").size(14.))
+                    .tooltip(move |_, cx| cx.new(|_| TableHint(hint.clone(), dark)).into())
+                    // The copy control owns its press: no text selection starts
+                    // under it and no ancestor reacts to the same click.
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .on_click(move |_, window, cx| {
+                        cx.write_to_clipboard(gpui::ClipboardItem::new_string(md.clone()));
+                        let state = clicking.clone();
+                        let generation = clicking.update(cx, |state, cx| {
+                            state.copied = Some(Instant::now());
+                            state.generation = state.generation.wrapping_add(1);
+                            cx.notify();
+                            state.generation
+                        });
+                        let task = window.spawn(cx, async move |cx| {
+                            cx.background_executor().timer(Duration::from_secs(3)).await;
+                            let _ = cx.update(|_, cx| {
+                                // A newer copy rescheduled the label; only the
+                                // timer from that click may hide it.
+                                if state.read(cx).generation == generation {
+                                    state.update(cx, |state, cx| {
+                                        state.copied = None;
+                                        cx.notify();
+                                    });
+                                }
+                            });
+                        });
+                        clicking.update(cx, |state, cx| {
+                            state.task = Some(task);
+                            cx.notify();
+                        });
+                        cx.stop_propagation();
+                    });
+                let badge = div()
+                    .absolute()
+                    .top(px(8.))
+                    .right(px(8.))
+                    .flex()
+                    .items_center()
+                    .gap(px(4.))
+                    .px(px(4.))
+                    .py(px(2.))
+                    .rounded(px(tokens::radius::BASE))
+                    .bg(rgb(theme.fill(crate::theme::Fill::Light)))
+                    .child(icon)
+                    .when(copied, |el| {
+                        el.child(
+                            div()
+                                .text_size(px(tokens::font_size::EXTRA_SMALL))
+                                .text_color(rgb(crate::theme::SUCCESS))
+                                .child(copied_label),
+                        )
+                    });
+                table = table.child(badge);
+            }
+        }
+        table
+    }
+}
+
+/// The copy control's tooltip, styled like the button hint.
+struct TableHint(SharedString, bool);
+
+impl gpui::Render for TableHint {
+    fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(10.))
+            .py(px(5.))
+            .rounded(px(crate::tokens::radius::BASE))
+            .text_size(px(12.))
+            .bg(rgb(if self.1 { 0xe5eaf3 } else { 0x303133 }))
+            .text_color(rgb(if self.1 { 0x141414 } else { 0xffffff }))
+            .child(self.0.clone())
     }
 }
 
@@ -911,6 +1125,117 @@ mod tests {
         assert_eq!(TableSize::Small.vertical_padding(), 4.);
         assert_eq!(TableSize::Small.font_size(), 12.);
         assert_eq!(TableSize::Default.font_size(), 13.);
+    }
+
+    #[test]
+    fn markdown_escapes_pipes_and_joins_rows() {
+        let columns = vec![
+            Column::new("Date").text(|row: &(&str, &str), _| row.0.into()),
+            Column::new("Name").text(|row: &(&str, &str), _| row.1.into()),
+            Column::new("Note"),
+        ];
+        let rows = [("2016-05-03", "Tom| Jerry"), ("2016-05-02\nLater", "Tom")];
+        assert_eq!(
+            markdown(&columns, &rows),
+            "| Date | Name | Note |\n| --- | --- | --- |\n\
+             | 2016-05-03 | Tom\\| Jerry |  |\n\
+             | 2016-05-02 Later | Tom |  |\n"
+        );
+    }
+
+    #[gpui::test]
+    fn the_copy_control_copies_markdown_and_hides_its_label(cx: &mut gpui::TestAppContext) {
+        use std::cell::Cell as StdCell;
+        struct Harness(Rc<StdCell<bool>>, Rc<StdCell<usize>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let row_clicked = self.0.clone();
+                self.1.set(self.1.get() + 1);
+                div().id("copy-harness").w(px(400.)).child(
+                    Table::new([("2016-05-03", "Tom"), ("2016-05-02", "Linda")])
+                        .id("copy-table")
+                        .copyable(true)
+                        .onrowclick(move |_, _, _, _, _| row_clicked.set(true))
+                        .column(
+                            Column::new("Date")
+                                .width(120.)
+                                .text(|row: &(&str, &str), _| row.0.into()),
+                        )
+                        .column(
+                            Column::new("Name")
+                                .width(100.)
+                                .text(|row: &(&str, &str), _| row.1.into()),
+                        ),
+                )
+            }
+        }
+        let row_clicked = Rc::new(StdCell::new(false));
+        let renders = Rc::new(StdCell::new(0));
+        let (_, view) = cx.add_window_view({
+            let row_clicked = row_clicked.clone();
+            let renders = renders.clone();
+            move |_, _| Harness(row_clicked, renders)
+        });
+        let draw = |view: &mut gpui::VisualTestContext| {
+            view.update(|window, cx| window.draw(cx).clear(cx));
+        };
+        let wait = |view: &mut gpui::VisualTestContext, millis| {
+            view.run_until_parked();
+            view.executor().advance_clock(Duration::from_millis(millis));
+            view.run_until_parked();
+            draw(view);
+        };
+        let clipboard = |view: &mut gpui::VisualTestContext| {
+            view.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()))
+        };
+        draw(view);
+        // Entering the table shows the control in the top-right corner; a
+        // click there copies Markdown and never reaches a row.
+        view.simulate_mouse_move(
+            gpui::point(px(200.), px(60.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        draw(view);
+        view.simulate_click(gpui::point(px(376.), px(22.)), gpui::Modifiers::default());
+        assert_eq!(
+            clipboard(view),
+            Some(
+                "| Date | Name |\n| --- | --- |\n\
+                 | 2016-05-03 | Tom |\n\
+                 | 2016-05-02 | Linda |\n"
+                    .to_owned()
+            ),
+            "the control copies the table as Markdown"
+        );
+        assert!(!row_clicked.get(), "the copy click does not activate a row");
+        // The confirmation stays for three seconds; the timer's clear is the
+        // only pending change, so the re-render it schedules is observable.
+        let labeled = renders.get();
+        wait(view, 2999);
+        assert_eq!(renders.get(), labeled, "the label is still up at 2.999 s");
+        wait(view, 2);
+        assert_eq!(
+            renders.get(),
+            labeled + 1,
+            "the label hides once the three-second timer fires"
+        );
+        // Leaving the table puts the control away: clicking its corner again
+        // does not overwrite the clipboard.
+        let markdown = clipboard(view);
+        view.simulate_mouse_move(
+            gpui::point(px(20.), px(400.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        draw(view);
+        view.simulate_click(gpui::point(px(376.), px(22.)), gpui::Modifiers::default());
+        assert_eq!(
+            clipboard(view),
+            markdown,
+            "the control is gone once the pointer leaves the table"
+        );
+        assert!(!row_clicked.get(), "no row was activated along the way");
     }
 
     #[gpui::test]

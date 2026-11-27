@@ -4,3 +4,6 @@ menu:
   more: 更多
 tag:
   close: 关闭
+table:
+  copy: 复制为 Markdown
+  copied: 复制成功

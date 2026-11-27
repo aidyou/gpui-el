@@ -103,6 +103,7 @@ copy_fields!(
     table_fixed,
     table_status,
     table_empty_section,
+    table_copy_section,
     table_date,
     table_name,
     table_address,

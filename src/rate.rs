@@ -459,7 +459,12 @@ impl RenderOnce for Rate {
                         .bottom_0()
                         .w(px(metrics.icon / 2.))
                         .on_mouse_move(move |_: &MouseMoveEvent, _, cx| {
-                            left_state.update(cx, |stored, _| *stored = Some(star - 0.5));
+                            left_state.update(cx, |stored, cx| {
+                                if *stored != Some(star - 0.5) {
+                                    *stored = Some(star - 0.5);
+                                    cx.notify();
+                                }
+                            });
                         })
                         .on_click(move |_, window, cx| left_pick(star - 0.5, window, cx));
                     let right_state = state.clone();
@@ -472,7 +477,12 @@ impl RenderOnce for Rate {
                         .bottom_0()
                         .w(px(metrics.icon / 2.))
                         .on_mouse_move(move |_: &MouseMoveEvent, _, cx| {
-                            right_state.update(cx, |stored, _| *stored = Some(star));
+                            right_state.update(cx, |stored, cx| {
+                                if *stored != Some(star) {
+                                    *stored = Some(star);
+                                    cx.notify();
+                                }
+                            });
                         })
                         .on_click(move |_, window, cx| right_pick(star, window, cx));
                     item = item.child(left).child(right);
@@ -483,7 +493,12 @@ impl RenderOnce for Rate {
                         .absolute()
                         .inset_0()
                         .on_mouse_move(move |_: &MouseMoveEvent, _, cx| {
-                            full_state.update(cx, |stored, _| *stored = Some(star));
+                            full_state.update(cx, |stored, cx| {
+                                if *stored != Some(star) {
+                                    *stored = Some(star);
+                                    cx.notify();
+                                }
+                            });
                         })
                         .on_click(move |_, window, cx| pick(star, window, cx));
                     item = item.child(full);
@@ -542,7 +557,12 @@ impl RenderOnce for Rate {
             .focusable()
             .tab_stop(true)
             .on_mouse_exit(move |_, _, cx| {
-                exit_state.update(cx, |stored, _| *stored = None);
+                exit_state.update(cx, |stored, cx| {
+                    if stored.is_some() {
+                        *stored = None;
+                        cx.notify();
+                    }
+                });
             });
         // gpui-fast only synthesizes MouseExitEvent when the pointer leaves
         // the window, not when it moves between elements, so the preview
@@ -555,16 +575,19 @@ impl RenderOnce for Rate {
                 move |bounds: Bounds<Pixels>, _window: &mut Window, _cx: &mut App| bounds,
                 move |bounds: Bounds<Pixels>, _t, window: &mut Window, _cx: &mut App| {
                     let state = preview.clone();
-                    window.on_mouse_event(
-                        move |event: &MouseMoveEvent, phase, _window, cx| {
-                            if phase == gpui::DispatchPhase::Bubble
-                                && !bounds.contains(&event.position)
-                                && state.read(cx).is_some()
-                            {
-                                state.update(cx, |stored, _| *stored = None);
-                            }
-                        },
-                    );
+                    window.on_mouse_event(move |event: &MouseMoveEvent, phase, _window, cx| {
+                        if phase == gpui::DispatchPhase::Bubble
+                            && !bounds.contains(&event.position)
+                            && state.read(cx).is_some()
+                        {
+                            state.update(cx, |stored, cx| {
+                                if stored.is_some() {
+                                    *stored = None;
+                                    cx.notify();
+                                }
+                            });
+                        }
+                    });
                 },
             )
             .absolute()
@@ -753,17 +776,14 @@ mod tests {
                 .on_key_down(move |event: &gpui::KeyDownEvent, _, _| {
                     eprintln!("ROOT KEY {:?}", event.keystroke.key);
                 })
-                .child(
-                    el_rate()
-                        .id("controlled")
-                        .value(value.get())
-                        .onchange(move |picked, _, cx| {
-                            view.update(cx, |this, cx| {
-                                this.value.set(picked);
-                                cx.notify();
-                            });
-                        }),
-                )
+                .child(el_rate().id("controlled").value(value.get()).onchange(
+                    move |picked, _, cx| {
+                        view.update(cx, |this, cx| {
+                            this.value.set(picked);
+                            cx.notify();
+                        });
+                    },
+                ))
                 .child(
                     el_button()
                         .id("reset")

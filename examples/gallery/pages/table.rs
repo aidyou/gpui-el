@@ -66,6 +66,7 @@ impl Gallery {
             _ => None,
         });
         let empty = columns("table-empty", &[]).empty_text(s.table_empty.as_str());
+        let copyable = columns("table-copy", ROWS).copyable(true);
         div()
             .flex()
             .flex_col()
@@ -113,6 +114,15 @@ el_table(rows).id("table-status")
                 r#"// The same columns over no rows at all.
 columns(Vec::new()).id("table-empty").empty_text("No Data");"#,
                 empty.into_any_element(),
+            ))
+            .child(section(
+                "table-copy",
+                &s.table_copy_section,
+                r#"// While the pointer is over the table, a control sits in the top-right
+// corner. Hovering it labels the action, and clicking it puts the table on
+// the clipboard as Markdown, confirming next to the icon for three seconds.
+columns(rows).id("table-copy").copyable(true);"#,
+                copyable.into_any_element(),
             ))
     }
 }

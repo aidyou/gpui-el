@@ -4,3 +4,6 @@ menu:
   more: More
 tag:
   close: Close
+table:
+  copy: Copy as markdown
+  copied: Copied

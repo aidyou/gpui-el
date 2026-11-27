@@ -20,6 +20,7 @@ struct Messages {
     button: ButtonMessages,
     menu: MenuMessages,
     tag: TagMessages,
+    table: TableMessages,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +41,13 @@ struct TagMessages {
     close: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TableMessages {
+    copy: String,
+    copied: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -54,6 +62,10 @@ impl Messages {
             },
             tag: TagMessages {
                 close: "Close".into(),
+            },
+            table: TableMessages {
+                copy: "Copy as markdown".into(),
+                copied: "Copied".into(),
             },
         }
     }
@@ -80,6 +92,12 @@ impl Locale {
     pub(crate) fn tag_close(self) -> &'static str {
         &self.messages().tag.close
     }
+    pub(crate) fn table_copy(self) -> &'static str {
+        &self.messages().table.copy
+    }
+    pub(crate) fn table_copied(self) -> &'static str {
+        &self.messages().table.copied
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -104,6 +122,10 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.button_loading(), "加载中");
         assert_eq!(Locale::default().tag_close(), "Close");
         assert_eq!(Locale::SimplifiedChinese.tag_close(), "关闭");
+        assert_eq!(Locale::default().table_copy(), "Copy as markdown");
+        assert_eq!(Locale::SimplifiedChinese.table_copy(), "复制为 Markdown");
+        assert_eq!(Locale::default().table_copied(), "Copied");
+        assert_eq!(Locale::SimplifiedChinese.table_copied(), "复制成功");
     }
 
     #[test]
@@ -114,5 +136,7 @@ mod tests {
         assert_eq!(fallback.button.loading, embedded.button.loading);
         assert_eq!(fallback.menu.more, embedded.menu.more);
         assert_eq!(fallback.tag.close, embedded.tag.close);
+        assert_eq!(fallback.table.copy, embedded.table.copy);
+        assert_eq!(fallback.table.copied, embedded.table.copied);
     }
 }
