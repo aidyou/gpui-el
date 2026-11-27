@@ -21,6 +21,7 @@ struct Messages {
     menu: MenuMessages,
     tag: TagMessages,
     table: TableMessages,
+    input_number: InputNumberMessages,
 }
 
 #[derive(Deserialize)]
@@ -48,6 +49,13 @@ struct TableMessages {
     copied: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InputNumberMessages {
+    increase: String,
+    decrease: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -66,6 +74,10 @@ impl Messages {
             table: TableMessages {
                 copy: "Copy as markdown".into(),
                 copied: "Copied".into(),
+            },
+            input_number: InputNumberMessages {
+                increase: "Increase".into(),
+                decrease: "Decrease".into(),
             },
         }
     }
@@ -98,6 +110,12 @@ impl Locale {
     pub(crate) fn table_copied(self) -> &'static str {
         &self.messages().table.copied
     }
+    pub(crate) fn input_number_increase(self) -> &'static str {
+        &self.messages().input_number.increase
+    }
+    pub(crate) fn input_number_decrease(self) -> &'static str {
+        &self.messages().input_number.decrease
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -126,6 +144,10 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.table_copy(), "复制为 Markdown");
         assert_eq!(Locale::default().table_copied(), "Copied");
         assert_eq!(Locale::SimplifiedChinese.table_copied(), "复制成功");
+        assert_eq!(Locale::default().input_number_increase(), "Increase");
+        assert_eq!(Locale::SimplifiedChinese.input_number_increase(), "增加");
+        assert_eq!(Locale::default().input_number_decrease(), "Decrease");
+        assert_eq!(Locale::SimplifiedChinese.input_number_decrease(), "减少");
     }
 
     #[test]
@@ -138,5 +160,13 @@ mod tests {
         assert_eq!(fallback.tag.close, embedded.tag.close);
         assert_eq!(fallback.table.copy, embedded.table.copy);
         assert_eq!(fallback.table.copied, embedded.table.copied);
+        assert_eq!(
+            fallback.input_number.increase,
+            embedded.input_number.increase
+        );
+        assert_eq!(
+            fallback.input_number.decrease,
+            embedded.input_number.decrease
+        );
     }
 }

@@ -287,6 +287,18 @@ input_disabled: Disabled
 input_basic_placeholder: Type something
 input_clearable_placeholder: Hover or focus to clear
 input_search_placeholder: Search
+input_number_intro: Enter numeric values with range clamping, precision, strict steps, side controls, formatting, and native keyboard editing.
+input_number_page: InputNumber 数字输入框
+input_number_basic: Basic usage
+input_number_steps: Step and strict step
+input_number_precision: Range and precision
+input_number_sizes: Sizes
+input_number_controls: Controls position and hidden controls
+input_number_states: Read-only and disabled
+input_number_formatted: Formatter and parser
+input_number_clear: Value on clear
+input_number_custom: Prefix, suffix, and custom icons
+input_number_align: Text alignment
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

@@ -955,6 +955,112 @@ const INPUT_EVENTS: &[Row] = &[
         "输入法组合结束并报告最终文本；随后 oninput 报告提交后的字段值。",
     ),
 ];
+const INPUT_NUMBER: &[Row] = &[
+    (
+        "el_input_number(), InputNumber::new, id",
+        "ElementId · call site",
+        "Create a numeric field. Supply a stable sibling-unique ID when creating repeated fields at the same call site.",
+        "创建数字输入框。同一调用位置生成多个时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "Option<f64> · None",
+        "The controlled value. Non-finite values are treated as empty; the application moves the value in oninput or onchange.",
+        "受控值。非有限值按空值处理；应用在 oninput 或 onchange 中移动该值。",
+    ),
+    (
+        "min, max, step, step_strictly",
+        "f64 / f64 / f64 / bool · safe integer range / 1 / false",
+        "Clamp to the range and step by the increment. Strict mode rounds input to a step multiple. Invalid steps restore 1; an inverted range collapses to min.",
+        "钳制到范围并按增量步进。严格模式将输入取整到步长倍数；非法步长恢复为 1，反向范围收敛到 min。",
+    ),
+    (
+        "precision",
+        "u32 · unset",
+        "Round and display with fixed decimal precision, capped at 15 useful f64 digits.",
+        "按固定小数位舍入与显示，最多使用 f64 的 15 位有效小数。",
+    ),
+    (
+        "value_on_clear",
+        "InputNumberValueOnClear · None",
+        "Choose Min, Max, or a concrete value when the edit is cleared; None commits null.",
+        "选择清空时提交 Min、Max 或具体值；None 提交空值。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Widths are 180/150/120 px and outer heights 40/32/24 px, matching Theme Chalk.",
+        "宽度为 180/150/120 px，外高为 40/32/24 px，与 Theme Chalk 一致。",
+    ),
+    (
+        "controls, controls_right",
+        "bool · true / false",
+        "Show side controls, or stack increase/decrease at the right edge. Hidden controls use 15 px horizontal padding.",
+        "显示侧边控件，或在右缘上下排列增加/减少按钮；隐藏控件时水平内边距为 15 px。",
+    ),
+    (
+        "align",
+        "InputNumberAlign · Center",
+        "Align the numeric text left, center, or right.",
+        "将数字文字左对齐、居中或右对齐。",
+    ),
+    (
+        "disabled, readonly",
+        "bool · false",
+        "disabled blocks editing and stepping; readonly keeps caret, selection, and copying but blocks value changes.",
+        "disabled 禁止编辑与步进；readonly 保留插入符号、选择与复制，但禁止改值。",
+    ),
+    (
+        "disabled_scientific",
+        "bool · false",
+        "Remove e/E from typed text so scientific notation cannot be entered.",
+        "移除键入文本中的 e/E，阻止科学计数法输入。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · empty / unset",
+        "Set the empty-state hint and the field's accessible name.",
+        "设置空态提示与字段的无障碍名称。",
+    ),
+    (
+        "prefix, suffix",
+        "IntoElement · none",
+        "Add leading and trailing content inside the field.",
+        "在字段内部添加前置与后置内容。",
+    ),
+    (
+        "decrease_icon, increase_icon",
+        "Icon · Element Plus arrows or minus/plus",
+        "Replace the control icons; they inherit the control color and size.",
+        "替换控件图标；图标继承控件颜色与尺寸。",
+    ),
+    (
+        "formatter, parser",
+        "Fn(f64) -> String / Fn(&str) -> String · none",
+        "Format committed values and extract numeric text from an edit. Draft text remains unformatted.",
+        "格式化提交值并从编辑文本提取数字；草稿文本保持未格式化。",
+    ),
+];
+const INPUT_NUMBER_EVENTS: &[Row] = &[
+    (
+        "oninput",
+        "Option<f64>, &mut Window, &mut App",
+        "Every parsed keystroke, control press, or keyboard step reports the value; invalid text reports None.",
+        "每次解析后的按键、控件按下或键盘步进报告值；非法文本报告 None。",
+    ),
+    (
+        "onchange",
+        "Option<f64>, Option<f64>, &mut Window, &mut App",
+        "A verified value changed on blur or by stepping; arguments are current and previous values.",
+        "失焦或步进后，已验证的值发生变化；参数为当前值与先前值。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1487,6 +1593,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Rate => (RATE, RATE_EVENTS),
         Page::Slider => (SLIDER, SLIDER_EVENTS),
         Page::Input => (INPUT, INPUT_EVENTS),
+        Page::InputNumber => (INPUT_NUMBER, INPUT_NUMBER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1545,6 +1652,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))

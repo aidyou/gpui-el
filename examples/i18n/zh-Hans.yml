@@ -287,6 +287,18 @@ input_disabled: 禁用
 input_basic_placeholder: 请输入内容
 input_clearable_placeholder: 悬停或聚焦后可清空
 input_search_placeholder: 搜索
+input_number_intro: 输入数值，支持范围钳制、精度、严格步长、侧边控件、格式化与原生键盘编辑。
+input_number_page: InputNumber 数字输入框
+input_number_basic: 基本用法
+input_number_steps: 步长与严格步长
+input_number_precision: 范围与精度
+input_number_sizes: 尺寸
+input_number_controls: 控件位置与隐藏控件
+input_number_states: 只读与禁用
+input_number_formatted: 格式化与解析
+input_number_clear: 清空时的值
+input_number_custom: 前缀、后缀与自定义图标
+input_number_align: 文字对齐
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

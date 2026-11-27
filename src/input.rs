@@ -42,7 +42,7 @@ pub enum InputSize {
 }
 
 impl InputSize {
-    fn height(self) -> f32 {
+    pub(crate) fn height(self) -> f32 {
         match self {
             InputSize::Large => 40.,
             InputSize::Default => 32.,
@@ -50,14 +50,14 @@ impl InputSize {
         }
     }
 
-    fn font_size(self) -> f32 {
+    pub(crate) fn font_size(self) -> f32 {
         match self {
             InputSize::Small => 12.,
             InputSize::Large | InputSize::Default => 14.,
         }
     }
 
-    fn padding(self) -> f32 {
+    pub(crate) fn padding(self) -> f32 {
         match self {
             InputSize::Large => 16.,
             InputSize::Default => 12.,
@@ -107,6 +107,7 @@ struct InputHandlers {
     onfocus: Option<FocusHandler>,
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
+    onkeydown: Option<InputKeyHandler>,
     oncompositionstart: Option<FocusHandler>,
     oncompositionupdate: Option<InputHandler>,
     oncompositionend: Option<InputHandler>,
@@ -224,6 +225,7 @@ impl InputState {
 
 /// An Element Plus input field.
 type InputHandler = Rc<dyn Fn(SharedString, &mut Window, &mut App)>;
+type InputKeyHandler = Rc<dyn Fn(&KeyDownEvent, &mut Window, &mut App) -> bool>;
 type FocusHandler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 #[derive(IntoElement)]
@@ -248,11 +250,15 @@ pub struct Input {
     show_word_limit: bool,
     prefix: Option<AnyElement>,
     suffix: Option<AnyElement>,
+    padding_x: Option<(f32, f32)>,
+    text_alignment: Option<gpui::TextAlign>,
+    accessibility_label: Option<SharedString>,
     oninput: Option<InputHandler>,
     onchange: Option<InputHandler>,
     onfocus: Option<FocusHandler>,
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
+    onkeydown: Option<InputKeyHandler>,
     oncompositionstart: Option<FocusHandler>,
     oncompositionupdate: Option<InputHandler>,
     oncompositionend: Option<InputHandler>,
@@ -286,11 +292,15 @@ impl Default for Input {
             show_word_limit: false,
             prefix: None,
             suffix: None,
+            padding_x: None,
+            text_alignment: None,
+            accessibility_label: None,
             oninput: None,
             onchange: None,
             onfocus: None,
             onblur: None,
             onclear: None,
+            onkeydown: None,
             oncompositionstart: None,
             oncompositionupdate: None,
             oncompositionend: None,
@@ -439,6 +449,29 @@ impl Input {
     /// Sets the trailing slot, like `suffix`.
     pub fn suffix(mut self, suffix: impl IntoElement) -> Self {
         self.suffix = Some(suffix.into_any_element());
+        self
+    }
+
+    pub(crate) fn horizontal_padding(mut self, left: f32, right: f32) -> Self {
+        self.padding_x = Some((left.max(0.), right.max(0.)));
+        self
+    }
+
+    pub(crate) fn text_alignment(mut self, alignment: gpui::TextAlign) -> Self {
+        self.text_alignment = Some(alignment);
+        self
+    }
+
+    pub(crate) fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.accessibility_label = Some(label.into());
+        self
+    }
+
+    pub(crate) fn on_key_down_filter(
+        mut self,
+        handler: impl Fn(&KeyDownEvent, &mut Window, &mut App) -> bool + 'static,
+    ) -> Self {
+        self.onkeydown = Some(Rc::new(handler));
         self
     }
 
@@ -1132,11 +1165,15 @@ impl RenderOnce for Input {
             show_word_limit,
             prefix,
             suffix,
+            padding_x,
+            text_alignment,
+            accessibility_label,
             oninput,
             onchange,
             onfocus,
             onblur,
             onclear,
+            onkeydown,
             oncompositionstart,
             oncompositionupdate,
             oncompositionend,
@@ -1170,6 +1207,7 @@ impl RenderOnce for Input {
                 onfocus,
                 onblur,
                 onclear,
+                onkeydown,
                 oncompositionstart,
                 oncompositionupdate,
                 oncompositionend,
@@ -1396,7 +1434,14 @@ impl RenderOnce for Input {
             .when(textarea, |el| el.items_stretch())
             .h(px(root_height))
             .w_full()
-            .px(px(size.padding() - tokens::BORDER_WIDTH))
+            .when_some(padding_x, |el, (left, right)| {
+                el.pl(px(left - tokens::BORDER_WIDTH))
+                    .pr(px(right - tokens::BORDER_WIDTH))
+            })
+            .when(padding_x.is_none(), |el| {
+                el.px(px(size.padding() - tokens::BORDER_WIDTH))
+            })
+            .when_some(accessibility_label, |el, label| el.aria_label(label))
             .when(textarea, |el| el.py(px(5.)))
             .rounded(px(corner_radius))
             .border_1()
@@ -1475,6 +1520,18 @@ impl RenderOnce for Input {
                 let state = state.clone();
                 move |event: &KeyDownEvent, window, cx| {
                     if disabled {
+                        return;
+                    }
+                    let key_handler = state
+                        .read(cx)
+                        .handlers
+                        .borrow()
+                        .as_ref()
+                        .and_then(|handlers| handlers.onkeydown.clone());
+                    if let Some(handler) = key_handler
+                        && handler(event, window, cx)
+                    {
+                        cx.stop_propagation();
                         return;
                     }
                     let key = event.keystroke.key.as_str();
@@ -1659,6 +1716,7 @@ impl RenderOnce for Input {
                     })
                     .when(!textarea, |el| el.flex().items_center().whitespace_nowrap())
                     .text_color(text_color)
+                    .when_some(text_alignment, |el, alignment| el.text_align(alignment))
                     .child(text),
             )
             .children({
@@ -2096,6 +2154,7 @@ mod tests {
                         onfocus: None,
                         onblur: None,
                         onclear: None,
+                        onkeydown: None,
                         oncompositionstart: Some(Rc::new({
                             let events = events_for_handler.clone();
                             move |_, _| {

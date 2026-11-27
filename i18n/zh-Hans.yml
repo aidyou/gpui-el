@@ -7,3 +7,6 @@ tag:
 table:
   copy: 复制为 Markdown
   copied: 复制成功
+input_number:
+  increase: 增加
+  decrease: 减少

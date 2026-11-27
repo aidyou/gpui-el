@@ -4,6 +4,7 @@ pub(super) mod container;
 pub(super) mod icon;
 pub(super) mod init;
 pub(super) mod input;
+pub(super) mod input_number;
 pub(super) mod layout;
 pub(super) mod link;
 pub(super) mod loading;

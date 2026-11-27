@@ -57,6 +57,7 @@ struct Gallery {
     rate: pages::rate::State,
     slider: pages::slider::State,
     input: pages::input::State,
+    input_number: pages::input_number::State,
 }
 
 impl Gallery {
@@ -111,10 +112,11 @@ enum Page {
     Rate,
     Slider,
     Input,
+    InputNumber,
 }
 
 impl Page {
-    const ALL: [Self; 20] = [
+    const ALL: [Self; 21] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -135,6 +137,7 @@ impl Page {
         Self::Rate,
         Self::Slider,
         Self::Input,
+        Self::InputNumber,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -159,6 +162,7 @@ impl Page {
             Self::Rate => &s.rate_intro,
             Self::Slider => &s.slider_intro,
             Self::Input => &s.input_intro,
+            Self::InputNumber => &s.input_number_intro,
         }
     }
 
@@ -184,6 +188,7 @@ impl Page {
             Self::Rate => "rate",
             Self::Slider => "slider",
             Self::Input => "input",
+            Self::InputNumber => "input-number",
         }
     }
 
@@ -209,6 +214,7 @@ impl Page {
             Self::Rate => &s.rate_page,
             Self::Slider => &s.slider_page,
             Self::Input => &s.input_page,
+            Self::InputNumber => &s.input_number_page,
         }
     }
 
@@ -245,6 +251,7 @@ impl Page {
             Self::Rate => &["el-rate"],
             Self::Slider => &["el-slider"],
             Self::Input => &["el-input"],
+            Self::InputNumber => &["el-input-number"],
         }
     }
 }
@@ -357,7 +364,8 @@ impl Render for Gallery {
                                         .entry(item(Page::Radio))
                                         .entry(item(Page::Rate))
                                         .entry(item(Page::Slider))
-                                        .entry(item(Page::Input)),
+                                        .entry(item(Page::Input))
+                                        .entry(item(Page::InputNumber)),
                                 ),
                         ),
                 )
@@ -384,6 +392,7 @@ impl Render for Gallery {
             Page::Rate => self.rates(s, cx),
             Page::Slider => self.sliders(s, cx),
             Page::Input => self.inputs(s, cx),
+            Page::InputNumber => self.input_numbers(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });
