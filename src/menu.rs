@@ -148,6 +148,11 @@ impl Metrics {
         self.icon_size() + 5.
     }
 }
+/// Gap between a row's icon and its label, and between the label and the
+/// trailing chevron. Nested rows add it to the icon gutter so their text
+/// starts where the parent title's text does.
+const ROW_GAP: f32 = 5.;
+
 /// Popup fade duration, like Theme Chalk's `el-zoom-in-center` transition.
 /// Normal speed for a popup fade; [`MotionSpeed`] scales it.
 const FADE_SECS: f64 = 0.2;
@@ -831,7 +836,7 @@ impl RenderOnce for MenuItem {
             .mx(px(metrics.item_inset))
             .rounded(px(metrics.item_radius))
             .px(px(metrics.padding_x))
-            .gap(px(5.))
+            .gap(px(ROW_GAP))
             .text_size(px(metrics.font_size))
             .text_color(rgb(if self.selected {
                 PRIMARY
@@ -1002,7 +1007,7 @@ impl RenderOnce for Menu {
                 let mut row = div()
                     .flex()
                     .items_center()
-                    .gap(px(5.))
+                    .gap(px(ROW_GAP))
                     .px(px(options.metrics.padding_x))
                     .text_size(px(options.metrics.font_size))
                     .whitespace_nowrap()
@@ -1265,7 +1270,7 @@ impl RenderOnce for Menu {
             shared
                 .roots
                 .iter()
-                .map(|node| shared.draw(node, 0, false, cx)),
+                .map(|node| shared.draw(node, 0, false, 0., cx)),
         )
     }
 }
@@ -1642,7 +1647,14 @@ impl Frame {
         }
         true
     }
-    fn draw(self: &Rc<Self>, node: &Node, depth: usize, floating: bool, cx: &App) -> AnyElement {
+    fn draw(
+        self: &Rc<Self>,
+        node: &Node,
+        depth: usize,
+        floating: bool,
+        indent: f32,
+        cx: &App,
+    ) -> AnyElement {
         if node.group {
             return div()
                 .flex()
@@ -1659,7 +1671,7 @@ impl Frame {
                 .children(
                     node.children
                         .iter()
-                        .map(|n| self.draw(n, depth, floating, cx)),
+                        .map(|n| self.draw(n, depth, floating, indent, cx)),
                 )
                 .into_any_element();
         }
@@ -1701,7 +1713,7 @@ impl Frame {
             .flex()
             .items_center()
             .flex_shrink_0()
-            .gap(px(5.))
+            .gap(px(ROW_GAP))
             .text_size(px(metrics.font_size))
             .whitespace_nowrap()
             // Native desktop menus inset the hover fill; the web preset keeps
@@ -1713,7 +1725,10 @@ impl Frame {
             } else if floating || top {
                 metrics.padding_x
             } else {
-                metrics.padding_x * (depth + 1) as f32
+                // Nested rows sit under a titled parent: align the child label
+                // with the parent title's text start, past its icon and the
+                // gap after it, plus the same left padding as the parent.
+                metrics.padding_x + indent
             }))
             .when(collapsed, |el| {
                 el.w(px(COLLAPSED_WIDTH)).px_0().justify_center()
@@ -1882,10 +1897,18 @@ impl Frame {
             });
         }
         if !self.options.popup() {
+            // Children line up with this row's label: the icon gutter and the
+            // gap after it when this row carries an icon, otherwise one more
+            // step of the row padding.
+            let step = if node.icon.is_some() {
+                metrics.icon_gutter() + ROW_GAP
+            } else {
+                metrics.padding_x
+            };
             let body = div().flex().flex_col().children(
                 node.children
                     .iter()
-                    .map(|n| self.draw(n, depth + 1, false, cx)),
+                    .map(|n| self.draw(n, depth + 1, false, indent + step, cx)),
             );
             // The transition keeps the body mounted while it collapses and
             // drops it once settled, like upstream's ElCollapseTransition.
@@ -2035,7 +2058,7 @@ impl Frame {
             .children(
                 node.children
                     .iter()
-                    .map(|n| self.draw(n, depth + 1, true, cx)),
+                    .map(|n| self.draw(n, depth + 1, true, 0., cx)),
             );
         deferred(
             anchored()
