@@ -11,6 +11,23 @@ pub(crate) struct State {
     password: String,
     textarea: String,
     styled: String,
+    prefixed: String,
+    radius: [String; 5],
+}
+
+fn field_target(state: &mut State, slot: usize) -> &mut String {
+    match slot {
+        0 => &mut state.basic,
+        1 => &mut state.sized,
+        2 => &mut state.limited,
+        3 => &mut state.clearing,
+        4 => &mut state.password,
+        5 => &mut state.textarea,
+        6 => &mut state.styled,
+        7 => &mut state.prefixed,
+        8..=12 => &mut state.radius[slot - 8],
+        _ => unreachable!("unknown input demo slot"),
+    }
 }
 
 impl Default for State {
@@ -23,6 +40,14 @@ impl Default for State {
             password: "secret".into(),
             textarea: "First line\nSecond line\nThird line".into(),
             styled: "Custom focus, outline, and text color".into(),
+            prefixed: String::new(),
+            radius: [
+                "Off · 0 px".into(),
+                "Small · 4 px".into(),
+                "Default · 8 px".into(),
+                "Large · 12 px".into(),
+                "Round · capsule".into(),
+            ],
         }
     }
 }
@@ -38,15 +63,7 @@ impl Gallery {
                 .value(value)
                 .oninput(move |reported, _, cx| {
                     view.update(cx, |this, cx| {
-                        let target = match slot {
-                            0 => &mut this.input.basic,
-                            1 => &mut this.input.sized,
-                            2 => &mut this.input.limited,
-                            3 => &mut this.input.clearing,
-                            4 => &mut this.input.password,
-                            5 => &mut this.input.textarea,
-                            _ => &mut this.input.styled,
-                        };
+                        let target = field_target(&mut this.input, slot);
                         *target = reported.to_string();
                         cx.notify();
                     })
@@ -88,8 +105,7 @@ impl Gallery {
         );
         let prefixed = row().child(
             width().child(
-                el_input()
-                    .id("input-prefixed")
+                field(7, "input-prefixed".into(), &self.input.prefixed)
                     .placeholder(s.input_search_placeholder.as_str())
                     .prefix(div().child(el_icon("search").size(14.))),
             ),
@@ -113,36 +129,20 @@ impl Gallery {
         );
         let radius = row().child(
             div().flex().flex_col().gap(px(12.)).children([
+                width()
+                    .child(field(8, "input-radius-off".into(), &self.input.radius[0]).radius_off()),
                 width().child(
-                    el_input()
-                        .id("input-radius-off")
-                        .value("Off · 0 px")
-                        .radius_off(),
+                    field(9, "input-radius-small".into(), &self.input.radius[1]).radius_small(),
                 ),
                 width().child(
-                    el_input()
-                        .id("input-radius-small")
-                        .value("Small · 4 px")
-                        .radius_small(),
-                ),
-                width().child(
-                    el_input()
-                        .id("input-radius-default")
-                        .value("Default · 8 px")
+                    field(10, "input-radius-default".into(), &self.input.radius[2])
                         .radius(InputRadius::Default),
                 ),
                 width().child(
-                    el_input()
-                        .id("input-radius-large")
-                        .value("Large · 12 px")
-                        .radius_large(),
+                    field(11, "input-radius-large".into(), &self.input.radius[3]).radius_large(),
                 ),
-                width().child(
-                    el_input()
-                        .id("input-radius-round")
-                        .value("Round · capsule")
-                        .round(),
-                ),
+                width()
+                    .child(field(12, "input-radius-round".into(), &self.input.radius[4]).round()),
             ]),
         );
         let styled = row().child(
@@ -258,5 +258,30 @@ impl Gallery {
                         })),
                 ),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_editable_demo_has_its_own_controlled_state_slot() {
+        let mut state = State::default();
+        for slot in 0..=12 {
+            *field_target(&mut state, slot) = format!("slot {slot}");
+        }
+        assert_eq!(state.basic, "slot 0");
+        assert_eq!(state.sized, "slot 1");
+        assert_eq!(state.limited, "slot 2");
+        assert_eq!(state.clearing, "slot 3");
+        assert_eq!(state.password, "slot 4");
+        assert_eq!(state.textarea, "slot 5");
+        assert_eq!(state.styled, "slot 6");
+        assert_eq!(state.prefixed, "slot 7");
+        assert_eq!(
+            state.radius,
+            ["slot 8", "slot 9", "slot 10", "slot 11", "slot 12"]
+        );
     }
 }
