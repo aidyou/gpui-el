@@ -178,6 +178,7 @@ mod checkbox;
 mod error;
 mod grid;
 mod icon;
+mod input;
 mod layout;
 mod link;
 mod loading;
@@ -204,6 +205,7 @@ pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkb
 pub use error::{Error, Result};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};
+pub use input::{Input, InputSize, el_input};
 pub use layout::{
     Aside, Container, Direction, Footer, Header, Main, Space, SpaceAlignment, SpaceSize, el_aside,
     el_container, el_footer, el_header, el_main, el_space,

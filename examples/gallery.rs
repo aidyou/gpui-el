@@ -56,6 +56,7 @@ struct Gallery {
     radio: pages::radio::State,
     rate: pages::rate::State,
     slider: pages::slider::State,
+    input: pages::input::State,
 }
 
 impl Gallery {
@@ -109,10 +110,11 @@ enum Page {
     Radio,
     Rate,
     Slider,
+    Input,
 }
 
 impl Page {
-    const ALL: [Self; 19] = [
+    const ALL: [Self; 20] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -132,6 +134,7 @@ impl Page {
         Self::Radio,
         Self::Rate,
         Self::Slider,
+        Self::Input,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -155,6 +158,7 @@ impl Page {
             Self::Radio => &s.radio_intro,
             Self::Rate => &s.rate_intro,
             Self::Slider => &s.slider_intro,
+            Self::Input => &s.input_intro,
         }
     }
 
@@ -179,6 +183,7 @@ impl Page {
             Self::Radio => "radio",
             Self::Rate => "rate",
             Self::Slider => "slider",
+            Self::Input => "input",
         }
     }
 
@@ -203,6 +208,7 @@ impl Page {
             Self::Radio => &s.radio_page,
             Self::Rate => &s.rate_page,
             Self::Slider => &s.slider_page,
+            Self::Input => &s.input_page,
         }
     }
 
@@ -238,6 +244,7 @@ impl Page {
             Self::Radio => &["el-radio", "el-radio-group"],
             Self::Rate => &["el-rate"],
             Self::Slider => &["el-slider"],
+            Self::Input => &["el-input"],
         }
     }
 }
@@ -349,7 +356,8 @@ impl Render for Gallery {
                                         .entry(item(Page::Checkbox))
                                         .entry(item(Page::Radio))
                                         .entry(item(Page::Rate))
-                                        .entry(item(Page::Slider)),
+                                        .entry(item(Page::Slider))
+                                        .entry(item(Page::Input)),
                                 ),
                         ),
                 )
@@ -375,6 +383,7 @@ impl Render for Gallery {
             Page::Radio => self.radios(s, cx),
             Page::Rate => self.rates(s, cx),
             Page::Slider => self.sliders(s, cx),
+            Page::Input => self.inputs(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

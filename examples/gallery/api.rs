@@ -837,6 +837,82 @@ const RATE: &[Row] = &[
         "滑块的无障碍名称。",
     ),
 ];
+const INPUT: &[Row] = &[
+    (
+        "el_input(), Input::new, id",
+        "ElementId · call site",
+        "Create a field. Supply a stable sibling-unique ID when creating repeated fields at the same call site.",
+        "创建输入框。同一调用位置生成多个输入框时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value, placeholder",
+        "SharedString · empty",
+        "The controlled value, and the placeholder shown while it is empty.",
+        "受控值，以及值为空时显示的占位文本。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default (32 px)",
+        "Large is 40 px, Small is 24 px; font size is 14 px, 12 px when small, and horizontal padding 16/12/8 px.",
+        "Large 为 40 px，Small 为 24 px；字号为 14 px，Small 为 12 px，水平内边距 16/12/8 px。",
+    ),
+    (
+        "disabled, readonly",
+        "bool · false",
+        "disabled blocks all editing; readonly still moves the caret and selection and copies.",
+        "disabled 禁止一切编辑；readonly 仍可移动插入符号与选择并可复制。",
+    ),
+    (
+        "clearable",
+        "bool · false",
+        "Adds a clear button at the right edge, shown on focus or by hovering it.",
+        "在右缘添加清空按钮，聚焦或悬停该按钮时显示。",
+    ),
+    (
+        "password, show_password",
+        "bool · false",
+        "password masks the value with bullets; show_password adds a reveal toggle.",
+        "password 以圆点掩码显示；show_password 添加显示切换按钮。",
+    ),
+    (
+        "maxlength, show_word_limit",
+        "usize / bool · unset / false",
+        "Stops typing past the limit and optionally shows a length / limit count that turns red when exceeded.",
+        "超过限制后停止输入，可选显示 字数/上限 计数，超限后变红。",
+    ),
+    (
+        "prefix, suffix",
+        "AnyElement · none",
+        "The leading and trailing slots, sized and colored like the field icons.",
+        "前缀与后缀插槽，尺寸与颜色与字段图标一致。",
+    ),
+];
+const INPUT_EVENTS: &[Row] = &[
+    (
+        "oninput",
+        "SharedString, &mut Window, &mut App",
+        "Every keystroke and IME composition step reports the value, like the web input event.",
+        "每次按键与输入法组合步骤都报告当前值，对应 Web 的 input 事件。",
+    ),
+    (
+        "onchange",
+        "SharedString, &mut Window, &mut App",
+        "A blur or a clear reports the committed value, like the web change event; Enter does not commit.",
+        "失焦或清空时报告提交值，对应 Web 的 change 事件；Enter 不提交。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The field gained or lost focus.",
+        "字段获得或失去焦点。",
+    ),
+    (
+        "onclear",
+        "SharedString, &mut Window, &mut App",
+        "The clear button emptied the field.",
+        "清空按钮清空了字段。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1338,6 +1414,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Radio => (RADIO, RADIO_EVENTS),
         Page::Rate => (RATE, RATE_EVENTS),
         Page::Slider => (SLIDER, SLIDER_EVENTS),
+        Page::Input => (INPUT, INPUT_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())

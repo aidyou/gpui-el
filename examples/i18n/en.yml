@@ -266,6 +266,19 @@ slider_mark_b: 25%
 slider_mark_c: 50%
 slider_mark_d: 75%
 slider_mark_e: 100%
+input_intro: Type, select, and edit with the keyboard or an IME, with a caret, selection, clear, masking, and a character count.
+input_page: Input
+input_basic: Basic usage
+input_sizes: Sizes
+input_limited: Character limit
+input_clearable: Clearable
+input_password: Password
+input_prefix: Prefix slot
+input_readonly: Read-only
+input_disabled: Disabled
+input_basic_placeholder: Type something
+input_clearable_placeholder: Hover or focus to clear
+input_search_placeholder: Search
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair
