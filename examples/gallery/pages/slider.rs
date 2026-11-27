@@ -17,6 +17,7 @@ pub(crate) struct State {
     range: (f32, f32),
     vertical: f32,
     marks: f32,
+    formatted: f32,
 }
 
 impl Default for State {
@@ -28,6 +29,7 @@ impl Default for State {
             range: (20., 60.),
             vertical: 40.,
             marks: 30.,
+            formatted: 40.,
         }
     }
 }
@@ -52,7 +54,8 @@ impl Gallery {
                             1 => &mut this.slider.sizes,
                             2 => &mut this.slider.steps,
                             3 => &mut this.slider.vertical,
-                            _ => &mut this.slider.marks,
+                            4 => &mut this.slider.marks,
+                            _ => &mut this.slider.formatted,
                         };
                         *target = reported;
                         cx.notify();
@@ -126,9 +129,7 @@ impl Gallery {
         ));
         let formatted = row().child(
             horizontal_demo().child(
-                el_slider()
-                    .id("slider-formatted")
-                    .value(40.)
+                slider(5, "slider-formatted".into(), self.slider.formatted)
                     .format_tooltip(|value| format!("{value:.0}%").into()),
             ),
         );
@@ -219,7 +220,9 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     #[gpui::test]
-    fn horizontal_slider_has_width_and_drags_inside_a_wrapping_row(cx: &mut gpui::TestAppContext) {
+    fn formatted_horizontal_slider_has_width_and_drags_inside_a_wrapping_row(
+        cx: &mut gpui::TestAppContext,
+    ) {
         struct Harness {
             value: Rc<RefCell<f32>>,
             bounds: Rc<RefCell<Option<gpui::Bounds<gpui::Pixels>>>>,
@@ -236,14 +239,19 @@ mod tests {
                 div().w(px(600.)).child(
                     row().child(
                         horizontal_demo()
-                            .child(el_slider().id("row-slider").value(current).oninput(
-                                move |reported, _, _| {
-                                    let gpui_el::SliderValue::Single(reported) = reported else {
-                                        return;
-                                    };
-                                    *value.borrow_mut() = reported;
-                                },
-                            ))
+                            .child(
+                                el_slider()
+                                    .id("row-slider")
+                                    .value(current)
+                                    .format_tooltip(|value| format!("{value:.0}%").into())
+                                    .oninput(move |reported, _, _| {
+                                        let gpui_el::SliderValue::Single(reported) = reported
+                                        else {
+                                            return;
+                                        };
+                                        *value.borrow_mut() = reported;
+                                    }),
+                            )
                             .child(
                                 gpui::canvas(
                                     move |bounds, _, _| {
@@ -280,11 +288,17 @@ mod tests {
             gpui::MouseButton::Left,
             gpui::Modifiers::default(),
         );
+        view.simulate_event(gpui::MouseMoveEvent {
+            position: gpui::point(px(210.), px(16.)),
+            pressed_button: Some(gpui::MouseButton::Left),
+            ..Default::default()
+        });
+        assert_eq!(*value.borrow(), 70.);
         view.simulate_mouse_up(
-            gpui::point(px(150.), px(16.)),
+            gpui::point(px(210.), px(16.)),
             gpui::MouseButton::Left,
             gpui::Modifiers::default(),
         );
-        assert_eq!(*value.borrow(), 50.);
+        assert_eq!(*value.borrow(), 70.);
     }
 }
