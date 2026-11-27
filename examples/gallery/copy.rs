@@ -161,6 +161,7 @@ copy_fields!(
     checkbox_bordered,
     checkbox_group,
     checkbox_content,
+    checkbox_colors,
     checkbox_all,
     checkbox_option,
     checkbox_custom,

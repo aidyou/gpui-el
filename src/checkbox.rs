@@ -7,7 +7,7 @@
 //! element.
 
 use gpui::{
-    AnyElement, App, ElementId, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
+    AnyElement, App, ElementId, Hsla, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
     prelude::*, px, rgb,
 };
 
@@ -109,6 +109,8 @@ pub struct Checkbox {
     border: bool,
     /// Whether `border` was set explicitly, so a group cannot override it.
     explicit_border: bool,
+    active_color: Option<Hsla>,
+    inactive_color: Option<Hsla>,
     onchange: Option<ChangeHandler>,
 }
 
@@ -182,6 +184,20 @@ impl Checkbox {
         self
     }
 
+    /// Sets the checked and indeterminate accent color; primary by default.
+    /// Disabled checkboxes keep their neutral disabled colors.
+    pub fn active_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.active_color = Some(color.into());
+        self
+    }
+
+    /// Sets the unchecked outline color; the theme border color by default.
+    /// Disabled checkboxes keep their neutral disabled colors.
+    pub fn inactive_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.inactive_color = Some(color.into());
+        self
+    }
+
     /// Reports the next checked state on native pointer or keyboard
     /// activation. Not emitted while disabled.
     #[track_caller]
@@ -211,23 +227,33 @@ impl RenderOnce for Checkbox {
         // Upstream keeps the box white, the border neutral, and switches both
         // to the primary color for the checked and indeterminate states.
         let border = theme.border(false);
+        let active_color: Hsla = self.active_color.unwrap_or_else(|| rgb(PRIMARY).into());
+        let inactive_color: Hsla = self.inactive_color.unwrap_or_else(|| rgb(border).into());
         let (box_bg, box_border, icon) = if self.disabled {
             if self.checked || self.indeterminate {
-                (theme.fill(Fill::ExtraLight), border, theme.disabled_text())
+                (
+                    rgb(theme.fill(Fill::ExtraLight)).into(),
+                    rgb(border).into(),
+                    theme.disabled_text(),
+                )
             } else {
-                (theme.fill(Fill::Light), border, theme.disabled_text())
+                (
+                    rgb(theme.fill(Fill::Light)).into(),
+                    rgb(border).into(),
+                    theme.disabled_text(),
+                )
             }
         } else if self.checked || self.indeterminate {
-            (PRIMARY, PRIMARY, WHITE)
+            (active_color, active_color, WHITE)
         } else {
-            (theme.background(), border, WHITE)
+            (rgb(theme.background()).into(), inactive_color, WHITE)
         };
-        let label_color = if self.disabled {
-            theme.disabled_text()
+        let label_color: Hsla = if self.disabled {
+            rgb(theme.disabled_text()).into()
         } else if self.checked {
-            PRIMARY
+            active_color
         } else {
-            theme.regular_text()
+            rgb(theme.regular_text()).into()
         };
         // The mark: a check for the checked state, a dash for indeterminate.
         let mark = if self.indeterminate {
@@ -255,16 +281,16 @@ impl RenderOnce for Checkbox {
             .items_center()
             .h(px(metrics.height))
             .text_size(px(metrics.font_size))
-            .text_color(rgb(label_color))
+            .text_color(label_color)
             .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
             .when(self.border, |el| {
                 el.border_1()
                     .border_color(if self.disabled {
-                        rgb(theme.border_lighter())
+                        rgb(theme.border_lighter()).into()
                     } else if self.checked {
-                        rgb(PRIMARY)
+                        active_color
                     } else {
-                        rgb(border)
+                        inactive_color
                     })
                     .rounded(px(metrics.radius))
                     .pl(px(metrics.padding_left))
@@ -279,10 +305,10 @@ impl RenderOnce for Checkbox {
                     .size(px(box_size))
                     .rounded(px(tokens::radius::SMALL))
                     .border_1()
-                    .border_color(rgb(box_border))
-                    .bg(rgb(box_bg))
+                    .border_color(box_border)
+                    .bg(box_bg)
                     .when(!self.disabled, |el| {
-                        el.hover(move |style| style.border_color(rgb(PRIMARY)))
+                        el.hover(move |style| style.border_color(active_color))
                     })
                     .child(mark),
             )
@@ -321,7 +347,7 @@ impl RenderOnce for Checkbox {
                 // ring on the checkbox itself.
                 .focus_visible(move |s| {
                     s.shadow(vec![gpui::BoxShadow {
-                        color: rgb(PRIMARY).into(),
+                        color: active_color,
                         offset: gpui::point(px(0.), px(0.)),
                         blur_radius: px(0.),
                         spread_radius: px(2.),
@@ -356,6 +382,8 @@ pub struct CheckboxGroup {
     size: Option<CheckboxSize>,
     disabled: Option<bool>,
     border: Option<bool>,
+    active_color: Option<Hsla>,
+    inactive_color: Option<Hsla>,
     /// Upstream spaces siblings with `margin-right: 30px`.
     gap: Option<f32>,
     accessibility_label: Option<SharedString>,
@@ -404,6 +432,19 @@ impl CheckboxGroup {
         self
     }
 
+    /// Sets the checked and indeterminate accent for checkboxes that do not
+    /// choose their own.
+    pub fn active_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.active_color = Some(color.into());
+        self
+    }
+
+    /// Sets the unchecked outline for checkboxes that do not choose their own.
+    pub fn inactive_color(mut self, color: impl Into<Hsla>) -> Self {
+        self.inactive_color = Some(color.into());
+        self
+    }
+
     /// Overrides the 30 px gap between siblings.
     pub fn gap(mut self, gap: f32) -> Self {
         self.gap = Some(gap);
@@ -440,6 +481,16 @@ impl CheckboxGroup {
                 && let Some(border) = self.border
             {
                 checkbox.border = border;
+            }
+            if checkbox.active_color.is_none()
+                && let Some(active_color) = self.active_color
+            {
+                checkbox.active_color = Some(active_color);
+            }
+            if checkbox.inactive_color.is_none()
+                && let Some(inactive_color) = self.inactive_color
+            {
+                checkbox.inactive_color = Some(inactive_color);
             }
         }
     }
@@ -516,12 +567,16 @@ mod tests {
             .checked(true)
             .indeterminate(false)
             .small()
-            .border(true);
+            .border(true)
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949));
         assert_eq!(widget.label.as_deref(), Some("Remember"));
         assert!(widget.checked);
         assert!(!widget.indeterminate);
         assert_eq!(widget.size, CheckboxSize::Small);
         assert!(widget.border);
+        assert_eq!(widget.active_color, Some(rgb(0x13ce66).into()));
+        assert_eq!(widget.inactive_color, Some(rgb(0xff4949).into()));
         assert!(el_checkbox().checked(true).border(true).checked);
         assert!(el_checkbox().checked(true).small().checked);
     }
@@ -532,16 +587,29 @@ mod tests {
             .small()
             .disabled(true)
             .border(true)
-            .checkbox(el_checkbox().id("a").large().disabled(false))
+            .active_color(rgb(0x13ce66))
+            .inactive_color(rgb(0xff4949))
+            .checkbox(
+                el_checkbox()
+                    .id("a")
+                    .large()
+                    .disabled(false)
+                    .active_color(rgb(0x626aef))
+                    .inactive_color(rgb(0x909399)),
+            )
             .checkbox(el_checkbox().id("b"));
         group.apply_defaults();
         let first = &group.checkboxes[0];
         assert_eq!(first.size, CheckboxSize::Large);
         assert!(!first.disabled);
+        assert_eq!(first.active_color, Some(rgb(0x626aef).into()));
+        assert_eq!(first.inactive_color, Some(rgb(0x909399).into()));
         let second = &group.checkboxes[1];
         assert_eq!(second.size, CheckboxSize::Small);
         assert!(second.disabled);
         assert!(second.border);
+        assert_eq!(second.active_color, Some(rgb(0x13ce66).into()));
+        assert_eq!(second.inactive_color, Some(rgb(0xff4949).into()));
         // The 30 px sibling gap is the render default, not a stored setting.
         let vertical = el_checkbox_group().vertical();
         assert_eq!(vertical.direction, Some(Direction::Vertical));

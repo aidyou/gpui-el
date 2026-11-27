@@ -228,6 +228,7 @@ checkbox_sizes: Sizes
 checkbox_bordered: Bordered
 checkbox_group: Checkbox group
 checkbox_content: Custom content
+checkbox_colors: Custom colors
 checkbox_all: All
 checkbox_option: Option
 checkbox_custom: Custom content

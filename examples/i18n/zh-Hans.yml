@@ -228,6 +228,7 @@ checkbox_sizes: 尺寸
 checkbox_bordered: 带边框
 checkbox_group: 多选框组
 checkbox_content: 自定义内容
+checkbox_colors: 自定义颜色
 checkbox_all: 全选
 checkbox_option: 选项
 checkbox_custom: 自定义内容

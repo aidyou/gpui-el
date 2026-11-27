@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use gpui::{Context, Div, div, prelude::*, px};
+use gpui::{Context, Div, div, prelude::*, px, rgb};
 use gpui_el::{CheckboxSize, el_button, el_checkbox, el_checkbox_group, el_icon};
 
 use crate::{Gallery, copy::Copy, demo::row};
@@ -13,6 +13,7 @@ pub(crate) struct State {
     children: [bool; 3],
     group: HashSet<&'static str>,
     custom: bool,
+    colors: bool,
 }
 
 impl Default for State {
@@ -24,6 +25,7 @@ impl Default for State {
             children: [true, true, false],
             group: HashSet::from(["A", "B"]),
             custom: true,
+            colors: true,
         }
     }
 }
@@ -193,6 +195,21 @@ impl Gallery {
                         .child(s.checkbox_custom.as_str()),
                 )
         });
+        let colors = row().child({
+            let view = view.clone();
+            el_checkbox()
+                .id("checkbox-colors")
+                .label(s.checkbox_option.as_str())
+                .checked(self.checkbox.colors)
+                .active_color(rgb(0x13ce66))
+                .inactive_color(rgb(0xff4949))
+                .onchange(move |checked, _, cx| {
+                    view.update(cx, |this, cx| {
+                        this.checkbox.colors = checked;
+                        cx.notify();
+                    })
+                })
+        });
         let section =
             |id, title, code: &str, controls| self.section(cx, id, title, || code.into(), controls);
         div()
@@ -279,6 +296,13 @@ el_checkbox_group().vertical().gap(12.).checkboxes(
         .child("Custom content"),
 );"#,
                 custom.into_any_element(),
+            ))
+            .child(section(
+                "checkbox-colors",
+                &s.checkbox_colors,
+                r#"el_checkbox().label("Option").checked(on)
+    .active_color(rgb(0x13ce66)).inactive_color(rgb(0xff4949));"#,
+                colors.into_any_element(),
             ))
             .child(
                 div().flex().items_center().gap(px(12.)).child(
