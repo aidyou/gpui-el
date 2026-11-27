@@ -200,6 +200,7 @@ mod table;
 mod tag;
 mod text;
 mod theme;
+mod time_picker;
 mod transition;
 
 pub use auto_complete::{AutoComplete, AutoCompleteOption, el_auto_complete};
@@ -241,6 +242,7 @@ pub use table::{Column, Table, TableAlign, TableSize, el_table};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
+pub use time_picker::{TimeFormat, TimePicker, el_time_picker};
 pub use transition::{Transition, TransitionEffect, el_transition};
 
 /// Sets the defaults for one GPUI application. Individual controls may still

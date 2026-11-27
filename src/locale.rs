@@ -25,6 +25,7 @@ struct Messages {
     select: SelectMessages,
     auto_complete: AutoCompleteMessages,
     color_picker: ColorPickerMessages,
+    time_picker: TimePickerMessages,
 }
 
 #[derive(Deserialize)]
@@ -83,6 +84,14 @@ struct ColorPickerMessages {
     default_label: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TimePickerMessages {
+    confirm: String,
+    cancel: String,
+    placeholder: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -120,6 +129,11 @@ impl Messages {
                 clear: "Clear".into(),
                 confirm: "Confirm".into(),
                 default_label: "Color picker".into(),
+            },
+            time_picker: TimePickerMessages {
+                confirm: "Confirm".into(),
+                cancel: "Cancel".into(),
+                placeholder: "Select time".into(),
             },
         }
     }
@@ -185,6 +199,15 @@ impl Locale {
     pub(crate) fn color_picker_default_label(self) -> &'static str {
         &self.messages().color_picker.default_label
     }
+    pub(crate) fn time_picker_confirm(self) -> &'static str {
+        &self.messages().time_picker.confirm
+    }
+    pub(crate) fn time_picker_cancel(self) -> &'static str {
+        &self.messages().time_picker.cancel
+    }
+    pub(crate) fn time_picker_placeholder(self) -> &'static str {
+        &self.messages().time_picker.placeholder
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -241,6 +264,15 @@ mod tests {
             Locale::SimplifiedChinese.color_picker_default_label(),
             "颜色选择器"
         );
+        assert_eq!(Locale::default().time_picker_confirm(), "Confirm");
+        assert_eq!(Locale::SimplifiedChinese.time_picker_confirm(), "确定");
+        assert_eq!(Locale::default().time_picker_cancel(), "Cancel");
+        assert_eq!(Locale::SimplifiedChinese.time_picker_cancel(), "取消");
+        assert_eq!(Locale::default().time_picker_placeholder(), "Select time");
+        assert_eq!(
+            Locale::SimplifiedChinese.time_picker_placeholder(),
+            "选择时间"
+        );
     }
 
     #[test]
@@ -275,6 +307,12 @@ mod tests {
         assert_eq!(
             fallback.color_picker.default_label,
             embedded.color_picker.default_label
+        );
+        assert_eq!(fallback.time_picker.confirm, embedded.time_picker.confirm);
+        assert_eq!(fallback.time_picker.cancel, embedded.time_picker.cancel);
+        assert_eq!(
+            fallback.time_picker.placeholder,
+            embedded.time_picker.placeholder
         );
     }
 }

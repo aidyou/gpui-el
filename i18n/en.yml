@@ -22,3 +22,7 @@ color_picker:
   clear: Clear
   confirm: Confirm
   default_label: Color picker
+time_picker:
+  confirm: Confirm
+  cancel: Cancel
+  placeholder: Select time

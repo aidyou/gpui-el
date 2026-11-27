@@ -351,6 +351,13 @@ color_picker_format: RGB 输出格式
 color_picker_sizes: 尺寸
 color_picker_disabled: 禁用
 color_picker_clear: 隐藏清空操作
+time_picker_intro: 通过滚动小时/分钟列、可选秒、键盘步进与确定/取消选择单个时间。
+time_picker_page: TimePicker 时间选择器
+time_picker_basic: 基本用法
+time_picker_seconds: 包含秒
+time_picker_sizes: 尺寸
+time_picker_states: 只读与禁用
+time_picker_custom: 自定义图标与不可编辑输入
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

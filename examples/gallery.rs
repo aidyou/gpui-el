@@ -57,6 +57,7 @@ struct Gallery {
     switch: pages::switch::State,
     checkbox: pages::checkbox::State,
     color_picker: pages::color_picker::State,
+    time_picker: pages::time_picker::State,
     radio: pages::radio::State,
     rate: pages::rate::State,
     slider: pages::slider::State,
@@ -121,10 +122,11 @@ enum Page {
     Select,
     AutoComplete,
     ColorPicker,
+    TimePicker,
 }
 
 impl Page {
-    const ALL: [Self; 25] = [
+    const ALL: [Self; 26] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -150,6 +152,7 @@ impl Page {
         Self::Select,
         Self::AutoComplete,
         Self::ColorPicker,
+        Self::TimePicker,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -179,6 +182,7 @@ impl Page {
             Self::Select => &s.select_intro,
             Self::AutoComplete => &s.auto_complete_intro,
             Self::ColorPicker => &s.color_picker_intro,
+            Self::TimePicker => &s.time_picker_intro,
         }
     }
 
@@ -209,6 +213,7 @@ impl Page {
             Self::Select => "select",
             Self::AutoComplete => "auto-complete",
             Self::ColorPicker => "color-picker",
+            Self::TimePicker => "time-picker",
         }
     }
 
@@ -239,6 +244,7 @@ impl Page {
             Self::Select => &s.select_page,
             Self::AutoComplete => &s.auto_complete_page,
             Self::ColorPicker => &s.color_picker_page,
+            Self::TimePicker => &s.time_picker_page,
         }
     }
 
@@ -280,6 +286,7 @@ impl Page {
             Self::Select => &["el-select", "el-option"],
             Self::AutoComplete => &["el-autocomplete"],
             Self::ColorPicker => &["el-color-picker"],
+            Self::TimePicker => &["el-time-picker"],
         }
     }
 }
@@ -397,7 +404,8 @@ impl Render for Gallery {
                                         .entry(item(Page::Capsule))
                                         .entry(item(Page::Select))
                                         .entry(item(Page::AutoComplete))
-                                        .entry(item(Page::ColorPicker)),
+                                        .entry(item(Page::ColorPicker))
+                                        .entry(item(Page::TimePicker)),
                                 ),
                         ),
                 )
@@ -429,6 +437,7 @@ impl Render for Gallery {
             Page::Select => self.selects(s, cx),
             Page::AutoComplete => self.auto_completes(s, cx),
             Page::ColorPicker => self.color_pickers(s, cx),
+            Page::TimePicker => self.time_pickers(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

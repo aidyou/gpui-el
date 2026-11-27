@@ -23,3 +23,4 @@ pub(super) mod switch;
 pub(super) mod table;
 pub(super) mod tag;
 pub(super) mod text;
+pub(super) mod time_picker;

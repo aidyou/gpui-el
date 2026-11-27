@@ -108,6 +108,7 @@ struct InputHandlers {
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
     onkeydown: Option<InputKeyHandler>,
+    onmousedown: Option<InputMouseDownHandler>,
     oncompositionstart: Option<FocusHandler>,
     oncompositionupdate: Option<InputHandler>,
     oncompositionend: Option<InputHandler>,
@@ -226,6 +227,7 @@ impl InputState {
 /// An Element Plus input field.
 type InputHandler = Rc<dyn Fn(SharedString, &mut Window, &mut App)>;
 type InputKeyHandler = Rc<dyn Fn(&KeyDownEvent, &mut Window, &mut App) -> bool>;
+type InputMouseDownHandler = Rc<dyn Fn(&MouseDownEvent, &mut Window, &mut App) -> bool>;
 type FocusHandler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 #[derive(IntoElement)]
@@ -259,6 +261,7 @@ pub struct Input {
     onblur: Option<FocusHandler>,
     onclear: Option<InputHandler>,
     onkeydown: Option<InputKeyHandler>,
+    onmousedown: Option<InputMouseDownHandler>,
     oncompositionstart: Option<FocusHandler>,
     oncompositionupdate: Option<InputHandler>,
     oncompositionend: Option<InputHandler>,
@@ -301,6 +304,7 @@ impl Default for Input {
             onblur: None,
             onclear: None,
             onkeydown: None,
+            onmousedown: None,
             oncompositionstart: None,
             oncompositionupdate: None,
             oncompositionend: None,
@@ -472,6 +476,14 @@ impl Input {
         handler: impl Fn(&KeyDownEvent, &mut Window, &mut App) -> bool + 'static,
     ) -> Self {
         self.onkeydown = Some(Rc::new(handler));
+        self
+    }
+
+    pub(crate) fn on_mouse_down_filter(
+        mut self,
+        handler: impl Fn(&MouseDownEvent, &mut Window, &mut App) -> bool + 'static,
+    ) -> Self {
+        self.onmousedown = Some(Rc::new(handler));
         self
     }
 
@@ -1174,6 +1186,7 @@ impl RenderOnce for Input {
             onblur,
             onclear,
             onkeydown,
+            onmousedown,
             oncompositionstart,
             oncompositionupdate,
             oncompositionend,
@@ -1208,6 +1221,7 @@ impl RenderOnce for Input {
                 onblur,
                 onclear,
                 onkeydown,
+                onmousedown,
                 oncompositionstart,
                 oncompositionupdate,
                 oncompositionend,
@@ -1469,6 +1483,18 @@ impl RenderOnce for Input {
                 let display = display.clone();
                 move |event: &MouseDownEvent, window, cx| {
                     if disabled {
+                        return;
+                    }
+                    let mouse_down_handler = state
+                        .read(cx)
+                        .handlers
+                        .borrow()
+                        .as_ref()
+                        .and_then(|handlers| handlers.onmousedown.clone());
+                    if let Some(handler) = mouse_down_handler
+                        && handler(event, window, cx)
+                    {
+                        cx.stop_propagation();
                         return;
                     }
                     let focus = state.read(cx).focus.clone();
@@ -2155,6 +2181,7 @@ mod tests {
                         onblur: None,
                         onclear: None,
                         onkeydown: None,
+                        onmousedown: None,
                         oncompositionstart: Some(Rc::new({
                             let events = events_for_handler.clone();
                             move |_, _| {

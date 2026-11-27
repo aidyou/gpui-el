@@ -22,3 +22,7 @@ color_picker:
   clear: 清空
   confirm: 确定
   default_label: 颜色选择器
+time_picker:
+  confirm: 确定
+  cancel: 取消
+  placeholder: 选择时间

@@ -1387,6 +1387,82 @@ const COLOR_PICKER_EVENTS: &[Row] = &[
         "触发器获得或失去焦点。",
     ),
 ];
+const TIME_PICKER: &[Row] = &[
+    (
+        "el_time_picker(), TimePicker::new, id",
+        "ElementId · call site",
+        "Create a single-time picker with a stable sibling-unique ID.",
+        "创建单选时间选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "Option<SharedString> · None",
+        "Control the bound time string; invalid strings display as empty.",
+        "控制绑定时间字符串；非法字符串显示为空。",
+    ),
+    (
+        "format",
+        "TimeFormat · HourMinute",
+        "Choose HH:mm or HH:mm:ss input, display, and output.",
+        "选择 HH:mm 或 HH:mm:ss 输入、显示与输出。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights.",
+        "使用 Input 字段的 40/32/24 px 外高。",
+    ),
+    (
+        "disabled, readonly, editable",
+        "bool · false / false / true",
+        "Disable all interaction, allow read-only selection, or disable text editing while keeping the panel.",
+        "禁用全部交互、允许只读选择，或禁用文本编辑但保留面板。",
+    ),
+    (
+        "clearable",
+        "bool · true",
+        "Show the Input clear control.",
+        "显示 Input 清空控件。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · locale / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+    (
+        "prefix_icon",
+        "Icon · Clock",
+        "Replace the leading clock icon.",
+        "替换前置时钟图标。",
+    ),
+];
+const TIME_PICKER_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "Option<SharedString>, &mut Window, &mut App",
+        "A column, keyboard step, blur, clear, or confirm changes the time.",
+        "列选择、键盘步进、失焦、清空或确认改变时间。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The time panel opened or closed.",
+        "时间面板打开或关闭。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The Input clear control emptied the time.",
+        "Input 清空控件清空了时间。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1924,6 +2000,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Select => (SELECT, SELECT_EVENTS),
         Page::AutoComplete => (AUTO_COMPLETE, AUTO_COMPLETE_EVENTS),
         Page::ColorPicker => (COLOR_PICKER, COLOR_PICKER_EVENTS),
+        Page::TimePicker => (TIME_PICKER, TIME_PICKER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1982,6 +2059,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))
         .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))
         .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))
         .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、选项分组、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, option groups, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
