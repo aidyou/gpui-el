@@ -631,6 +631,12 @@ fn display_text(value: &SharedString, password: bool, visible: bool) -> SharedSt
     }
 }
 
+/// Read-only fields keep focus and selection, but never paint an editing
+/// caret. Disabled fields cannot receive it either.
+fn caret_visible(focused: bool, disabled: bool, readonly: bool) -> bool {
+    focused && !disabled && !readonly
+}
+
 /// Maps a byte offset in the displayed text back to one in the value; the mask
 /// keeps the value's character count but not its byte count, so the conversion
 /// goes through characters.
@@ -1703,7 +1709,7 @@ impl RenderOnce for Input {
                             } else {
                                 display_text(&props.value, password, state.password_visible)
                             };
-                            if focused && !props.disabled {
+                            if caret_visible(focused, props.disabled, props.readonly) {
                                 let layout = state.layout.borrow().clone();
                                 let caret = value_byte_to_display(
                                     &props.value,
@@ -1861,6 +1867,14 @@ mod tests {
             disabled: false,
         };
         assert!(clamped_edit(&readonly, "a").is_none());
+    }
+
+    #[test]
+    fn readonly_and_disabled_fields_do_not_paint_a_caret() {
+        assert!(caret_visible(true, false, false));
+        assert!(!caret_visible(false, false, false));
+        assert!(!caret_visible(true, true, false));
+        assert!(!caret_visible(true, false, true));
     }
 
     #[test]
