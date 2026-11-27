@@ -193,6 +193,19 @@ impl Icon {
         Self::with_source(Source::Svg(bytes))
     }
 
+    /// Applies the size and color unless the icon already chose its own, so
+    /// embedding components can keep their defaults without overriding
+    /// explicit choices.
+    pub(crate) fn fallback(mut self, size: f32, color: gpui::Hsla) -> Self {
+        if self.size.is_none() {
+            self.size = Some(size);
+        }
+        if self.color.is_none() {
+            self.color = Some(color);
+        }
+        self
+    }
+
     /// Overrides the glyph size in logical pixels; invalid values restore inheritance.
     pub fn size(mut self, logical_px: f32) -> Self {
         self.size = (logical_px.is_finite() && logical_px > 0.).then_some(logical_px);

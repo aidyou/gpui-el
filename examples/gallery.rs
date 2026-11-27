@@ -54,6 +54,7 @@ struct Gallery {
     switch: pages::switch::State,
     checkbox: pages::checkbox::State,
     radio: pages::radio::State,
+    rate: pages::rate::State,
 }
 
 impl Gallery {
@@ -105,10 +106,11 @@ enum Page {
     Switch,
     Checkbox,
     Radio,
+    Rate,
 }
 
 impl Page {
-    const ALL: [Self; 17] = [
+    const ALL: [Self; 18] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -126,6 +128,7 @@ impl Page {
         Self::Switch,
         Self::Checkbox,
         Self::Radio,
+        Self::Rate,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -147,6 +150,7 @@ impl Page {
             Self::Switch => &s.switch_intro,
             Self::Checkbox => &s.checkbox_intro,
             Self::Radio => &s.radio_intro,
+            Self::Rate => &s.rate_intro,
         }
     }
 
@@ -169,6 +173,7 @@ impl Page {
             Self::Switch => "switch",
             Self::Checkbox => "checkbox",
             Self::Radio => "radio",
+            Self::Rate => "rate",
         }
     }
 
@@ -191,6 +196,7 @@ impl Page {
             Self::Switch => &s.switch_page,
             Self::Checkbox => &s.checkbox_page,
             Self::Radio => &s.radio_page,
+            Self::Rate => &s.rate_page,
         }
     }
 
@@ -224,6 +230,7 @@ impl Page {
             Self::Switch => &["el-switch"],
             Self::Checkbox => &["el-checkbox", "el-checkbox-group"],
             Self::Radio => &["el-radio", "el-radio-group"],
+            Self::Rate => &["el-rate"],
         }
     }
 }
@@ -331,7 +338,8 @@ impl Render for Gallery {
                                         .icon(nav_glyph(nav_icon::FORM))
                                         .entry(item(Page::Switch))
                                         .entry(item(Page::Checkbox))
-                                        .entry(item(Page::Radio)),
+                                        .entry(item(Page::Radio))
+                                        .entry(item(Page::Rate)),
                                 ),
                         ),
                 )
@@ -355,6 +363,7 @@ impl Render for Gallery {
             Page::Switch => self.switches(s, cx),
             Page::Checkbox => self.checkboxes(s, cx),
             Page::Radio => self.radios(s, cx),
+            Page::Rate => self.rates(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

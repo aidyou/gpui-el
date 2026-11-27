@@ -751,6 +751,92 @@ const LOADING: &[Row] = &[
         "添加被遮罩的内容。",
     ),
 ];
+const RATE: &[Row] = &[
+    (
+        "el_rate(), Rate::new, id",
+        "ElementId · call site",
+        "Create a rate. Supply a stable sibling-unique ID when creating repeated rates at the same call site.",
+        "创建评分。同一调用位置生成多个评分时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "f32 · 0",
+        "The controlled rating; halves are kept with allow_half.",
+        "受控分值；allow_half 时保留半星。",
+    ),
+    (
+        "max",
+        "u32 · 5",
+        "The highest rating; at least one star.",
+        "最高分值；至少为一星。",
+    ),
+    (
+        "size, large, small",
+        "RateSize · Default (32 px)",
+        "Large is 40 px, Small is 24 px; the star is 18 px, 14 px when small.",
+        "Large 为 40 px，Small 为 24 px；星形为 18 px，Small 为 14 px。",
+    ),
+    (
+        "allow_half, clearable",
+        "bool · false",
+        "Pick half stars, or reset the value to zero by re-picking it.",
+        "允许半星，或再次选择当前分值时清零。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Make the rating read-only; fractional values still display clipped.",
+        "只读模式；小数分值仍按比例裁剪显示。",
+    ),
+    (
+        "show_text, show_score",
+        "bool · false",
+        "Show the matching text or the score; show_score wins, and nothing shows at zero.",
+        "显示对应文案或分数；show_score 优先，零分时不显示。",
+    ),
+    (
+        "texts, score_template",
+        "Iterator<SharedString> / SharedString · upstream English / {value}",
+        "The texts per whole star, and the score template.",
+        "每个整星对应的文案，以及分数模板。",
+    ),
+    (
+        "low_threshold, high_threshold",
+        "f32 · 2 / 4",
+        "The score levels for colors and icons; the low threshold belongs to the low level.",
+        "颜色与图标的分数级别；低阈值本身属于低级别。",
+    ),
+    (
+        "colors",
+        "[Hsla; 3] · $rate-fill-color",
+        "One active color per score level, low to high.",
+        "三个级别的激活颜色，由低到高。",
+    ),
+    (
+        "void_color, disabled_void_color, text_color",
+        "Hsla · $rate-void-color / $fill-color / $text-color-primary",
+        "Colors of the unselected stars, the read-only unselected stars, and the text.",
+        "未选中星形、只读未选中星形与文案的颜色。",
+    ),
+    (
+        "icon, icons, void_icon, disabled_void_icon",
+        "Icon · StarFilled / Star / StarFilled",
+        "The active icons (one for every level, or one per level), the unselected icon, and the read-only unselected icon.",
+        "激活图标（全部级别统一或逐级别）、未选中图标与只读未选中图标。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · rating",
+        "The accessible name of the slider.",
+        "滑块的无障碍名称。",
+    ),
+];
+const RATE_EVENTS: &[Row] = &[(
+    "onchange",
+    "f32, &mut Window, &mut App",
+    "Pointer or keyboard activation reports the selected value; not emitted while read-only. Arrow keys step by 1, or 0.5 with allow_half, and stop propagating.",
+    "指针或键盘激活时报告所选分值；只读时不触发。方向键按 1 递进，allow_half 时为 0.5，并停止传播。",
+)];
 const CHECKBOX: &[Row] = &[
     (
         "el_checkbox(), Checkbox::new, id",
@@ -1168,6 +1254,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Switch => (SWITCH, SWITCH_EVENTS),
         Page::Checkbox => (CHECKBOX, CHECKBOX_EVENTS),
         Page::Radio => (RADIO, RADIO_EVENTS),
+        Page::Rate => (RATE, RATE_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         Table::new(rows.iter().copied())
@@ -1231,6 +1318,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
         .when(page == Page::Table, |el| el.child(if zh { "原生差异：表头使用粗体字面配正文文字色；上游用 600 字重配次要文字色，缺少 semibold 字面的原生字体栈会把它画成普通字重且偏淡。排序、行选择、筛选、固定列、树形数据和合计行未移植。" } else { "Native differences: headers use the bold face with the body text color; upstream uses weight 600 on secondary text, which native font stacks without a semibold face paint as plain and washed out. Sorting, row selection, filtering, fixed columns, tree data, and summary rows are not reproduced." }))
+        .when(page == Page::Rate, |el| el.child(if zh { "原生差异：图标为 Icon 值而非 Vue 组件，三个级别用数组传入，不支持任意内容；悬停星形没有 1.15 倍缩放（GPUI 无变换动画），但填充仍会预览选择；半星通过裁剪的激活图标叠加实现，而非上游的 decimal 伪元素；分数模板按 Rust f32 显示，3 而不是 3.0；悬停预览存在窗口键控状态中，应用不需要持有。" } else { "Native differences: the icons are Icon values instead of Vue components, so the three levels take an array and arbitrary content is not supported. The hovered star does not scale 1.15x (GPUI has no transform animation), but the fill still previews the selection. The half star is a clipped overlay of the active icon rather than upstream's decimal pseudo element. The score template renders with Rust's f32 display, 3 instead of 3.0. The hover preview lives in window-keyed state, so the application does not own it." }))
         .when(page == Page::Checkbox, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中与半选状态用无障碍 toggle 属性（Mixed）与可见聚焦环表达；勾选标记使用内置 Element Plus Check 轮廓而非 CSS 边框旋转技巧；true-value/false-value 与分组的值集合收集属于应用状态，由各多选框的 onchange 处理；分组不提供上游的方向键导航，用原生 Tab 顺序。" } else { "Native differences: there is no hidden checkbox; the checked and indeterminate states use the accessibility toggle attribute (Mixed) and a visible focus ring. The check mark is the bundled Element Plus Check outline rather than a rotated CSS border trick. true-value/false-value and the group's value collection are the application's concern, handled in each checkbox's onchange. The group does not reproduce upstream's arrow-key navigation; native Tab order applies instead." }))
         .when(page == Page::Radio, |el| el.child(if zh { "原生差异：没有隐藏 radio，选中状态用无障碍 toggle 属性与可见聚焦环表达；选中圆点为 4 px 实心圆而非 CSS 伪元素缩放；分组不收集选中值，由应用在各单选框的 onchange 中移动选择；分组不提供上游的方向键导航，用原生 Tab 顺序；重复点击已选中的单选框不触发事件，与上游一致。" } else { "Native differences: there is no hidden radio; the selected state uses the accessibility toggle attribute and a visible focus ring. The selection dot is a 4 px filled circle rather than a scaled CSS pseudo element. The group does not collect the picked value; the application moves the selection in each radio's onchange. Upstream's arrow-key navigation between group items is not reproduced; native Tab order applies instead. Activating the already selected radio fires nothing, like upstream." }))
         .when(page == Page::Switch, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中状态用无障碍 toggle 属性与可见聚焦环表达；滑块滑动为 0.2 秒桌面版上游 300 ms 过渡；inline-prompt 显示完整文字并按宽度省略，而不是仅首个字符；active-value/inactive-value 属于应用状态，由 onchange 映射；before-change 为同步谓词，异步拦截由应用自行调度。" } else { "Native differences: there is no hidden checkbox; the checked state is conveyed with the accessibility toggle attribute and a visible focus ring. The knob slides for 0.2 s, the desktop variant of the upstream 300 ms transition. inline-prompt renders the full text with ellipsis instead of the first character. active-value/inactive-value are the application's state, mapped in onchange. before-change is a synchronous predicate; asynchronous gating is the caller's to schedule." }))

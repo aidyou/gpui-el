@@ -240,3 +240,18 @@ radio_custom: 自定义内容
 radio_prepare: 备货
 radio_ship: 发货
 radio_pickup: 自提
+rate_intro: 用星形打分，支持半星、尺寸、颜色、图标与只读模式。
+rate_page: Rate 评分
+rate_basic: 基础用法
+rate_half: 半星
+rate_sizes: 尺寸
+rate_text: 文案与分数
+rate_colors: 自定义颜色
+rate_icons: 自定义图标
+rate_readonly: 只读
+rate_clearable: 可清空
+rate_bad: 很差
+rate_poor: 较差
+rate_fair: 一般
+rate_good: 满意
+rate_excellent: 惊喜

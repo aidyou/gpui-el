@@ -8,6 +8,7 @@ pub(super) mod link;
 pub(super) mod loading;
 pub(super) mod menu;
 pub(super) mod radio;
+pub(super) mod rate;
 pub(super) mod scrollbar;
 pub(super) mod space;
 pub(super) mod splitter;

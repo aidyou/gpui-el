@@ -240,3 +240,18 @@ radio_custom: Custom content
 radio_prepare: Prepare
 radio_ship: Ship
 radio_pickup: Pickup
+rate_intro: Score with stars, with halves, sizes, colors, icons, and a read-only mode.
+rate_page: Rate
+rate_basic: Basic usage
+rate_half: Allow half
+rate_sizes: Sizes
+rate_text: Text and score
+rate_colors: Colors
+rate_icons: Icons
+rate_readonly: Read-only
+rate_clearable: Clearable
+rate_bad: Bad
+rate_poor: Poor
+rate_fair: Fair
+rate_good: Good
+rate_excellent: Excellent
