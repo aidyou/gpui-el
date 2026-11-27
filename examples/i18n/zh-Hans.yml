@@ -251,6 +251,21 @@ rate_colors: 自定义颜色
 rate_icons: 自定义图标
 rate_readonly: 只读
 rate_clearable: 可清空
+slider_intro: 拖动或点击滑轨，键盘微调，支持范围选择、标记与竖直布局。
+slider_page: Slider 滑块
+slider_basic: 基础用法
+slider_sizes: 尺寸
+slider_steps: 步长与断点
+slider_range: 范围选择
+slider_vertical: 竖直
+slider_marks: 标记
+slider_formatted: 格式化提示
+slider_readonly: 只读
+slider_mark_a: 0%
+slider_mark_b: 25%
+slider_mark_c: 50%
+slider_mark_d: 75%
+slider_mark_e: 100%
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

@@ -187,6 +187,7 @@ pub mod motion;
 mod radio;
 mod rate;
 mod scrollbar;
+mod slider;
 mod splitter;
 mod switch;
 mod table;
@@ -218,6 +219,7 @@ pub use motion::MotionSpeed;
 pub use radio::{Radio, RadioGroup, RadioSize, el_radio, el_radio_group};
 pub use rate::{Rate, RateSize, el_rate};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
+pub use slider::{Slider, SliderMark, SliderSize, SliderValue, el_slider};
 pub use splitter::{
     Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent,
     SplitterSide, SplitterSizes, el_splitter, el_splitter_panel,

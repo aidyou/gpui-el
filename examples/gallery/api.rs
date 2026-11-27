@@ -837,6 +837,82 @@ const RATE: &[Row] = &[
         "滑块的无障碍名称。",
     ),
 ];
+const SLIDER: &[Row] = &[
+    (
+        "el_slider(), Slider::new, id",
+        "ElementId · call site",
+        "Create a slider. Supply a stable sibling-unique ID when creating repeated sliders at the same call site.",
+        "创建滑块。同一调用位置生成多个滑块时，提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value, range",
+        "f32 · 0 / (f32, f32)",
+        "The controlled value of a single slider, or the low and high ends of a range slider. Handles may cross; the reported pair stays ordered.",
+        "单滑块的受控值，或范围滑块的两端。手柄可交叉；报告的一端保持有序。",
+    ),
+    (
+        "min, max",
+        "f32 · 0 / 100",
+        "The value range; a degenerate range pins the value at the minimum.",
+        "取值范围；退化的范围将值固定在最小值。",
+    ),
+    (
+        "step",
+        "f32 · 1",
+        "The snap size. Steps round to the nearest step, the gap before the maximum rounds across it, and the result keeps the endpoints' precision.",
+        "步长。按最近步长取整，最大值前的间隙向其取整，结果保留端点精度。",
+    ),
+    (
+        "size, large, small",
+        "SliderSize · Default (32 px)",
+        "Large is 40 px, Small is 24 px; the runway is 6 px and the handle 20 px in every size.",
+        "Large 为 40 px，Small 为 24 px；滑轨均为 6 px，手柄均为 20 px。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Make the slider read-only; the bar and handles take the placeholder color.",
+        "只读模式；进度条与手柄使用占位色。",
+    ),
+    (
+        "vertical, height",
+        "bool · false / f32 · 200",
+        "Lay the runway out vertically with the given length; horizontal sliders fill their container's width.",
+        "按给定长度竖直布局滑轨；水平滑块填满容器宽度。",
+    ),
+    (
+        "show_stops",
+        "bool · false",
+        "Draw a stop at every step boundary.",
+        "在每个步长边界绘制断点。",
+    ),
+    (
+        "show_tooltip, format_tooltip",
+        "bool · true / Fn(f32) -> SharedString",
+        "Show the value in a tooltip on the handles, and format it; the raw number by default.",
+        "在手柄上以提示显示值，并可格式化；默认为原始数字。",
+    ),
+    (
+        "marks",
+        "Iterator<SliderMark>",
+        "The labeled breakpoints; points outside [min, max] are dropped and the rest are sorted.",
+        "带标签的断点；超出 [min, max] 的点被丢弃，其余排序。",
+    ),
+];
+const SLIDER_EVENTS: &[Row] = &[
+    (
+        "oninput",
+        "SliderValue, &mut Window, &mut App",
+        "Dragging, a runway click, or a keyboard step reports the value while it changes, like the web input event.",
+        "拖动、点击滑轨或键盘步进时持续报告当前值，对应 Web 的 input 事件。",
+    ),
+    (
+        "onchange",
+        "SliderValue, &mut Window, &mut App",
+        "A drag end, a runway click, or a keyboard step reports the committed value, like the web change event. Arrows step by step, Page Up/Down by four steps, Home and End jump to the ends.",
+        "拖动结束、点击滑轨或键盘步进时报告提交值，对应 Web 的 change 事件。方向键按步长递进，Page Up/Down 为四倍步长，Home 与 End 跳至两端。",
+    ),
+];
 const RATE_EVENTS: &[Row] = &[(
     "onchange",
     "f32, &mut Window, &mut App",
@@ -1261,6 +1337,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Checkbox => (CHECKBOX, CHECKBOX_EVENTS),
         Page::Radio => (RADIO, RADIO_EVENTS),
         Page::Rate => (RATE, RATE_EVENTS),
+        Page::Slider => (SLIDER, SLIDER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())

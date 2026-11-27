@@ -251,6 +251,21 @@ rate_colors: Colors
 rate_icons: Icons
 rate_readonly: Read-only
 rate_clearable: Clearable
+slider_intro: Drag or click the runway, step with the keyboard, and pick a range, marks, or a vertical layout.
+slider_page: Slider
+slider_basic: Basic usage
+slider_sizes: Sizes
+slider_steps: Steps and stops
+slider_range: Range
+slider_vertical: Vertical
+slider_marks: Marks
+slider_formatted: Formatted tooltip
+slider_readonly: Read-only
+slider_mark_a: 0%
+slider_mark_b: 25%
+slider_mark_c: 50%
+slider_mark_d: 75%
+slider_mark_e: 100%
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair
