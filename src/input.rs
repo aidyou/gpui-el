@@ -682,16 +682,19 @@ fn value_byte_to_display(value: &str, display: &str, byte: usize) -> usize {
 }
 
 /// Reports the new value for an edit, blocked when the field is disabled or
-/// read-only, and clamped to `maxlength` by character, like the native
-/// attribute.
+/// read-only. `maxlength` prevents growth by character, but an already
+/// overlong controlled value can still be shortened or replaced at the same
+/// length instead of becoming impossible to edit.
 fn clamped_edit(props: &InputProps, new_value: &str) -> Option<SharedString> {
     if props.disabled || props.readonly {
         return None;
     }
-    if let Some(maxlength) = props.maxlength
-        && new_value.chars().count() > maxlength
-    {
-        return None;
+    if let Some(maxlength) = props.maxlength {
+        let current_length = props.value.chars().count();
+        let new_length = new_value.chars().count();
+        if new_length > maxlength && new_length > current_length {
+            return None;
+        }
     }
     Some(SharedString::from(new_value))
 }
@@ -1889,6 +1892,15 @@ mod tests {
         };
         assert!(clamped_edit(&props, "𝄞𝄞").is_some());
         assert!(clamped_edit(&props, "𝄞𝄞𝄞").is_none());
+        let overlong = InputProps {
+            value: "abcd".into(),
+            maxlength: Some(3),
+            readonly: false,
+            disabled: false,
+        };
+        assert!(clamped_edit(&overlong, "abc").is_some());
+        assert!(clamped_edit(&overlong, "wxyz").is_some());
+        assert!(clamped_edit(&overlong, "abcde").is_none());
         let readonly = InputProps {
             value: "".into(),
             maxlength: None,
@@ -2203,6 +2215,42 @@ mod tests {
 
         press_key(view, "enter");
         assert_eq!(value.borrow().as_str(), "abX\nZ\ncdY");
+    }
+
+    #[gpui::test]
+    fn overlong_values_can_shrink_but_cannot_grow(cx: &mut gpui::TestAppContext) {
+        struct Harness(Rc<RefCell<String>>);
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                let value = self.0.clone();
+                let current = value.borrow().clone();
+                div().w(px(400.)).child(
+                    el_input()
+                        .id("overlong")
+                        .value(current)
+                        .maxlength(10)
+                        .oninput(move |reported, _, _| *value.borrow_mut() = reported.to_string()),
+                )
+            }
+        }
+        let value = Rc::new(RefCell::new("abcdefghijk".into()));
+        let (_, view) = cx.add_window_view({
+            let value = value.clone();
+            move |_, _| Harness(value)
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.simulate_mouse_down(
+            gpui::point(px(380.), px(16.)),
+            MouseButton::Left,
+            Modifiers::default(),
+        );
+        press_key(view, "end");
+        press_key(view, "backspace");
+        assert_eq!(value.borrow().as_str(), "abcdefghij");
+
+        // Once the value reaches the limit, normal insertion is blocked.
+        type_text(view, "X");
+        assert_eq!(value.borrow().as_str(), "abcdefghij");
     }
 
     fn press_key(view: &mut gpui::VisualTestContext, key: &str) {
