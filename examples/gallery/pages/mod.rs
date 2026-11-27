@@ -1,4 +1,5 @@
 pub(super) mod button;
+pub(super) mod capsule;
 pub(super) mod checkbox;
 pub(super) mod container;
 pub(super) mod icon;

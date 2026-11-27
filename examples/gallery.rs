@@ -44,6 +44,7 @@ struct Gallery {
     page: Page,
     expanded: HashSet<&'static str>,
     button: pages::button::State,
+    capsule: pages::capsule::State,
     icon: pages::icon::State,
     link: pages::link::State,
     loading: pages::loading::State,
@@ -113,10 +114,11 @@ enum Page {
     Slider,
     Input,
     InputNumber,
+    Capsule,
 }
 
 impl Page {
-    const ALL: [Self; 21] = [
+    const ALL: [Self; 22] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -138,6 +140,7 @@ impl Page {
         Self::Slider,
         Self::Input,
         Self::InputNumber,
+        Self::Capsule,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -163,6 +166,7 @@ impl Page {
             Self::Slider => &s.slider_intro,
             Self::Input => &s.input_intro,
             Self::InputNumber => &s.input_number_intro,
+            Self::Capsule => &s.capsule_intro,
         }
     }
 
@@ -189,6 +193,7 @@ impl Page {
             Self::Slider => "slider",
             Self::Input => "input",
             Self::InputNumber => "input-number",
+            Self::Capsule => "capsule",
         }
     }
 
@@ -215,6 +220,7 @@ impl Page {
             Self::Slider => &s.slider_page,
             Self::Input => &s.input_page,
             Self::InputNumber => &s.input_number_page,
+            Self::Capsule => &s.capsule_page,
         }
     }
 
@@ -252,6 +258,7 @@ impl Page {
             Self::Slider => &["el-slider"],
             Self::Input => &["el-input"],
             Self::InputNumber => &["el-input-number"],
+            Self::Capsule => &[],
         }
     }
 }
@@ -365,7 +372,8 @@ impl Render for Gallery {
                                         .entry(item(Page::Rate))
                                         .entry(item(Page::Slider))
                                         .entry(item(Page::Input))
-                                        .entry(item(Page::InputNumber)),
+                                        .entry(item(Page::InputNumber))
+                                        .entry(item(Page::Capsule)),
                                 ),
                         ),
                 )
@@ -393,6 +401,7 @@ impl Render for Gallery {
             Page::Slider => self.sliders(s, cx),
             Page::Input => self.inputs(s, cx),
             Page::InputNumber => self.input_numbers(s, cx),
+            Page::Capsule => self.capsules(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

@@ -1061,6 +1061,50 @@ const INPUT_NUMBER_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const CAPSULE: &[Row] = &[
+    (
+        "el_capsule_segments(), CapsuleSegments::new, id",
+        "ElementId · call site",
+        "Create a connected single-selection capsule with a stable sibling-unique ID.",
+        "创建连通单选胶囊；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "options",
+        "IntoIterator<CapsuleOption> · empty",
+        "Set value/label pairs. Values should be unique because they also key the rendered options.",
+        "设置值/标签对。值同时用作渲染选项的键，应保持唯一。",
+    ),
+    (
+        "selected, clear_selection",
+        "SharedString / — · none",
+        "Control the selected value, or clear it. Unknown values select nothing.",
+        "控制选中值，或清空选择。未知值不选中任何选项。",
+    ),
+    (
+        "height, font_size",
+        "f32 · 30 / follows height",
+        "Set the shared option height and label size. The default label size follows height, clamped to 10–13 px.",
+        "设置选项共用高度与标签字号。默认字号随高度变化，并钳制在 10–13 px。",
+    ),
+    (
+        "disabled",
+        "bool · false",
+        "Block pointer and keyboard activation and remove options from the Tab order.",
+        "阻止指针与键盘激活，并将选项移出 Tab 顺序。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · unset",
+        "Name the capsule group for assistive technology; each option uses its label as its accessible name.",
+        "为胶囊组提供无障碍名称；每个选项使用自身标签作为无障碍名称。",
+    ),
+];
+const CAPSULE_EVENTS: &[Row] = &[(
+    "onselect",
+    "SharedString, &mut Window, &mut App",
+    "Pointer or Enter/Space activation reports the option value, including an already selected option.",
+    "指针或 Enter/Space 激活报告选项值；重复激活已选项也会报告。",
+)];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -1594,6 +1638,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Slider => (SLIDER, SLIDER_EVENTS),
         Page::Input => (INPUT, INPUT_EVENTS),
         Page::InputNumber => (INPUT_NUMBER, INPUT_NUMBER_EVENTS),
+        Page::Capsule => (CAPSULE, CAPSULE_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -1652,6 +1697,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
         .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))

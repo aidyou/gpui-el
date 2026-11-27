@@ -174,6 +174,7 @@
 )]
 
 mod button;
+mod capsule;
 mod checkbox;
 mod error;
 mod grid;
@@ -202,6 +203,7 @@ pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
     el_button_group,
 };
+pub use capsule::{CapsuleOption, CapsuleSegments, el_capsule_segments};
 pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
 pub use error::{Error, Result};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};

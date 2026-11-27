@@ -299,6 +299,18 @@ input_number_formatted: Formatter and parser
 input_number_clear: Value on clear
 input_number_custom: Prefix, suffix, and custom icons
 input_number_align: Text alignment
+capsule_intro: A connected single-selection capsule for compact forms, adapted from the ChatSpeed automation execution-frequency control.
+capsule_page: Capsule 胶囊选项
+capsule_basic: Execution frequency
+capsule_sizes: Heights
+capsule_disabled: Disabled
+capsule_wrapped: Wrapping in a narrow form
+capsule_frequency: Execution frequency
+capsule_daily: Daily
+capsule_interval: Interval
+capsule_once: Once
+capsule_weekdays: Weekdays
+capsule_monthly: Monthly
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

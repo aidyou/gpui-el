@@ -299,6 +299,18 @@ input_number_formatted: 格式化与解析
 input_number_clear: 清空时的值
 input_number_custom: 前缀、后缀与自定义图标
 input_number_align: 文字对齐
+capsule_intro: 用于紧凑表单的连通单选胶囊，参考 ChatSpeed 自动化表单的执行频率控件。
+capsule_page: Capsule 胶囊选项
+capsule_basic: 执行频率
+capsule_sizes: 高度
+capsule_disabled: 禁用
+capsule_wrapped: 窄表单中的换行
+capsule_frequency: 执行频率
+capsule_daily: 每天
+capsule_interval: 间隔
+capsule_once: 一次
+capsule_weekdays: 工作日
+capsule_monthly: 每月
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般
