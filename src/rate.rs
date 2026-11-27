@@ -6,8 +6,8 @@
 //! upstream's decimal pseudo element.
 
 use gpui::{
-    App, ElementId, Hsla, IntoElement, KeyDownEvent, MouseMoveEvent, RenderOnce, SharedString,
-    Window, div, prelude::*, px, rgb,
+    App, Bounds, ElementId, Hsla, IntoElement, KeyDownEvent, MouseMoveEvent, Pixels, RenderOnce,
+    SharedString, Window, div, prelude::*, px, rgb,
 };
 
 use std::sync::Arc;
@@ -536,14 +536,40 @@ impl RenderOnce for Rate {
         if self.disabled {
             return root.into_any_element();
         }
-        let state = state.clone();
+        let exit_state = state.clone();
         root = root
             .cursor_pointer()
             .focusable()
             .tab_stop(true)
             .on_mouse_exit(move |_, _, cx| {
-                state.update(cx, |stored, _| *stored = None);
+                exit_state.update(cx, |stored, _| *stored = None);
             });
+        // gpui-fast only synthesizes MouseExitEvent when the pointer leaves
+        // the window, not when it moves between elements, so the preview
+        // would outlive the hover. Like the platform's own hover styling,
+        // arm a window-level move listener each frame and drop the preview
+        // once the position falls outside the bounds measured here.
+        let preview = state.clone();
+        root = root.relative().child(
+            gpui::canvas(
+                move |bounds: Bounds<Pixels>, _window: &mut Window, _cx: &mut App| bounds,
+                move |bounds: Bounds<Pixels>, _t, window: &mut Window, _cx: &mut App| {
+                    let state = preview.clone();
+                    window.on_mouse_event(
+                        move |event: &MouseMoveEvent, phase, _window, cx| {
+                            if phase == gpui::DispatchPhase::Bubble
+                                && !bounds.contains(&event.position)
+                                && state.read(cx).is_some()
+                            {
+                                state.update(cx, |stored, _| *stored = None);
+                            }
+                        },
+                    );
+                },
+            )
+            .absolute()
+            .inset_0(),
+        );
         if let Some(handler) = self.onchange {
             root = root.on_key_down(move |event: &KeyDownEvent, window, cx| {
                 let key = event.keystroke.key.as_ref();
@@ -567,6 +593,7 @@ impl RenderOnce for Rate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::el_button;
 
     #[test]
     fn sizes_map_the_theme_chalk_tokens() {
@@ -707,6 +734,125 @@ mod tests {
         // Read-only rates never report.
         view.simulate_click(gpui::point(px(57.), px(80.)), gpui::Modifiers::default());
         assert_eq!(picked.get(), 3.);
+    }
+
+    struct ResetHarness {
+        value: std::rc::Rc<std::cell::Cell<f32>>,
+    }
+
+    impl gpui::Render for ResetHarness {
+        fn render(&mut self, _: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
+            let view = cx.entity();
+            let value = self.value.clone();
+            div()
+                .id("rate-reset-tests")
+                .tab_group()
+                .flex()
+                .flex_col()
+                .size_full()
+                .on_key_down(move |event: &gpui::KeyDownEvent, _, _| {
+                    eprintln!("ROOT KEY {:?}", event.keystroke.key);
+                })
+                .child(
+                    el_rate()
+                        .id("controlled")
+                        .value(value.get())
+                        .onchange(move |picked, _, cx| {
+                            view.update(cx, |this, cx| {
+                                this.value.set(picked);
+                                cx.notify();
+                            });
+                        }),
+                )
+                .child(
+                    el_button()
+                        .id("reset")
+                        .small()
+                        .label("reset")
+                        .onclick(cx.listener(|this, _, _, cx| {
+                            this.value.set(0.);
+                            cx.notify();
+                        })),
+                )
+        }
+    }
+
+    #[gpui::test]
+    fn a_controlled_rate_follows_a_reset_to_zero(cx: &mut gpui::TestAppContext) {
+        let value = std::rc::Rc::new(std::cell::Cell::new(0.));
+        let (_, view) = cx.add_window_view({
+            let value = value.clone();
+            move |_, cx| {
+                cx.set_reduce_motion(true);
+                ResetHarness { value }
+            }
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // Hover the fifth star and pick it, then move the pointer off the
+        // rate onto the reset button below and click it, as a pointer user
+        // would.
+        view.simulate_mouse_move(
+            gpui::point(px(105.), px(16.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        view.simulate_click(gpui::point(px(105.), px(16.)), gpui::Modifiers::default());
+        assert_eq!(value.get(), 5.);
+        view.simulate_mouse_move(
+            gpui::point(px(30.), px(44.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        // The reset button spans y 32..56.
+        view.simulate_click(gpui::point(px(30.), px(44.)), gpui::Modifiers::default());
+        assert_eq!(value.get(), 0.);
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // The display follows the reset: clicking the gap between the first
+        // two stars focuses the rate without picking, and a step right
+        // reports 1, not 6 left over from the pre-reset hover preview.
+        view.simulate_click(gpui::point(px(20.), px(16.)), gpui::Modifiers::default());
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        press_key(view, "right");
+        assert_eq!(value.get(), 1.);
+    }
+
+    #[gpui::test]
+    fn the_hover_preview_clears_when_the_pointer_leaves(cx: &mut gpui::TestAppContext) {
+        let value = std::rc::Rc::new(std::cell::Cell::new(0.));
+        let (_, view) = cx.add_window_view({
+            let value = value.clone();
+            move |_, cx| {
+                cx.set_reduce_motion(true);
+                ResetHarness { value }
+            }
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // Pick the third star; the click also focuses the rate, so arrow
+        // keys step from the displayed value.
+        view.simulate_click(gpui::point(px(57.), px(16.)), gpui::Modifiers::default());
+        assert_eq!(value.get(), 3.);
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        // Hovering the fifth star previews 5, so a step left reports 4, not
+        // 2: the preview drives the display while the pointer is over the
+        // rate.
+        view.simulate_mouse_move(
+            gpui::point(px(105.), px(16.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        press_key(view, "left");
+        assert_eq!(value.get(), 4.);
+        // Once the pointer leaves the rate the preview clears and the display
+        // falls back to the controlled value, so a step right reports 5.
+        view.simulate_mouse_move(
+            gpui::point(px(30.), px(44.)),
+            None,
+            gpui::Modifiers::default(),
+        );
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        press_key(view, "right");
+        assert_eq!(value.get(), 5.);
     }
 
     fn press_key(view: &mut gpui::VisualTestContext, key: &str) {
