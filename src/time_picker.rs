@@ -80,6 +80,7 @@ impl Time {
 type ChangeHandler = Rc<dyn Fn(Option<SharedString>, &mut Window, &mut App)>;
 type VisibleHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;
 type FocusHandler = Rc<dyn Fn(&mut Window, &mut App)>;
+type TimePredicate = Rc<dyn Fn(u32) -> bool>;
 
 #[derive(Clone)]
 struct TimePickerProps {
@@ -88,6 +89,9 @@ struct TimePickerProps {
     disabled: bool,
     readonly: bool,
     editable: bool,
+    disabled_hours: Option<TimePredicate>,
+    disabled_minutes: Option<TimePredicate>,
+    disabled_seconds: Option<TimePredicate>,
 }
 
 #[derive(Clone, Default)]
@@ -124,6 +128,9 @@ impl Default for TimePickerState {
                 disabled: false,
                 readonly: false,
                 editable: true,
+                disabled_hours: None,
+                disabled_minutes: None,
+                disabled_seconds: None,
             },
             handlers: TimePickerHandlers::default(),
             last_value: None,
@@ -165,6 +172,26 @@ impl TimePickerState {
             .unwrap_or_default()
     }
 
+    fn is_disabled(&self, unit: usize, value: u32) -> bool {
+        match unit {
+            0 => self
+                .props
+                .disabled_hours
+                .as_ref()
+                .is_some_and(|disabled| disabled(value)),
+            1 => self
+                .props
+                .disabled_minutes
+                .as_ref()
+                .is_some_and(|disabled| disabled(value)),
+            _ => self
+                .props
+                .disabled_seconds
+                .as_ref()
+                .is_some_and(|disabled| disabled(value)),
+        }
+    }
+
     fn accept_input(&mut self, value: SharedString) {
         if self.props.disabled || self.props.readonly || !self.props.editable {
             return;
@@ -192,7 +219,7 @@ impl TimePickerState {
     }
 
     fn select_component(&mut self, unit: usize, value: u32, window: &mut Window, cx: &mut App) {
-        if self.props.disabled || self.props.readonly {
+        if self.props.disabled || self.props.readonly || self.is_disabled(unit, value) {
             return;
         }
         let mut time = self.current_time();
@@ -212,7 +239,28 @@ impl TimePickerState {
         if self.props.disabled || self.props.readonly {
             return;
         }
-        let time = self.current_time().step(self.unit, direction);
+        let current = self.current_time();
+        let count = match self.unit {
+            0 => 24,
+            1 => 60,
+            _ => 60,
+        };
+        let mut time = current;
+        for _ in 0..count {
+            let candidate = time.step(self.unit, direction);
+            if !self.is_disabled(
+                self.unit,
+                match self.unit {
+                    0 => candidate.hour,
+                    1 => candidate.minute,
+                    _ => candidate.second,
+                },
+            ) {
+                time = candidate;
+                break;
+            }
+            time = candidate;
+        }
         self.draft = Some(time.format(self.props.format).to_string());
         if let Some(handler) = self.handlers.onchange.clone() {
             handler(self.draft.clone().map(SharedString::from), window, cx);
@@ -291,6 +339,9 @@ pub struct TimePicker {
     readonly: bool,
     editable: bool,
     clearable: bool,
+    disabled_hours: Option<TimePredicate>,
+    disabled_minutes: Option<TimePredicate>,
+    disabled_seconds: Option<TimePredicate>,
     placeholder: Option<SharedString>,
     accessibility_label: Option<SharedString>,
     prefix_icon: Option<Icon>,
@@ -320,6 +371,9 @@ impl Default for TimePicker {
             readonly: false,
             editable: true,
             clearable: true,
+            disabled_hours: None,
+            disabled_minutes: None,
+            disabled_seconds: None,
             placeholder: None,
             accessibility_label: None,
             prefix_icon: None,
@@ -383,6 +437,21 @@ impl TimePicker {
 
     pub fn editable(mut self, editable: bool) -> Self {
         self.editable = editable;
+        self
+    }
+
+    pub fn disabled_hours(mut self, disabled: impl Fn(u32) -> bool + 'static) -> Self {
+        self.disabled_hours = Some(Rc::new(disabled));
+        self
+    }
+
+    pub fn disabled_minutes(mut self, disabled: impl Fn(u32) -> bool + 'static) -> Self {
+        self.disabled_minutes = Some(Rc::new(disabled));
+        self
+    }
+
+    pub fn disabled_seconds(mut self, disabled: impl Fn(u32) -> bool + 'static) -> Self {
+        self.disabled_seconds = Some(Rc::new(disabled));
         self
     }
 
@@ -482,6 +551,9 @@ impl RenderOnce for TimePicker {
             disabled,
             readonly,
             editable,
+            disabled_hours,
+            disabled_minutes,
+            disabled_seconds,
             clearable,
             placeholder,
             accessibility_label,
@@ -498,6 +570,9 @@ impl RenderOnce for TimePicker {
             disabled,
             readonly,
             editable,
+            disabled_hours,
+            disabled_minutes,
+            disabled_seconds,
         };
         let handlers = TimePickerHandlers {
             onchange,
@@ -624,13 +699,10 @@ impl RenderOnce for TimePicker {
                         .read(cx)
                         .popup_bounds
                         .is_some_and(|bounds| bounds.contains(&event.position))
-                        || state.read(cx).bounds.is_some_and(|target| {
-                            gpui::Bounds::new(
-                                point(target.left(), target.bottom() + px(4.)),
-                                gpui::size(target.size.width, px(240.)),
-                            )
-                            .contains(&event.position)
-                        });
+                        || state
+                            .read(cx)
+                            .bounds
+                            .is_some_and(|bounds| bounds.contains(&event.position));
                     if !inside_popup {
                         state.update(cx, |state, cx| state.set_open(false, window, cx));
                         window.refresh();
@@ -674,28 +746,34 @@ impl RenderOnce for TimePicker {
                     .on_scroll(|_, _, cx| cx.stop_propagation());
                 for value in 0..count {
                     let active = value == selected;
-                    list = list.child(
-                        div()
-                            .id(ElementId::NamedChild(
-                                Arc::new(id.clone()),
-                                format!("{name}-{value}").into(),
-                            ))
-                            .h(px(32.))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .text_size(px(12.))
-                            .text_color(if active {
-                                rgb(crate::theme::PRIMARY)
-                            } else {
-                                rgb(theme.regular_text())
-                            })
-                            .when(active, |el| el.font_weight(gpui::FontWeight::MEDIUM))
-                            .when(unit == index, |el| {
-                                el.bg(rgb(theme.fill(crate::theme::Fill::Light)))
-                            })
-                            .cursor_pointer()
-                            .on_mouse_down(MouseButton::Left, {
+                    let disabled = state.read(cx).is_disabled(index, value);
+                    let cell = div()
+                        .id(ElementId::NamedChild(
+                            Arc::new(id.clone()),
+                            format!("{name}-{value}").into(),
+                        ))
+                        .h(px(32.))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_size(px(12.))
+                        .text_color(if disabled {
+                            rgb(theme.disabled_text())
+                        } else if active {
+                            rgb(crate::theme::PRIMARY)
+                        } else {
+                            rgb(theme.regular_text())
+                        })
+                        .when(active, |el| el.font_weight(gpui::FontWeight::MEDIUM))
+                        .when(unit == index, |el| {
+                            el.bg(rgb(theme.fill(crate::theme::Fill::Light)))
+                        })
+                        .when(disabled, |el| {
+                            el.cursor_not_allowed()
+                                .bg(rgb(theme.fill(crate::theme::Fill::Light)))
+                        })
+                        .when(!disabled, |el| {
+                            el.cursor_pointer().on_mouse_down(MouseButton::Left, {
                                 let state = state.clone();
                                 move |_, window, cx| {
                                     cx.stop_propagation();
@@ -704,8 +782,9 @@ impl RenderOnce for TimePicker {
                                     });
                                     window.refresh();
                                 }
-                            }),
-                    );
+                            })
+                        });
+                    list = list.child(cell);
                 }
                 column_lists = column_lists.child(list);
             }
@@ -862,6 +941,35 @@ mod tests {
             view.update(|_, cx| cx.read_entity(&state, |state, _| state.popup_bounds)),
             view.update(|_, cx| cx.read_entity(&state, |state, _| state.open)),
         );
+    }
+
+    #[gpui::test]
+    fn disabled_times_are_skipped_by_keyboard_and_reject_pointer_selection(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        struct Harness {
+            state: gpui::Entity<TimePickerState>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, _: &mut gpui::Context<Self>) -> impl IntoElement {
+                div()
+            }
+        }
+        let (harness, view) = cx.add_window_view(|_, cx| {
+            let state = cx.new(|_| TimePickerState::default());
+            state.update(cx, |state, _| {
+                state.props.value = Some("09:30".into());
+                state.props.disabled_hours = Some(Rc::new(|hour| hour == 10));
+            });
+            Harness { state }
+        });
+        view.update(|window, cx| {
+            let state = harness.read(cx).state.clone();
+            state.update(cx, |state, cx| state.step(1, window, cx));
+            assert_eq!(state.read(cx).draft.as_deref(), Some("11:30"));
+            state.update(cx, |state, cx| state.select_component(0, 10, window, cx));
+            assert_eq!(state.read(cx).draft.as_deref(), Some("11:30"));
+        });
     }
 
     #[gpui::test]

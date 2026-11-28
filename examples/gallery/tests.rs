@@ -147,6 +147,28 @@ fn gallery_time_picker_panel_is_visible_and_selects_hours(cx: &mut gpui::TestApp
 }
 
 #[gpui::test]
+fn gallery_color_picker_panel_opens(cx: &mut gpui::TestAppContext) {
+    let (_, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::ColorPicker,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("color-picker-basic")
+        .expect("gallery color picker bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(view.debug_bounds("color-picker-panel").is_some());
+}
+
+#[gpui::test]
 fn gallery_select_can_create_a_new_option(cx: &mut gpui::TestAppContext) {
     let (gallery, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);

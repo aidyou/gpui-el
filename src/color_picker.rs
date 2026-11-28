@@ -5,9 +5,8 @@
 //! alpha sliders, predefined colors, and clear/confirm actions. The panel uses
 //! HSV directly, which is appropriate for a simple screen color picker.
 //!
-//! Native differences: the panel has no text color input, custom popper
-//! configuration, or imperative exposes; dragging is tracked while the pointer
-//! remains over the control.
+//! Native differences: custom popper configuration and imperative exposes are
+//! not mapped; dragging is tracked while the pointer remains over the control.
 
 use std::{rc::Rc, sync::Arc};
 
@@ -17,7 +16,7 @@ use gpui::{
     div, point, prelude::*, px, rgb,
 };
 
-use crate::{InputSize, Locale, Theme, el_button, el_icon};
+use crate::{InputSize, Locale, Theme, el_button, el_icon, el_input};
 
 /// Output format for committed ColorPicker values.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -600,6 +599,23 @@ where
     .into_any_element()
 }
 
+fn measure_control<F>(state: gpui::Entity<ColorPickerState>, height: f32, set: F) -> AnyElement
+where
+    F: Fn(&mut ColorPickerState, Bounds<Pixels>) + 'static,
+{
+    gpui::canvas(
+        move |bounds: Bounds<Pixels>, _, cx: &mut App| {
+            let bounds =
+                gpui::Bounds::new(bounds.origin, gpui::size(bounds.size.width, px(height)));
+            state.update(cx, |state, _| set(state, bounds));
+        },
+        |_, _, _, _| {},
+    )
+    .w_full()
+    .h(px(0.))
+    .into_any_element()
+}
+
 fn paint_hue_gradient(bounds: Bounds<Pixels>, window: &mut Window) {
     let segments = f32::from(bounds.size.width).max(1.).ceil() as usize;
     for index in 0..segments {
@@ -745,10 +761,12 @@ impl RenderOnce for ColorPicker {
         let measure_trigger = state.clone();
         let mut root = div()
             .relative()
+            .child(measure_control(
+                measure_trigger,
+                trigger_size,
+                |state, bounds| state.bounds = Some(bounds),
+            ))
             .child(trigger)
-            .child(measure(measure_trigger, |state, bounds| {
-                state.bounds = Some(bounds)
-            }))
             .on_mouse_down_out({
                 let state = state.clone();
                 move |event, window, cx| {
@@ -779,6 +797,7 @@ impl RenderOnce for ColorPicker {
             let pure = Color::from_hsv(hue, 1., 1., 1.).hsla();
             let mut panel = div()
                 .id(ElementId::NamedChild(Arc::new(id.clone()), "panel".into()))
+                .debug_selector(|| "color-picker-panel".into())
                 .w(px(304.))
                 .p(px(12.))
                 .flex()
@@ -1043,34 +1062,48 @@ impl RenderOnce for ColorPicker {
                 );
             }
             actions = actions.child(
-                el_button()
-                    .id(ElementId::NamedChild(
-                        Arc::new(id.clone()),
-                        "confirm".into(),
-                    ))
-                    .small()
-                    .primary()
-                    .label(locale.color_picker_confirm())
-                    .onclick({
-                        let state = state.clone();
-                        move |_, window, cx| {
-                            state.update(cx, |state, cx| state.confirm(window, cx));
-                            window.refresh();
-                        }
-                    }),
+                div().child(
+                    el_button()
+                        .id(ElementId::NamedChild(
+                            Arc::new(id.clone()),
+                            "confirm".into(),
+                        ))
+                        .small()
+                        .primary()
+                        .label(locale.color_picker_confirm())
+                        .onclick({
+                            let state = state.clone();
+                            move |_, window, cx| {
+                                state.update(cx, |state, cx| state.confirm(window, cx));
+                                window.refresh();
+                            }
+                        }),
+                ),
             );
-            panel = panel
-                .child(
-                    div()
-                        .mt(px(12.))
-                        .text_size(px(12.))
-                        .text_color(rgb(theme.secondary_text()))
-                        .child(current),
-                )
-                .child(actions)
-                .child(measure(state.clone(), |state, bounds| {
-                    state.popup_bounds = Some(bounds)
-                }));
+            panel = panel.child(
+                div().mt(px(12.)).child(
+                    el_input()
+                        .id(ElementId::NamedChild(
+                            Arc::new(id.clone()),
+                            "text-input".into(),
+                        ))
+                        .value(current)
+                        .small()
+                        .aria_label(locale.color_picker_default_label())
+                        .onchange({
+                            let state = state.clone();
+                            move |reported, window, cx| {
+                                if let Some(parsed) = Color::parse(reported.as_ref()) {
+                                    state.update(cx, |state, cx| {
+                                        state.update_color(parsed, window, cx)
+                                    });
+                                    window.refresh();
+                                }
+                            }
+                        }),
+                ),
+            );
+            panel = panel.child(actions);
             root = root.child(
                 deferred(
                     anchored()

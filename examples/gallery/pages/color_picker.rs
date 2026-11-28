@@ -55,11 +55,16 @@ impl Gallery {
                     })
                 })
         };
-        let basic = row().child(field(
-            0,
-            "color-picker-basic".into(),
-            self.color_picker.basic.clone(),
-        ));
+        let basic = row().child(
+            div()
+                .size(px(32.))
+                .debug_selector(|| "color-picker-basic".into())
+                .child(field(
+                    0,
+                    "color-picker-basic".into(),
+                    self.color_picker.basic.clone(),
+                )),
+        );
         let alpha = row().child(
             field(
                 1,
