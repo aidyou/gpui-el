@@ -26,6 +26,7 @@ struct Messages {
     auto_complete: AutoCompleteMessages,
     color_picker: ColorPickerMessages,
     time_picker: TimePickerMessages,
+    date_picker: DatePickerMessages,
 }
 
 #[derive(Deserialize)]
@@ -92,6 +93,13 @@ struct TimePickerMessages {
     placeholder: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DatePickerMessages {
+    placeholder: String,
+    weekdays: Vec<String>,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -134,6 +142,13 @@ impl Messages {
                 confirm: "Confirm".into(),
                 cancel: "Cancel".into(),
                 placeholder: "Select time".into(),
+            },
+            date_picker: DatePickerMessages {
+                placeholder: "Select date".into(),
+                weekdays: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect(),
             },
         }
     }
@@ -208,6 +223,12 @@ impl Locale {
     pub(crate) fn time_picker_placeholder(self) -> &'static str {
         &self.messages().time_picker.placeholder
     }
+    pub(crate) fn date_picker_placeholder(self) -> &'static str {
+        &self.messages().date_picker.placeholder
+    }
+    pub(crate) fn date_picker_weekdays(self) -> &'static [String] {
+        &self.messages().date_picker.weekdays
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -273,6 +294,13 @@ mod tests {
             Locale::SimplifiedChinese.time_picker_placeholder(),
             "选择时间"
         );
+        assert_eq!(Locale::default().date_picker_placeholder(), "Select date");
+        assert_eq!(
+            Locale::SimplifiedChinese.date_picker_placeholder(),
+            "选择日期"
+        );
+        assert_eq!(Locale::default().date_picker_weekdays()[0], "Su");
+        assert_eq!(Locale::SimplifiedChinese.date_picker_weekdays()[0], "日");
     }
 
     #[test]
@@ -314,5 +342,10 @@ mod tests {
             fallback.time_picker.placeholder,
             embedded.time_picker.placeholder
         );
+        assert_eq!(
+            fallback.date_picker.placeholder,
+            embedded.date_picker.placeholder
+        );
+        assert_eq!(fallback.date_picker.weekdays, embedded.date_picker.weekdays);
     }
 }

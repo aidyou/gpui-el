@@ -26,3 +26,6 @@ time_picker:
   confirm: 确定
   cancel: 取消
   placeholder: 选择时间
+date_picker:
+  placeholder: 选择日期
+  weekdays: [日, 一, 二, 三, 四, 五, 六]

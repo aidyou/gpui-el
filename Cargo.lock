@@ -1986,6 +1986,7 @@ dependencies = [
 name = "gpui-el"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "gpui-fast",
  "gpui-fast-platform",
  "serde",

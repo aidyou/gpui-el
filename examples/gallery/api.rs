@@ -1463,6 +1463,76 @@ const TIME_PICKER_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const DATE_PICKER: &[Row] = &[
+    (
+        "el_date_picker(), DatePicker::new, id",
+        "ElementId · call site",
+        "Create a single-date picker with a stable sibling-unique ID.",
+        "创建单选日期选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "Option<SharedString> · None",
+        "Control the bound `YYYY-MM-DD` date string.",
+        "控制绑定的 `YYYY-MM-DD` 日期字符串。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights.",
+        "使用 Input 字段的 40/32/24 px 外高。",
+    ),
+    (
+        "disabled, readonly, editable",
+        "bool · false / false / true",
+        "Disable all interaction, allow read-only selection, or disable text editing while keeping the calendar.",
+        "禁用全部交互、允许只读选择，或禁用文本编辑但保留日历。",
+    ),
+    (
+        "clearable",
+        "bool · true",
+        "Show the Input clear control.",
+        "显示 Input 清空控件。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · locale / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+    (
+        "prefix_icon",
+        "Icon · Calendar",
+        "Replace the leading calendar icon.",
+        "替换前置日历图标。",
+    ),
+];
+const DATE_PICKER_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "Option<SharedString>, &mut Window, &mut App",
+        "A day, keyboard move, blur, clear, or confirm changes the date.",
+        "日期选择、键盘移动、失焦、清空或确认改变日期。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The calendar panel opened or closed.",
+        "日历面板打开或关闭。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The Input clear control emptied the date.",
+        "Input 清空控件清空了日期。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -2001,6 +2071,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::AutoComplete => (AUTO_COMPLETE, AUTO_COMPLETE_EVENTS),
         Page::ColorPicker => (COLOR_PICKER, COLOR_PICKER_EVENTS),
         Page::TimePicker => (TIME_PICKER, TIME_PICKER_EVENTS),
+        Page::DatePicker => (DATE_PICKER, DATE_PICKER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -2059,6 +2130,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：当前仅支持单选 YYYY-MM-DD 日期，未移植范围、周/月/年/季度模式、disabled-date、快捷选项、自定义 popper 配置与命令式 exposes。" } else { "Native differences: only single YYYY-MM-DD dates are supported; ranges, week/month/year/quarter modes, disabled-date callbacks, shortcuts, custom popper configuration, and imperative exposes are not mapped." }))
         .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))
         .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))
         .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))

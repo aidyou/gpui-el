@@ -10,6 +10,7 @@ categories = ["gui"]
 include = ["/src/**", "/examples/**", "/i18n/**", "/README.md", "/CONSTITUTION.md", "/COMPONENT_EXCLUSIONS.md", "/LICENSE", "/Cargo.toml", "/build.rs"]
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 gpui = { package = "gpui-fast", version = "=0.1.19" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"

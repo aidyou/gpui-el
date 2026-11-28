@@ -358,6 +358,12 @@ time_picker_seconds: Include seconds
 time_picker_sizes: Sizes
 time_picker_states: Read-only and disabled
 time_picker_custom: Custom icon and non-editable input
+date_picker_intro: Pick a single YYYY-MM-DD date from a month calendar with keyboard movement, clearable input, and native date validation.
+date_picker_page: DatePicker 日期选择器
+date_picker_basic: Basic usage
+date_picker_sizes: Sizes
+date_picker_states: Read-only and disabled
+date_picker_custom: Custom icon and non-editable input
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

@@ -4,6 +4,7 @@ pub(super) mod capsule;
 pub(super) mod checkbox;
 pub(super) mod color_picker;
 pub(super) mod container;
+pub(super) mod date_picker;
 pub(super) mod icon;
 pub(super) mod init;
 pub(super) mod input;

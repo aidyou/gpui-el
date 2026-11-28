@@ -26,3 +26,6 @@ time_picker:
   confirm: Confirm
   cancel: Cancel
   placeholder: Select time
+date_picker:
+  placeholder: Select date
+  weekdays: [Su, Mo, Tu, We, Th, Fr, Sa]
