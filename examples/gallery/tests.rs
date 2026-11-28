@@ -73,6 +73,80 @@ fn sidebar_titles_keep_chinese_suffixes_in_chinese_mode() {
 }
 
 #[gpui::test]
+fn gallery_select_opens_and_selects_with_pointer_and_keyboard(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Select,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("select-basic")
+        .expect("gallery select bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let popup = view
+        .debug_bounds("select-popup")
+        .expect("gallery select popup");
+    assert!(
+        popup.top() >= target.bottom() && popup.top() < target.bottom() + px(20.),
+        "popup={popup:?}, target={target:?}"
+    );
+    view.simulate_keystrokes("down");
+    view.simulate_keystrokes("enter");
+    gallery.update(cx, |gallery, _| {
+        assert_eq!(
+            pages::select::basic_value(&gallery.select).map(|value| value.as_ref()),
+            Some("interval")
+        );
+    });
+}
+
+#[gpui::test]
+fn gallery_time_picker_panel_is_visible_and_selects_hours(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::TimePicker,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("time-picker-basic")
+        .expect("gallery time picker bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let panel = view
+        .debug_bounds("time-picker-panel")
+        .expect("gallery time picker panel");
+    assert!(
+        panel.top() >= target.bottom() && panel.top() < target.bottom() + px(20.),
+        "panel={panel:?}, target={target:?}"
+    );
+    view.simulate_click(
+        gpui::point(panel.left() + px(40.), panel.top() + px(80.)),
+        gpui::Modifiers::default(),
+    );
+    gallery.update(cx, |gallery, _| {
+        assert_eq!(
+            pages::time_picker::basic_value(&gallery.time_picker).map(|value| value.as_ref()),
+            Some("02:30")
+        );
+    });
+}
+
+#[gpui::test]
 fn all_pages_draw_at_wide_and_narrow_sizes_in_both_languages_and_themes(
     cx: &mut gpui::TestAppContext,
 ) {

@@ -23,6 +23,11 @@ impl Default for State {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn basic_value(state: &State) -> Option<&SharedString> {
+    state.basic.as_ref()
+}
+
 impl Gallery {
     pub(crate) fn time_pickers(&self, s: &'static Copy, cx: &Context<Self>) -> Div {
         let view = cx.entity();
@@ -45,11 +50,16 @@ impl Gallery {
                     })
                 })
         };
-        let basic = row().child(div().w(px(240.)).child(field(
-            0,
-            "time-picker-basic".into(),
-            self.time_picker.basic.clone(),
-        )));
+        let basic = row().child(
+            div()
+                .w(px(240.))
+                .debug_selector(|| "time-picker-basic".into())
+                .child(field(
+                    0,
+                    "time-picker-basic".into(),
+                    self.time_picker.basic.clone(),
+                )),
+        );
         let seconds = row().child(
             div().w(px(240.)).child(
                 field(

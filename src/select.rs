@@ -902,6 +902,18 @@ impl RenderOnce for Select {
                     window.refresh();
                 }
             })
+            .on_mouse_down_filter({
+                let state = state.clone();
+                move |_, window, cx| {
+                    if disabled {
+                        return false;
+                    }
+                    let open = !state.read(cx).open;
+                    state.update(cx, |state, cx| state.set_open(open, window, cx));
+                    window.refresh();
+                    false
+                }
+            })
             .onfocus({
                 let state = state.clone();
                 move |window, cx| {
@@ -943,14 +955,18 @@ impl RenderOnce for Select {
         }
 
         let measure = state.clone();
+        let control_height = size.height();
         let mut root = div()
             .id(id.clone())
             .relative()
             .w_full()
-            .child(input)
             .child(
                 gpui::canvas(
                     move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                        let bounds = gpui::Bounds::new(
+                            bounds.origin,
+                            gpui::size(bounds.size.width, px(control_height)),
+                        );
                         if measure.read(cx).bounds != Some(bounds) {
                             measure.update(cx, |state, _| state.bounds = Some(bounds));
                             window.refresh();
@@ -958,25 +974,14 @@ impl RenderOnce for Select {
                     },
                     |_, _, _, _| {},
                 )
-                .absolute()
-                .inset_0(),
+                .w_full()
+                .h(px(0.)),
             )
+            .child(input)
             .on_hover({
                 let state = state.clone();
                 move |hovered, window, cx| {
                     state.update(cx, |state, _| state.hovered = *hovered);
-                    window.refresh();
-                }
-            })
-            .on_click({
-                let state = state.clone();
-                move |_, window, cx| {
-                    if disabled {
-                        return;
-                    }
-                    cx.stop_propagation();
-                    let open = !state.read(cx).open;
-                    state.update(cx, |state, cx| state.set_open(open, window, cx));
                     window.refresh();
                 }
             })
@@ -1007,6 +1012,7 @@ impl RenderOnce for Select {
             let popup_id = ElementId::NamedChild(Arc::new(id.clone()), "popup".into());
             let mut popup = div()
                 .id(popup_id)
+                .debug_selector(|| "select-popup".into())
                 .flex()
                 .flex_col()
                 .py(px(6.))
@@ -1382,7 +1388,7 @@ mod tests {
         view.simulate_click(gpui::point(px(100.), px(36.)), gpui::Modifiers::default());
         press_key(view, "down");
         press_key(view, "enter");
-        assert_eq!(selected.borrow().as_deref(), Some("daily"));
+        assert_eq!(selected.borrow().as_deref(), Some("interval"));
         press_key(view, "down");
         press_key(view, "down");
         press_key(view, "enter");

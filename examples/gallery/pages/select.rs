@@ -27,6 +27,11 @@ impl Default for State {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn basic_value(state: &State) -> Option<&SharedString> {
+    state.basic.as_ref()
+}
+
 fn options<'a>(items: impl IntoIterator<Item = (&'a str, &'a str)>) -> Vec<SelectOption> {
     items
         .into_iter()
@@ -65,11 +70,12 @@ impl Gallery {
                     })
                 })
         };
-        let basic = row().child(div().w(px(240.)).child(field(
-            0,
-            "select-basic".into(),
-            self.select.basic.clone(),
-        )));
+        let basic = row().child(
+            div()
+                .w(px(240.))
+                .debug_selector(|| "select-basic".into())
+                .child(field(0, "select-basic".into(), self.select.basic.clone())),
+        );
         let filterable = row().child(
             div().w(px(240.)).child(
                 field(

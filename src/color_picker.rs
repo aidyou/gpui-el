@@ -600,6 +600,22 @@ where
     .into_any_element()
 }
 
+fn paint_hue_gradient(bounds: Bounds<Pixels>, window: &mut Window) {
+    let segments = f32::from(bounds.size.width).max(1.).ceil() as usize;
+    for index in 0..segments {
+        let left = bounds.left() + px(index as f32);
+        let right = bounds.left() + px((index + 1) as f32);
+        let hue = index as f32 / segments as f32;
+        window.paint_quad(gpui::fill(
+            gpui::Bounds::new(
+                gpui::point(left, bounds.top()),
+                gpui::size(right - left, bounds.size.height),
+            ),
+            Color::from_hsv(hue, 1., 1., 1.).hsla(),
+        ));
+    }
+}
+
 impl RenderOnce for ColorPicker {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let ColorPicker {
@@ -840,28 +856,16 @@ impl RenderOnce for ColorPicker {
                 .w(px(280.))
                 .h(px(12.))
                 .mt(px(8.))
-                .flex();
-            for (index, color) in [
-                rgb(0xff0000),
-                rgb(0xffff00),
-                rgb(0x00ff00),
-                rgb(0x00ffff),
-                rgb(0x0000ff),
-                rgb(0xff00ff),
-                rgb(0xff0000),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                hue_bar = hue_bar.child(
-                    div()
-                        .flex_1()
-                        .h_full()
-                        .bg(color)
-                        .when(index == 0, |el| el.rounded_tl(px(2.)).rounded_bl(px(2.)))
-                        .when(index == 6, |el| el.rounded_tr(px(2.)).rounded_br(px(2.))),
+                .rounded(px(2.))
+                .overflow_hidden()
+                .child(
+                    gpui::canvas(
+                        |_, _, _| {},
+                        move |bounds, _, window, _| paint_hue_gradient(bounds, window),
+                    )
+                    .absolute()
+                    .inset_0(),
                 );
-            }
             hue_bar = hue_bar
                 .child(
                     div()
