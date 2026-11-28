@@ -210,6 +210,9 @@ mod menu;
 mod message;
 pub mod motion;
 mod notification;
+mod popconfirm;
+mod popover;
+mod popup;
 mod radio;
 mod rate;
 mod scrollbar;
@@ -222,6 +225,7 @@ mod tag;
 mod text;
 mod theme;
 mod time_picker;
+mod tooltip;
 mod transfer;
 mod transition;
 mod tree_select;
@@ -269,6 +273,9 @@ pub use notification::{
     NotificationOptions, NotificationPosition, NotificationStack, NotificationState,
     el_notification_stack,
 };
+pub use popconfirm::{Popconfirm, el_popconfirm};
+pub use popover::{Popover, el_popover};
+pub use popup::PopupPlacement;
 pub use radio::{
     Radio, RadioGroup, RadioOption, RadioSize, el_radio, el_radio_button, el_radio_group,
 };
@@ -286,6 +293,7 @@ pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
 pub use time_picker::{TimeFormat, TimePicker, el_time_picker};
+pub use tooltip::{Tooltip, TooltipEffect, TooltipTrigger, el_tooltip};
 pub use transfer::{Transfer, TransferDirection, TransferItem, TransferTargetOrder, el_transfer};
 pub use transition::{Transition, TransitionEffect, el_transition};
 pub use tree_select::{TreeSelect, TreeSelectValue, el_tree_select};

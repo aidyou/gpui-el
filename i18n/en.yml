@@ -47,6 +47,9 @@ transfer:
   filter_placeholder: Search
   no_data: No data
   checked: "{count} selected"
+popconfirm:
+  confirm: Confirm
+  cancel: Cancel
 form:
   submit: Submit
   reset: Reset

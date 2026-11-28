@@ -30,6 +30,7 @@ struct Messages {
     cascader: CascaderMessages,
     tree_select: TreeSelectMessages,
     transfer: TransferMessages,
+    popconfirm: PopconfirmMessages,
     form: FormMessages,
 }
 
@@ -136,6 +137,13 @@ struct TransferMessages {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct PopconfirmMessages {
+    confirm: String,
+    cancel: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct FormMessages {
     submit: String,
     reset: String,
@@ -230,6 +238,10 @@ impl Messages {
                 filter_placeholder: "Search".into(),
                 no_data: "No data".into(),
                 checked: "{count} selected".into(),
+            },
+            popconfirm: PopconfirmMessages {
+                confirm: "Confirm".into(),
+                cancel: "Cancel".into(),
             },
             form: FormMessages {
                 submit: "Submit".into(),
@@ -361,6 +373,12 @@ impl Locale {
     }
     pub(crate) fn transfer_checked(self) -> &'static str {
         &self.messages().transfer.checked
+    }
+    pub(crate) fn popconfirm_confirm(self) -> &'static str {
+        &self.messages().popconfirm.confirm
+    }
+    pub(crate) fn popconfirm_cancel(self) -> &'static str {
+        &self.messages().popconfirm.cancel
     }
     pub(crate) fn form_submit(self) -> &'static str {
         &self.messages().form.submit
