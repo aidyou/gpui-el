@@ -46,6 +46,32 @@ fn dynamic_tags_are_removed_by_stable_id_not_label() {
     );
 }
 
+#[test]
+fn sidebar_titles_are_english_only_in_english_mode() {
+    let english = strings(Locale::English);
+    for page in Page::ALL {
+        let title = page.title(english);
+        assert!(
+            title.bytes().all(|byte| byte.is_ascii()),
+            "English sidebar title contains non-ASCII text: {title}"
+        );
+    }
+}
+
+#[test]
+fn sidebar_titles_keep_chinese_suffixes_in_chinese_mode() {
+    let chinese = strings(Locale::SimplifiedChinese);
+    for page in Page::ALL {
+        let title = page.title(chinese);
+        assert!(
+            title
+                .chars()
+                .any(|character| ('\u{4e00}'..='\u{9fff}').contains(&character)),
+            "Chinese sidebar title is missing Chinese text: {title}"
+        );
+    }
+}
+
 #[gpui::test]
 fn all_pages_draw_at_wide_and_narrow_sizes_in_both_languages_and_themes(
     cx: &mut gpui::TestAppContext,

@@ -288,7 +288,7 @@ input_basic_placeholder: Type something
 input_clearable_placeholder: Hover or focus to clear
 input_search_placeholder: Search
 input_number_intro: Enter numeric values with range clamping, precision, strict steps, side controls, formatting, and native keyboard editing.
-input_number_page: InputNumber 数字输入框
+input_number_page: InputNumber
 input_number_basic: Basic usage
 input_number_steps: Step and strict step
 input_number_precision: Range and precision
@@ -300,7 +300,7 @@ input_number_clear: Value on clear
 input_number_custom: Prefix, suffix, and custom icons
 input_number_align: Text alignment
 capsule_intro: A connected single-selection capsule for compact forms, adapted from the ChatSpeed automation execution-frequency control.
-capsule_page: Capsule 胶囊选项
+capsule_page: Capsule
 capsule_basic: Execution frequency
 capsule_sizes: Heights
 capsule_disabled: Disabled
@@ -312,7 +312,7 @@ capsule_once: Once
 capsule_weekdays: Weekdays
 capsule_monthly: Monthly
 select_intro: Choose one or more values from a filterable dropdown with native text editing, keyboard navigation, and controlled events.
-select_page: Select 选择器
+select_page: Select
 select_basic: Basic usage
 select_filterable: Filterable
 select_multiple: Multiple selection
@@ -330,7 +330,7 @@ select_no_data: No data
 select_header: Choose an execution frequency
 select_footer: Selection is controlled by the application
 auto_complete_intro: Get suggestions from the current input with local or caller-driven filtering, loading states, and keyboard selection.
-auto_complete_page: AutoComplete 自动补全
+auto_complete_page: AutoComplete
 auto_complete_basic: Basic usage
 auto_complete_remote: Caller-driven suggestions
 auto_complete_clearable: Clearable
@@ -344,7 +344,7 @@ auto_complete_element: Element Plus
 auto_complete_header: Suggested values
 auto_complete_footer: Use ↑/↓ and Enter to select
 color_picker_intro: Pick a color with saturation/value, hue, alpha, presets, and clear/confirm actions.
-color_picker_page: ColorPicker 颜色选择器
+color_picker_page: ColorPicker
 color_picker_basic: Basic usage
 color_picker_alpha: Alpha channel
 color_picker_format: RGB output format
@@ -352,40 +352,40 @@ color_picker_sizes: Sizes
 color_picker_disabled: Disabled
 color_picker_clear: Hide the clear action
 time_picker_intro: Pick a single time with scrolling hour/minute columns, optional seconds, keyboard stepping, and confirm/cancel.
-time_picker_page: TimePicker 时间选择器
+time_picker_page: TimePicker
 time_picker_basic: Basic usage
 time_picker_seconds: Include seconds
 time_picker_sizes: Sizes
 time_picker_states: Read-only and disabled
 time_picker_custom: Custom icon and non-editable input
 date_picker_intro: Pick a single YYYY-MM-DD date from a month calendar with keyboard movement, clearable input, and native date validation.
-date_picker_page: DatePicker 日期选择器
+date_picker_page: DatePicker
 date_picker_basic: Basic usage
 date_picker_sizes: Sizes
 date_picker_states: Read-only and disabled
 date_picker_custom: Custom icon and non-editable input
 cascader_intro: Select hierarchical paths with column expansion, leaf selection, multiple values, filtering, and clearable display.
-cascader_page: Cascader 级联选择器
+cascader_page: Cascader
 cascader_basic: Basic usage
 cascader_multiple: Multiple selection
 cascader_filterable: Filterable paths
 cascader_last_level: Show only the last level
 cascader_disabled: Disabled
 tree_select_intro: Select from an expandable tree with single or multiple node values, strict parent selection, filtering, and clearable display.
-tree_select_page: TreeSelect 树选择器
+tree_select_page: TreeSelect
 tree_select_basic: Basic usage
 tree_select_multiple: Multiple selection
 tree_select_strict: Select any level
 tree_select_filterable: Filterable nodes
 tree_select_disabled: Disabled
 transfer_intro: Move items between two checkable lists with controlled target keys, filtering, disabled items, ordering, and change events.
-transfer_page: Transfer 穿梭框
+transfer_page: Transfer
 transfer_basic: Basic usage
 transfer_filterable: Filterable lists
 transfer_target_order: Target ordering
 transfer_custom: Custom titles and buttons
 form_intro: Collect, validate, reset, and submit string fields with shared model state, rules, labels, and inline error messages.
-form_page: Form 表单
+form_page: Form
 form_horizontal: Horizontal validation
 form_vertical: Vertical labels
 form_inline: Inline form
