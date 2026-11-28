@@ -33,3 +33,11 @@ cascader:
   placeholder: 请选择
 tree_select:
   placeholder: 请选择
+transfer:
+  left_title: 列表
+  right_title: 已选择
+  to_right: 向右移动
+  to_left: 向左移动
+  filter_placeholder: 搜索
+  no_data: 暂无数据
+  checked: "已选 {count} 项"

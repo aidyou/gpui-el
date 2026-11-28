@@ -378,6 +378,12 @@ tree_select_multiple: 多选
 tree_select_strict: 选择任意层级
 tree_select_filterable: 节点过滤
 tree_select_disabled: 禁用
+transfer_intro: 在两个可勾选列表间移动项目，支持受控目标键、过滤、禁用项、排序与变更事件。
+transfer_page: Transfer 穿梭框
+transfer_basic: 基本用法
+transfer_filterable: 可过滤列表
+transfer_target_order: 目标排序
+transfer_custom: 自定义标题与按钮
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

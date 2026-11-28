@@ -1691,6 +1691,58 @@ const TREE_SELECT_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const TRANSFER: &[Row] = &[
+    (
+        "el_transfer(), Transfer::new, id",
+        "ElementId · call site",
+        "Create a two-list transfer control with a stable sibling-unique ID.",
+        "创建双列表穿梭控件；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "data",
+        "IntoIterator<TransferItem> · empty",
+        "Set static key/label items; individual items may be disabled.",
+        "设置静态键/标签项目；单个项目可禁用。",
+    ),
+    (
+        "value",
+        "IntoIterator<SharedString> · empty",
+        "Control the target-list keys.",
+        "控制目标列表键。",
+    ),
+    (
+        "filterable, filter_placeholder, filter_method",
+        "bool / SharedString / Fn · false / locale / label match",
+        "Filter each list by label or a caller-provided predicate.",
+        "按标签或调用方提供的谓词过滤各列表。",
+    ),
+    (
+        "target_order",
+        "TransferTargetOrder · Original",
+        "Keep source order, push new targets, or unshift them.",
+        "保持源顺序、追加新目标或前插新目标。",
+    ),
+    (
+        "titles, button_texts",
+        "[SharedString; 2] · locale",
+        "Customize left/right titles and move-button labels.",
+        "自定义左右标题与移动按钮标签。",
+    ),
+];
+const TRANSFER_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "Vec<SharedString>, TransferDirection, Vec<SharedString>, &mut Window, &mut App",
+        "A batch move updates the target keys and reports direction/moved keys.",
+        "批量移动更新目标键并报告方向与被移动键。",
+    ),
+    (
+        "onleftcheckchange, onrightcheckchange",
+        "Vec<SharedString>, &mut Window, &mut App",
+        "Item or select-all checks change in either list.",
+        "任一列表的项目或全选勾选状态改变。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -2232,6 +2284,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::DatePicker => (DATE_PICKER, DATE_PICKER_EVENTS),
         Page::Cascader => (CASCADER, CASCADER_EVENTS),
         Page::TreeSelect => (TREE_SELECT, TREE_SELECT_EVENTS),
+        Page::Transfer => (TRANSFER, TRANSFER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -2290,6 +2343,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::Transfer, |el| el.child(if zh { "原生差异：当前仅支持静态数据与文本标签，未移植属性别名、自定义项目渲染、页脚/空态插槽、虚拟滚动与命令式 panel/query exposes。" } else { "Native differences: only static data and text labels are supported; prop aliases, custom item rendering, footer/empty slots, virtual scrolling, and imperative panel/query exposes are not mapped." }))
         .when(page == Page::TreeSelect, |el| el.child(if zh { "原生差异：当前仅支持静态树与节点键值，未移植懒加载、cache-data、自定义节点渲染、虚拟滚动与命令式 tree/select exposes。" } else { "Native differences: only static trees and node-key values are supported; lazy loading, cache-data, custom node rendering, virtual scrolling, and imperative tree/select exposes are not mapped." }))
         .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
         .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：当前仅支持单选 YYYY-MM-DD 日期，未移植范围、周/月/年/季度模式、disabled-date、快捷选项、自定义 popper 配置与命令式 exposes。" } else { "Native differences: only single YYYY-MM-DD dates are supported; ranges, week/month/year/quarter modes, disabled-date callbacks, shortcuts, custom popper configuration, and imperative exposes are not mapped." }))

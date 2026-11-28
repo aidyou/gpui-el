@@ -29,6 +29,7 @@ struct Messages {
     date_picker: DatePickerMessages,
     cascader: CascaderMessages,
     tree_select: TreeSelectMessages,
+    transfer: TransferMessages,
 }
 
 #[derive(Deserialize)]
@@ -114,6 +115,18 @@ struct TreeSelectMessages {
     placeholder: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TransferMessages {
+    left_title: String,
+    right_title: String,
+    to_right: String,
+    to_left: String,
+    filter_placeholder: String,
+    no_data: String,
+    checked: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -169,6 +182,15 @@ impl Messages {
             },
             tree_select: TreeSelectMessages {
                 placeholder: "Select".into(),
+            },
+            transfer: TransferMessages {
+                left_title: "List".into(),
+                right_title: "Selected".into(),
+                to_right: "Move right".into(),
+                to_left: "Move left".into(),
+                filter_placeholder: "Search".into(),
+                no_data: "No data".into(),
+                checked: "{count} selected".into(),
             },
         }
     }
@@ -255,6 +277,27 @@ impl Locale {
     pub(crate) fn tree_select_placeholder(self) -> &'static str {
         &self.messages().tree_select.placeholder
     }
+    pub(crate) fn transfer_left_title(self) -> &'static str {
+        &self.messages().transfer.left_title
+    }
+    pub(crate) fn transfer_right_title(self) -> &'static str {
+        &self.messages().transfer.right_title
+    }
+    pub(crate) fn transfer_to_right(self) -> &'static str {
+        &self.messages().transfer.to_right
+    }
+    pub(crate) fn transfer_to_left(self) -> &'static str {
+        &self.messages().transfer.to_left
+    }
+    pub(crate) fn transfer_filter_placeholder(self) -> &'static str {
+        &self.messages().transfer.filter_placeholder
+    }
+    pub(crate) fn transfer_no_data(self) -> &'static str {
+        &self.messages().transfer.no_data
+    }
+    pub(crate) fn transfer_checked(self) -> &'static str {
+        &self.messages().transfer.checked
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -334,6 +377,10 @@ mod tests {
             Locale::SimplifiedChinese.tree_select_placeholder(),
             "请选择"
         );
+        assert_eq!(Locale::default().transfer_left_title(), "List");
+        assert_eq!(Locale::SimplifiedChinese.transfer_left_title(), "列表");
+        assert_eq!(Locale::default().transfer_to_right(), "Move right");
+        assert_eq!(Locale::SimplifiedChinese.transfer_to_left(), "向左移动");
     }
 
     #[test]
@@ -385,5 +432,15 @@ mod tests {
             fallback.tree_select.placeholder,
             embedded.tree_select.placeholder
         );
+        assert_eq!(fallback.transfer.left_title, embedded.transfer.left_title);
+        assert_eq!(fallback.transfer.right_title, embedded.transfer.right_title);
+        assert_eq!(fallback.transfer.to_right, embedded.transfer.to_right);
+        assert_eq!(fallback.transfer.to_left, embedded.transfer.to_left);
+        assert_eq!(
+            fallback.transfer.filter_placeholder,
+            embedded.transfer.filter_placeholder
+        );
+        assert_eq!(fallback.transfer.no_data, embedded.transfer.no_data);
+        assert_eq!(fallback.transfer.checked, embedded.transfer.checked);
     }
 }

@@ -378,6 +378,12 @@ tree_select_multiple: Multiple selection
 tree_select_strict: Select any level
 tree_select_filterable: Filterable nodes
 tree_select_disabled: Disabled
+transfer_intro: Move items between two checkable lists with controlled target keys, filtering, disabled items, ordering, and change events.
+transfer_page: Transfer 穿梭框
+transfer_basic: Basic usage
+transfer_filterable: Filterable lists
+transfer_target_order: Target ordering
+transfer_custom: Custom titles and buttons
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

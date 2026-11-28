@@ -33,3 +33,11 @@ cascader:
   placeholder: Select
 tree_select:
   placeholder: Select
+transfer:
+  left_title: List
+  right_title: Selected
+  to_right: Move right
+  to_left: Move left
+  filter_placeholder: Search
+  no_data: No data
+  checked: "{count} selected"
