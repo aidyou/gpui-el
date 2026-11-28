@@ -2681,6 +2681,121 @@ const NOTIFICATION_EVENTS: &[Row] = &[(
     "通知被激活，或手动/计时关闭时触发。",
 )];
 
+const TOOLTIP: &[Row] = &[
+    (
+        "el_tooltip(), Tooltip::new, id, child, content",
+        "ElementId / IntoElement · call site",
+        "Wrap a trigger and supply text or native tooltip content.",
+        "包装触发器并设置文本或原生提示内容。",
+    ),
+    (
+        "placement, fallback_placements, offset",
+        "PopupPlacement / f32 · Bottom / 12",
+        "Choose one of twelve placements, fallback order, and trigger distance.",
+        "选择十二向定位、回退顺序与触发器距离。",
+    ),
+    (
+        "effect, trigger, visible, disabled",
+        "TooltipEffect / TooltipTrigger / bool · Dark / Hover",
+        "Choose dark/light, hover/click/focus/contextmenu, controlled visibility, or disabled state.",
+        "选择深色/浅色、悬停/点击/聚焦/右键、受控显隐或禁用状态。",
+    ),
+    (
+        "show_arrow, enterable, width, padding",
+        "bool / f32 · true / true / unset / 5×11",
+        "Configure arrow, pointer-enterable content, width, and surface padding.",
+        "配置箭头、指针可进入内容、宽度与表面内边距。",
+    ),
+    (
+        "show_after, hide_after, auto_close",
+        "Duration · 0 / 200 ms / 0",
+        "Delay appearance, delay disappearance, or auto-close after a timeout.",
+        "延迟出现、延迟消失或超时自动关闭。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · unset",
+        "Name the popup for assistive technology.",
+        "为辅助技术命名浮层。",
+    ),
+];
+const TOOLTIP_EVENTS: &[Row] = &[(
+    "onshow, onhide",
+    "&mut App",
+    "The tooltip becomes visible or closes.",
+    "提示显示或关闭时触发。",
+)];
+const POPOVER: &[Row] = &[
+    (
+        "el_popover(), Popover::new, id, child",
+        "ElementId / IntoElement · call site",
+        "Create a popover around a native trigger.",
+        "围绕原生触发器创建弹出框。",
+    ),
+    (
+        "title, content, width",
+        "SharedString / IntoElement / f32 · 150",
+        "Set the title, rich body, and minimum width.",
+        "设置标题、富正文与最小宽度。",
+    ),
+    (
+        "placement, effect, trigger, visible, disabled",
+        "PopupPlacement / TooltipEffect / TooltipTrigger / bool · Bottom / Light / Hover",
+        "Configure geometry, theme, activation, controlled visibility, and disabled state.",
+        "配置几何、主题、触发、受控显隐与禁用状态。",
+    ),
+    (
+        "offset, show_arrow, enterable",
+        "f32 / bool · 0 / true / true",
+        "Configure distance, arrow, and pointer-enterable content.",
+        "配置距离、箭头与指针可进入内容。",
+    ),
+    (
+        "show_after, hide_after, auto_close, accessibility_label",
+        "Duration / SharedString · 0 / 200 ms / 0",
+        "Configure timing and the accessible popup name.",
+        "配置计时与辅助技术名称。",
+    ),
+];
+const POPOVER_EVENTS: &[Row] = &[(
+    "onshow, onhide",
+    "&mut App",
+    "The popover becomes visible or closes.",
+    "弹出框显示或关闭时触发。",
+)];
+const POPCONFIRM: &[Row] = &[
+    (
+        "el_popconfirm(), Popconfirm::new, id, child, title",
+        "ElementId / IntoElement / SharedString · call site",
+        "Create a click-triggered confirmation around a native action.",
+        "围绕原生操作创建点击触发的确认气泡。",
+    ),
+    (
+        "confirm_text, cancel_text, confirm_type, cancel_type",
+        "SharedString / ButtonType · localized / Primary / text",
+        "Customize action labels and semantic button types; Default renders text.",
+        "自定义操作文字与语义按钮类型；Default 渲染文字按钮。",
+    ),
+    (
+        "icon_color, hide_icon, width, placement, effect",
+        "u32 / bool / f32 / PopupPlacement / TooltipEffect · #f90 / false / 150 / Bottom / Light",
+        "Configure warning icon, geometry, and theme.",
+        "配置警告图标、几何与主题。",
+    ),
+    (
+        "visible, disabled, hide_after, accessibility_label",
+        "bool / Duration / SharedString · unset / false / 200 ms",
+        "Configure controlled visibility, disabled state, close delay, and accessible name.",
+        "配置受控显隐、禁用、关闭延迟与辅助技术名称。",
+    ),
+];
+const POPCONFIRM_EVENTS: &[Row] = &[(
+    "onconfirm, oncancel",
+    "&mut Window, &mut App",
+    "The corresponding action is activated; the popup then closes.",
+    "对应操作被激活；随后关闭气泡。",
+)];
+
 pub(super) fn render(page: Page, locale: Locale) -> Div {
     let zh = locale == Locale::SimplifiedChinese;
     let (api, events): (&[Row], &[Row]) = match page {
@@ -2703,6 +2818,9 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Drawer => (DRAWER, DRAWER_EVENTS),
         Page::Message => (MESSAGE, MESSAGE_EVENTS),
         Page::Notification => (NOTIFICATION, NOTIFICATION_EVENTS),
+        Page::Tooltip => (TOOLTIP, TOOLTIP_EVENTS),
+        Page::Popover => (POPOVER, POPOVER_EVENTS),
+        Page::Popconfirm => (POPCONFIRM, POPCONFIRM_EVENTS),
         Page::Switch => (SWITCH, SWITCH_EVENTS),
         Page::Checkbox => (CHECKBOX, CHECKBOX_EVENTS),
         Page::Radio => (RADIO, RADIO_EVENTS),
@@ -2794,6 +2912,9 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Drawer, |el| el.child(if zh { "原生差异：需挂载到窗口根级；支持四向、像素/百分比尺寸、焦点进入/恢复与内部滚动，但未移植可调整大小、open/close delay、DOM Teleport 与 z-index。" } else { "Native differences: mount at the window root; four directions, pixel/percentage sizing, focus entry/restoration, and internal scrolling are supported, while resizing, open/close delays, DOM Teleport, and z-index are not mapped." }))
         .when(page == Page::Message, |el| el.child(if zh { "原生差异：使用 MessageState 句柄而非全局 Vue 服务；支持计时、分组、位置与关闭，未移植 HTML 字符串、自定义 class、appendTo 与全局 z-index。" } else { "Native differences: a MessageState handle replaces the global Vue service; timers, grouping, placement, and closing are supported, while HTML strings, custom classes, appendTo, and global z-index are not mapped." }))
         .when(page == Page::Notification, |el| el.child(if zh { "原生差异：使用 NotificationState 句柄而非全局 Vue 服务；支持计时、悬停暂停、进度与角落定位，未移植 HTML 字符串、自定义 class、appendTo 与全局 z-index。" } else { "Native differences: a NotificationState handle replaces the global Vue service; timers, hover pause, progress, and corner placement are supported, while HTML strings, custom classes, appendTo, and global z-index are not mapped." }))
+        .when(page == Page::Tooltip, |el| el.child(if zh { "原生差异：使用 GPUI 锚点定位与路径箭头，不依赖 DOM Teleport；支持十二向、回退、延迟与四种触发，但未移植 HTML 字符串、popper.js 选项、虚拟触发器、singleton、自定义 class/style 与全局 z-index；进入淡入，关闭即时移除。" } else { "Native differences: positioning and arrows use GPUI anchors and paths instead of DOM Teleport; twelve placements, fallbacks, delays, and four triggers are supported, while HTML strings, popper.js options, virtual triggering, singleton mode, custom classes/styles, and global z-index are not mapped. Entry fades in; closing removes the popup immediately." }))
+        .when(page == Page::Popover, |el| el.child(if zh { "原生差异：Popover 复用原生 Tooltip；支持标题、富内容、150 px 最小宽度与嵌套操作，未移植 HTML 字符串、虚拟引用、指令用法、popper.js 选项、自定义 class/style 与全局 z-index。" } else { "Native differences: Popover reuses native Tooltip; titles, rich content, a 150 px minimum width, and nested actions are supported, while HTML strings, virtual references, directive usage, popper.js options, custom classes/styles, and global z-index are not mapped." }))
+        .when(page == Page::Popconfirm, |el| el.child(if zh { "原生差异：Popconfirm 复用原生 Tooltip 的 click 触发；支持警告图标、按钮类型、确认/取消与自动关闭，未移植虚拟引用、popper.js 选项、自定义 class/style 与全局 z-index。" } else { "Native differences: Popconfirm reuses native Tooltip's click trigger; warning icon, button types, confirm/cancel, and automatic closing are supported, while virtual references, popper.js options, custom classes/styles, and global z-index are not mapped." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))

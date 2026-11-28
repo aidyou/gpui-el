@@ -20,6 +20,9 @@ dialog_intro: 用标题、内容、页脚、遮罩、Esc 关闭与可选拖动�
 drawer_intro: 从任意方向打开贴边模态面板，可配置尺寸、标题与页脚。
 message_intro: 显示短暂语义反馈，支持位置、分组、朴素样式以及自动或手动关闭。
 notification_intro: 在角落显示通知，支持标题/正文、点击关闭回调、悬停暂停与倒计时进度。
+tooltip_intro: 用悬停、点击、聚焦或右键菜单显示简洁帮助，支持十二向定位、延迟与明暗主题。
+popover_intro: 在浅色 150 px 浮层中显示带标题的富内容，支持嵌套操作与可配置触发方式。
+popconfirm_intro: 用紧凑浮层确认点击操作，包含警告图标、取消/确定动作与自动关闭。
 grid_basic: 基础布局
 grid_gutter: 列间距
 grid_mixed: 混合布局
@@ -70,6 +73,9 @@ dialog_page: Dialog 对话框
 drawer_page: Drawer 抽屉
 message_page: Message 消息提示
 notification_page: Notification 通知
+tooltip_page: Tooltip 文字提示
+popover_page: Popover 弹出框
+popconfirm_page: Popconfirm 确认气泡
 icon_pack_error: 无法载入 Tabler 字体，当前图标库未更改。
 named_icons: 图标目录
 icon_search: 搜索当前分组
@@ -454,6 +460,40 @@ notification_title: 通知
 notification_progress: 显示进度
 notification_bottom: 左下角
 notification_working: 正在处理
+tooltip_basic: 基本文字提示
+tooltip_placements: 十二向定位
+tooltip_effects: 深色与浅色主题
+tooltip_triggers: 点击、聚焦与右键菜单
+tooltip_delays: 延迟显示与隐藏
+tooltip_content: 原生文字提示内容
+tooltip_hover: 悬停查看
+tooltip_click: 点击查看
+tooltip_focus: 聚焦后按 Enter
+tooltip_context: 右键查看
+tooltip_delayed: 延迟文字提示
+tooltip_top_start: 上方起始
+tooltip_top_end: 上方末端
+tooltip_bottom_start: 下方起始
+tooltip_bottom_end: 下方末端
+tooltip_left_start: 左侧起始
+tooltip_left_end: 左侧末端
+tooltip_right_start: 右侧起始
+tooltip_right_end: 右侧末端
+popover_basic: 带标题的弹出框
+popover_rich: 原生富内容
+popover_click: 点击触发
+popover_title: 详细信息
+popover_content: 弹出框正文内容
+popover_rich_body: 弹出框可以包含原生控件与结构化内容。
+popover_action: 执行操作
+popconfirm_basic: 基本确认
+popconfirm_danger: 危险操作确认
+popconfirm_custom: 自定义文字与隐藏图标
+popconfirm_title: 删除此项？
+popconfirm_danger_title: 永久删除此项？
+popconfirm_delete: 删除
+popconfirm_yes: 是
+popconfirm_no: 否
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

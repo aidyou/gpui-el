@@ -20,6 +20,9 @@ dialog_intro: Present focused modal content with a title, body, footer, backdrop
 drawer_intro: Open an edge-anchored modal panel from any direction with configurable size and header/footer content.
 message_intro: Show transient semantic feedback with placement, grouping, plain style, and automatic or manual closing.
 notification_intro: Show corner notifications with title/message, click and close callbacks, hover pause, and countdown progress.
+tooltip_intro: Show concise hover, click, focus, or context-menu help with twelve placements, delayed display, and dark/light themes.
+popover_intro: Show richer titled content in a light 150 px popup with native nested actions and configurable triggers.
+popconfirm_intro: Confirm a click action in a compact popup with warning icon, cancel/confirm actions, and automatic closing.
 grid_basic: Basic layout
 grid_gutter: Column spacing
 grid_mixed: Mixed column widths
@@ -70,6 +73,9 @@ dialog_page: Dialog
 drawer_page: Drawer
 message_page: Message
 notification_page: Notification
+tooltip_page: Tooltip
+popover_page: Popover
+popconfirm_page: Popconfirm
 icon_pack_error: Could not load the Tabler font. The current pack is unchanged.
 named_icons: Icon catalog
 icon_search: Search this group
@@ -454,6 +460,40 @@ notification_title: Notification
 notification_progress: Show progress
 notification_bottom: Bottom-left
 notification_working: Work is in progress
+tooltip_basic: Basic tooltip
+tooltip_placements: Twelve placements
+tooltip_effects: Dark and light themes
+tooltip_triggers: Click, focus, and context menu
+tooltip_delays: Delayed show and hide
+tooltip_content: Native tooltip content
+tooltip_hover: Hover me
+tooltip_click: Click me
+tooltip_focus: Focus and press Enter
+tooltip_context: Right-click me
+tooltip_delayed: Delayed tooltip
+tooltip_top_start: Top start
+tooltip_top_end: Top end
+tooltip_bottom_start: Bottom start
+tooltip_bottom_end: Bottom end
+tooltip_left_start: Left start
+tooltip_left_end: Left end
+tooltip_right_start: Right start
+tooltip_right_end: Right end
+popover_basic: Titled popover
+popover_rich: Rich native content
+popover_click: Click trigger
+popover_title: Details
+popover_content: Popover body content
+popover_rich_body: Popovers can contain native controls and structured content.
+popover_action: Run action
+popconfirm_basic: Basic confirmation
+popconfirm_danger: Danger confirmation
+popconfirm_custom: Custom text and hidden icon
+popconfirm_title: Delete this item?
+popconfirm_danger_title: Delete this item permanently?
+popconfirm_delete: Delete
+popconfirm_yes: Yes
+popconfirm_no: No
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

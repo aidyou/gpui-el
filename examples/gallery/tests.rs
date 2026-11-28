@@ -374,6 +374,75 @@ fn gallery_message_and_notification_stacks_render_and_clear(cx: &mut gpui::TestA
 }
 
 #[gpui::test]
+fn gallery_tooltip_family_opens_and_closes(cx: &mut gpui::TestAppContext) {
+    let (_, tooltip_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Tooltip,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    tooltip_view.simulate_resize(size(px(1040.), px(900.)));
+    tooltip_view.update(|window, cx| window.draw(cx).clear(cx));
+    let trigger = tooltip_view
+        .debug_bounds("tooltip-basic-area")
+        .expect("tooltip area");
+    tooltip_view.simulate_mouse_move(trigger.center(), None, Default::default());
+    tooltip_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(tooltip_view.debug_bounds("tooltip-popup").is_some());
+    tooltip_view.simulate_click(gpui::point(px(1000.), px(850.)), gpui::Modifiers::default());
+    tooltip_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(tooltip_view.debug_bounds("tooltip-popup").is_none());
+
+    let (_, popover_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Popover,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    popover_view.simulate_resize(size(px(1040.), px(900.)));
+    popover_view.update(|window, cx| window.draw(cx).clear(cx));
+    let trigger = popover_view
+        .debug_bounds("popover-basic-area")
+        .expect("popover area");
+    popover_view.simulate_mouse_move(trigger.center(), None, Default::default());
+    popover_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(popover_view.debug_bounds("popover-title").is_some());
+
+    let (_, popconfirm_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Popconfirm,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    popconfirm_view.simulate_resize(size(px(1040.), px(900.)));
+    popconfirm_view.update(|window, cx| window.draw(cx).clear(cx));
+    let trigger = popconfirm_view
+        .debug_bounds("popconfirm-basic-area")
+        .expect("popconfirm area");
+    popconfirm_view.simulate_click(trigger.center(), gpui::Modifiers::default());
+    popconfirm_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(popconfirm_view.debug_bounds("popconfirm-content").is_some());
+    let cancel = popconfirm_view
+        .debug_bounds("popconfirm-cancel")
+        .expect("cancel action");
+    popconfirm_view.simulate_click(cancel.center(), gpui::Modifiers::default());
+    popconfirm_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(popconfirm_view.debug_bounds("popconfirm-content").is_none());
+}
+
+#[gpui::test]
 fn gallery_select_can_create_a_new_option(cx: &mut gpui::TestAppContext) {
     let (gallery, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);

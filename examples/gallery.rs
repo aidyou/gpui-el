@@ -125,6 +125,9 @@ enum Page {
     Drawer,
     Message,
     Notification,
+    Tooltip,
+    Popover,
+    Popconfirm,
     Switch,
     Checkbox,
     Radio,
@@ -145,7 +148,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 36] = [
+    const ALL: [Self; 39] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -165,6 +168,9 @@ impl Page {
         Self::Drawer,
         Self::Message,
         Self::Notification,
+        Self::Tooltip,
+        Self::Popover,
+        Self::Popconfirm,
         Self::Switch,
         Self::Checkbox,
         Self::Radio,
@@ -205,6 +211,9 @@ impl Page {
             Self::Drawer => &s.drawer_intro,
             Self::Message => &s.message_intro,
             Self::Notification => &s.notification_intro,
+            Self::Tooltip => &s.tooltip_intro,
+            Self::Popover => &s.popover_intro,
+            Self::Popconfirm => &s.popconfirm_intro,
             Self::Switch => &s.switch_intro,
             Self::Checkbox => &s.checkbox_intro,
             Self::Radio => &s.radio_intro,
@@ -246,6 +255,9 @@ impl Page {
             Self::Drawer => "drawer",
             Self::Message => "message",
             Self::Notification => "notification",
+            Self::Tooltip => "tooltip",
+            Self::Popover => "popover",
+            Self::Popconfirm => "popconfirm",
             Self::Switch => "switch",
             Self::Checkbox => "checkbox",
             Self::Radio => "radio",
@@ -287,6 +299,9 @@ impl Page {
             Self::Drawer => &s.drawer_page,
             Self::Message => &s.message_page,
             Self::Notification => &s.notification_page,
+            Self::Tooltip => &s.tooltip_page,
+            Self::Popover => &s.popover_page,
+            Self::Popconfirm => &s.popconfirm_page,
             Self::Switch => &s.switch_page,
             Self::Checkbox => &s.checkbox_page,
             Self::Radio => &s.radio_page,
@@ -339,6 +354,9 @@ impl Page {
             Self::Drawer => &["el-drawer"],
             Self::Message => &["ElMessage"],
             Self::Notification => &["ElNotification"],
+            Self::Tooltip => &["el-tooltip"],
+            Self::Popover => &["el-popover"],
+            Self::Popconfirm => &["el-popconfirm"],
             Self::Switch => &["el-switch"],
             Self::Checkbox => &["el-checkbox", "el-checkbox-group"],
             Self::Radio => &["el-radio", "el-radio-group"],
@@ -469,7 +487,10 @@ impl Render for Gallery {
                                         .entry(item(Page::Dialog))
                                         .entry(item(Page::Drawer))
                                         .entry(item(Page::Message))
-                                        .entry(item(Page::Notification)),
+                                        .entry(item(Page::Notification))
+                                        .entry(item(Page::Tooltip))
+                                        .entry(item(Page::Popover))
+                                        .entry(item(Page::Popconfirm)),
                                 )
                                 .entry(
                                     el_sub_menu("form", s.form.as_str())
@@ -516,6 +537,9 @@ impl Render for Gallery {
             Page::Drawer => self.drawers(s, cx),
             Page::Message => self.messages(s, cx),
             Page::Notification => self.notifications(s, cx),
+            Page::Tooltip => self.tooltips(s, cx),
+            Page::Popover => self.popovers(s, cx),
+            Page::Popconfirm => self.popconfirms(s, cx),
             Page::Switch => self.switches(s, cx),
             Page::Checkbox => self.checkboxes(s, cx),
             Page::Radio => self.radios(s, cx),

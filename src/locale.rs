@@ -478,6 +478,10 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.transfer_left_title(), "列表");
         assert_eq!(Locale::default().transfer_to_right(), "Move right");
         assert_eq!(Locale::SimplifiedChinese.transfer_to_left(), "向左移动");
+        assert_eq!(Locale::default().popconfirm_confirm(), "Confirm");
+        assert_eq!(Locale::SimplifiedChinese.popconfirm_confirm(), "确定");
+        assert_eq!(Locale::default().popconfirm_cancel(), "Cancel");
+        assert_eq!(Locale::SimplifiedChinese.popconfirm_cancel(), "取消");
         assert_eq!(Locale::default().form_submit(), "Submit");
         assert_eq!(Locale::SimplifiedChinese.form_reset(), "重置");
         assert_eq!(Locale::default().form_required(), "{label} is required");
@@ -546,6 +550,8 @@ mod tests {
         );
         assert_eq!(fallback.transfer.no_data, embedded.transfer.no_data);
         assert_eq!(fallback.transfer.checked, embedded.transfer.checked);
+        assert_eq!(fallback.popconfirm.confirm, embedded.popconfirm.confirm);
+        assert_eq!(fallback.popconfirm.cancel, embedded.popconfirm.cancel);
         assert_eq!(fallback.form.submit, embedded.form.submit);
         assert_eq!(fallback.form.reset, embedded.form.reset);
         assert_eq!(fallback.form.required, embedded.form.required);

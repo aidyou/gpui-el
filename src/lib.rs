@@ -115,6 +115,19 @@
 //! let dialog = el_dialog().open(true).title("Confirm").child("Review the details.");
 //! ```
 //!
+//! Tooltip, Popover, and Popconfirm share twelve-way native popup placement,
+//! boundary fallback, path arrows, delayed show/hide, and outside/Escape close.
+//! Popover reuses Tooltip for titled rich content; Popconfirm uses click
+//! activation and closes after confirm or cancel.
+//!
+//! ```
+//! use gpui_el::{PopupPlacement, el_button, el_tooltip};
+//! let tooltip = el_tooltip()
+//!     .placement(PopupPlacement::TopStart)
+//!     .content("Native tooltip")
+//!     .child(el_button().label("Hover me"));
+//! ```
+//!
 //! Table follows `table.md`, `components/table/src`, and Theme Chalk
 //! `table.scss` for its basic subset: typed columns with fixed or distributed
 //! widths, header and cell alignment, stripes, borders, three sizes, a fixed
