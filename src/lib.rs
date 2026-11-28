@@ -204,6 +204,7 @@ mod text;
 mod theme;
 mod time_picker;
 mod transition;
+mod tree_select;
 
 pub use auto_complete::{AutoComplete, AutoCompleteOption, el_auto_complete};
 pub use button::{
@@ -248,6 +249,7 @@ pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
 pub use time_picker::{TimeFormat, TimePicker, el_time_picker};
 pub use transition::{Transition, TransitionEffect, el_transition};
+pub use tree_select::{TreeSelect, TreeSelectValue, el_tree_select};
 
 /// Sets the defaults for one GPUI application. Individual controls may still
 /// override their icon source. Register custom fonts before opening windows.

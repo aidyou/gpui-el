@@ -46,6 +46,22 @@ impl CascaderOption {
         self.children = children.into_iter().collect();
         self
     }
+
+    pub(crate) fn value(&self) -> &SharedString {
+        &self.value
+    }
+
+    pub(crate) fn label(&self) -> &SharedString {
+        &self.label
+    }
+
+    pub(crate) fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
+    pub(crate) fn child_options(&self) -> &[CascaderOption] {
+        &self.children
+    }
 }
 
 /// Controlled Cascader selection.

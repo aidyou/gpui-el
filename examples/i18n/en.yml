@@ -371,6 +371,13 @@ cascader_multiple: Multiple selection
 cascader_filterable: Filterable paths
 cascader_last_level: Show only the last level
 cascader_disabled: Disabled
+tree_select_intro: Select from an expandable tree with single or multiple node values, strict parent selection, filtering, and clearable display.
+tree_select_page: TreeSelect 树选择器
+tree_select_basic: Basic usage
+tree_select_multiple: Multiple selection
+tree_select_strict: Select any level
+tree_select_filterable: Filterable nodes
+tree_select_disabled: Disabled
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

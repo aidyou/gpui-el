@@ -1615,6 +1615,82 @@ const CASCADER_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const TREE_SELECT: &[Row] = &[
+    (
+        "el_tree_select(), TreeSelect::new, id",
+        "ElementId · call site",
+        "Create a tree selector with a stable sibling-unique ID.",
+        "创建树选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "value",
+        "TreeSelectValue · Single(None)",
+        "Control one node key or multiple node keys.",
+        "控制单个节点键或多个节点键。",
+    ),
+    (
+        "options",
+        "IntoIterator<CascaderOption> · empty",
+        "Set the static tree; node values, labels, children, and disabled flags are reused from CascaderOption.",
+        "设置静态树；复用 CascaderOption 的节点值、标签、子节点与禁用标记。",
+    ),
+    (
+        "multiple, check_strictly",
+        "bool · false",
+        "Enable multiple values and allow parent nodes to be selected directly.",
+        "启用多选，并允许直接选择父节点。",
+    ),
+    (
+        "filterable",
+        "bool · false",
+        "Filter visible nodes by label while typing.",
+        "键入时按标签过滤可见节点。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights.",
+        "使用 Input 字段的 40/32/24 px 外高。",
+    ),
+    (
+        "disabled, clearable",
+        "bool · false",
+        "Disable interaction and optionally show the Input clear control.",
+        "禁用交互，并可显示 Input 清空控件。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · locale / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+];
+const TREE_SELECT_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "TreeSelectValue, &mut Window, &mut App",
+        "A node, multiple toggle, or clear changes the value.",
+        "节点选择、多选切换或清空改变值。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The tree panel opened or closed.",
+        "树面板打开或关闭。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The Input clear control emptied the value.",
+        "Input 清空控件清空了值。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -2155,6 +2231,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::TimePicker => (TIME_PICKER, TIME_PICKER_EVENTS),
         Page::DatePicker => (DATE_PICKER, DATE_PICKER_EVENTS),
         Page::Cascader => (CASCADER, CASCADER_EVENTS),
+        Page::TreeSelect => (TREE_SELECT, TREE_SELECT_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -2213,6 +2290,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::TreeSelect, |el| el.child(if zh { "原生差异：当前仅支持静态树与节点键值，未移植懒加载、cache-data、自定义节点渲染、虚拟滚动与命令式 tree/select exposes。" } else { "Native differences: only static trees and node-key values are supported; lazy loading, cache-data, custom node rendering, virtual scrolling, and imperative tree/select exposes are not mapped." }))
         .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
         .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：当前仅支持单选 YYYY-MM-DD 日期，未移植范围、周/月/年/季度模式、disabled-date、快捷选项、自定义 popper 配置与命令式 exposes。" } else { "Native differences: only single YYYY-MM-DD dates are supported; ranges, week/month/year/quarter modes, disabled-date callbacks, shortcuts, custom popper configuration, and imperative exposes are not mapped." }))
         .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))

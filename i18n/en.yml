@@ -31,3 +31,5 @@ date_picker:
   weekdays: [Su, Mo, Tu, We, Th, Fr, Sa]
 cascader:
   placeholder: Select
+tree_select:
+  placeholder: Select

@@ -26,3 +26,4 @@ pub(super) mod table;
 pub(super) mod tag;
 pub(super) mod text;
 pub(super) mod time_picker;
+pub(super) mod tree_select;

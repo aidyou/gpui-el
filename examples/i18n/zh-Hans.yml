@@ -371,6 +371,13 @@ cascader_multiple: 多选
 cascader_filterable: 路径过滤
 cascader_last_level: 仅显示最后一级
 cascader_disabled: 禁用
+tree_select_intro: 从可展开的树中选择单个或多个节点值，支持父节点严格选择、过滤与清空显示。
+tree_select_page: TreeSelect 树选择器
+tree_select_basic: 基本用法
+tree_select_multiple: 多选
+tree_select_strict: 选择任意层级
+tree_select_filterable: 节点过滤
+tree_select_disabled: 禁用
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

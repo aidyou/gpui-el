@@ -28,6 +28,7 @@ struct Messages {
     time_picker: TimePickerMessages,
     date_picker: DatePickerMessages,
     cascader: CascaderMessages,
+    tree_select: TreeSelectMessages,
 }
 
 #[derive(Deserialize)]
@@ -107,6 +108,12 @@ struct CascaderMessages {
     placeholder: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TreeSelectMessages {
+    placeholder: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -158,6 +165,9 @@ impl Messages {
                     .collect(),
             },
             cascader: CascaderMessages {
+                placeholder: "Select".into(),
+            },
+            tree_select: TreeSelectMessages {
                 placeholder: "Select".into(),
             },
         }
@@ -242,6 +252,9 @@ impl Locale {
     pub(crate) fn cascader_placeholder(self) -> &'static str {
         &self.messages().cascader.placeholder
     }
+    pub(crate) fn tree_select_placeholder(self) -> &'static str {
+        &self.messages().tree_select.placeholder
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -316,6 +329,11 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.date_picker_weekdays()[0], "日");
         assert_eq!(Locale::default().cascader_placeholder(), "Select");
         assert_eq!(Locale::SimplifiedChinese.cascader_placeholder(), "请选择");
+        assert_eq!(Locale::default().tree_select_placeholder(), "Select");
+        assert_eq!(
+            Locale::SimplifiedChinese.tree_select_placeholder(),
+            "请选择"
+        );
     }
 
     #[test]
@@ -363,5 +381,9 @@ mod tests {
         );
         assert_eq!(fallback.date_picker.weekdays, embedded.date_picker.weekdays);
         assert_eq!(fallback.cascader.placeholder, embedded.cascader.placeholder);
+        assert_eq!(
+            fallback.tree_select.placeholder,
+            embedded.tree_select.placeholder
+        );
     }
 }
