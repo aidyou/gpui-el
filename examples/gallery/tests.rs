@@ -254,6 +254,126 @@ fn gallery_color_picker_text_input_commits(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn gallery_dialog_and_drawer_overlays_open(cx: &mut gpui::TestAppContext) {
+    let (dialog, dialog_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let mut gallery = Gallery {
+            page: Page::Dialog,
+            ..Gallery::default()
+        };
+        gallery.dialog.open = true;
+        gallery.apply_theme(cx);
+        gallery
+    });
+    dialog_view.simulate_resize(size(px(1040.), px(660.)));
+    dialog_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(dialog_view.debug_bounds("dialog-panel").is_some());
+    dialog_view.simulate_keystrokes("escape");
+    dialog.update(cx, |dialog, _| assert!(!dialog.dialog.open));
+
+    let (drawer, drawer_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let mut gallery = Gallery {
+            page: Page::Drawer,
+            ..Gallery::default()
+        };
+        gallery.drawer.open = true;
+        gallery.drawer.direction = gpui_el::DrawerDirection::Left;
+        gallery.apply_theme(cx);
+        gallery
+    });
+    drawer_view.simulate_resize(size(px(1040.), px(660.)));
+    drawer_view.update(|window, cx| window.draw(cx).clear(cx));
+    let panel = drawer_view
+        .debug_bounds("drawer-panel")
+        .expect("drawer panel");
+    assert!((panel.left() - px(0.)).abs() < px(1.));
+    drawer_view.simulate_keystrokes("escape");
+    drawer.update(cx, |drawer, _| assert!(!drawer.drawer.open));
+}
+
+#[gpui::test]
+fn gallery_message_and_notification_stacks_render_and_clear(cx: &mut gpui::TestAppContext) {
+    let (message, message_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Message,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    message_view.simulate_resize(size(px(1040.), px(660.)));
+    let state = message_view.update(|window, cx| {
+        let state = message
+            .read(cx)
+            .message
+            .as_ref()
+            .cloned()
+            .expect("message state");
+        state.update(cx, |state, cx| {
+            state.push(
+                gpui_el::MessageOptions::new("Persistent").duration(std::time::Duration::ZERO),
+                cx,
+            );
+        });
+        window.draw(cx).clear(cx);
+        state
+    });
+    assert!(message_view.debug_bounds("message-stack").is_some());
+    message_view.update(|window, cx| {
+        state.update(cx, |state, cx| state.close_all(cx));
+        window.draw(cx).clear(cx);
+    });
+    assert!(message_view.debug_bounds("message-stack").is_none());
+
+    let (notification, notification_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Notification,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    notification_view.simulate_resize(size(px(1040.), px(660.)));
+    let state = notification_view.update(|window, cx| {
+        let state = notification
+            .read(cx)
+            .notification
+            .as_ref()
+            .cloned()
+            .expect("notification state");
+        state.update(cx, |state, cx| {
+            state.push(
+                gpui_el::NotificationOptions::new("Persistent").duration(std::time::Duration::ZERO),
+                cx,
+            );
+        });
+        window.draw(cx).clear(cx);
+        state
+    });
+    assert!(
+        notification_view
+            .debug_bounds("notification-stack")
+            .is_some()
+    );
+    notification_view.update(|window, cx| {
+        state.update(cx, |state, cx| state.close_all(cx));
+        window.draw(cx).clear(cx);
+    });
+    assert!(
+        notification_view
+            .debug_bounds("notification-stack")
+            .is_none()
+    );
+}
+
+#[gpui::test]
 fn gallery_select_can_create_a_new_option(cx: &mut gpui::TestAppContext) {
     let (gallery, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);

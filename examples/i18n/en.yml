@@ -15,6 +15,11 @@ table_intro: Present typed rows and columns with stripes, borders, a fixed heade
 tag_intro: Mark content with tags, or toggle a selection with check tags.
 menu_intro: Navigate with nested entries, collapsible sidebars, and horizontal menus.
 loading_intro: Show progress over a specific region without blocking the rest of the window.
+alert_intro: Display important inline feedback with semantic types, optional icons, descriptions, and dismiss actions.
+dialog_intro: Present focused modal content with a title, body, footer, backdrop, Escape closing, and optional dragging.
+drawer_intro: Open an edge-anchored modal panel from any direction with configurable size and header/footer content.
+message_intro: Show transient semantic feedback with placement, grouping, plain style, and automatic or manual closing.
+notification_intro: Show corner notifications with title/message, click and close callbacks, hover pause, and countdown progress.
 grid_basic: Basic layout
 grid_gutter: Column spacing
 grid_mixed: Mixed column widths
@@ -60,6 +65,11 @@ table_page: Table
 tag_page: Tag
 menu_page: Menu
 loading_page: Loading
+alert_page: Alert
+dialog_page: Dialog
+drawer_page: Drawer
+message_page: Message
+notification_page: Notification
 icon_pack_error: Could not load the Tabler font. The current pack is unchanged.
 named_icons: Icon catalog
 icon_search: Search this group
@@ -404,6 +414,46 @@ form_name: Name
 form_email: Email
 form_city: City
 form_submitted: Form submitted successfully
+alert_basic: Basic usage
+alert_types: Semantic types
+alert_dark: Dark effect
+alert_description: Your changes have been saved.
+dialog_basic: Basic dialog
+dialog_options: Fullscreen, centered, and modeless
+dialog_open: Open dialog
+dialog_draggable: Draggable
+dialog_fullscreen: Fullscreen
+dialog_center: Centered
+dialog_modeless: Modeless
+dialog_title: Confirm changes
+dialog_body: Review the details before continuing.
+dialog_cancel: Cancel
+dialog_confirm: Confirm
+drawer_basic: Four directions
+drawer_no_header: Without header
+drawer_open: Open drawer
+drawer_close: Close drawer
+drawer_right: Right
+drawer_left: Left
+drawer_top: Top
+drawer_bottom: Bottom
+drawer_title: Details
+drawer_body: Drawer body content stays scrollable and keeps wheel events inside the panel.
+message_basic: Semantic messages
+message_options: Plain, grouped, persistent, and positioned
+message_saved: Changes saved
+message_warning: Check your input before continuing
+message_persistent: Persistent message
+message_plain: Plain message
+message_group: Grouped message
+message_bottom: Bottom-right message
+message_clear: Clear messages
+notification_basic: Basic notifications
+notification_options: Progress, position, and persistence
+notification_title: Notification
+notification_progress: Show progress
+notification_bottom: Bottom-left
+notification_working: Work is in progress
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

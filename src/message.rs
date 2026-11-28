@@ -371,7 +371,7 @@ mod tests {
 
     #[gpui::test]
     fn auto_close_and_grouping_follow_upstream_defaults(cx: &mut gpui::TestAppContext) {
-        let state = cx.update(|cx| MessageState::new(cx));
+        let state = cx.update(MessageState::new);
         state.update(cx, |state, cx| {
             state.push(
                 MessageOptions::new("Saved")
@@ -395,7 +395,7 @@ mod tests {
 
     #[gpui::test]
     fn zero_duration_keeps_the_message_open(cx: &mut gpui::TestAppContext) {
-        let state = cx.update(|cx| MessageState::new(cx));
+        let state = cx.update(MessageState::new);
         state.update(cx, |state, cx| {
             state.push(
                 MessageOptions::new("Persistent").duration(Duration::ZERO),

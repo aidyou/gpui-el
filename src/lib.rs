@@ -103,6 +103,18 @@
 //! ``fast()`/`slow()` on a component, or `Transition::speed`,
 //! `Menu::speed`, and `Loading::speed` for an explicit preset.
 //!
+//! Alert, Dialog, Drawer, Message, and Notification follow their Element Plus
+//! docs, component sources, and Theme Chalk styles. Alert is inline semantic
+//! feedback; Dialog and Drawer are controlled root-level modal surfaces with
+//! focus entry/restoration; Message and Notification use explicit native queue
+//! handles with timers instead of a global Vue service.
+//!
+//! ```
+//! use gpui_el::{FeedbackType, el_alert, el_dialog};
+//! let alert = el_alert().title("Saved").kind(FeedbackType::Success).show_icon(true);
+//! let dialog = el_dialog().open(true).title("Confirm").child("Review the details.");
+//! ```
+//!
 //! Table follows `table.md`, `components/table/src`, and Theme Chalk
 //! `table.scss` for its basic subset: typed columns with fixed or distributed
 //! widths, header and cell alignment, stripes, borders, three sizes, a fixed

@@ -15,6 +15,11 @@ table_intro: 用条纹、边框、固定表头和状态色展示类型化的行�
 tag_intro: 用标签标记内容，或用可选择标签切换选中状态。
 menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
 loading_intro: 在指定区域显示加载提示，不影响窗口内其他区域的操作。
+alert_intro: 用语义类型、可选图标、描述与关闭操作显示重要的行内反馈。
+dialog_intro: 用标题、内容、页脚、遮罩、Esc 关闭与可选拖动呈现聚焦的模态内容。
+drawer_intro: 从任意方向打开贴边模态面板，可配置尺寸、标题与页脚。
+message_intro: 显示短暂语义反馈，支持位置、分组、朴素样式以及自动或手动关闭。
+notification_intro: 在角落显示通知，支持标题/正文、点击关闭回调、悬停暂停与倒计时进度。
 grid_basic: 基础布局
 grid_gutter: 列间距
 grid_mixed: 混合布局
@@ -60,6 +65,11 @@ table_page: Table 表格
 tag_page: Tag 标签
 menu_page: Menu 菜单
 loading_page: Loading 加载
+alert_page: Alert 提示
+dialog_page: Dialog 对话框
+drawer_page: Drawer 抽屉
+message_page: Message 消息提示
+notification_page: Notification 通知
 icon_pack_error: 无法载入 Tabler 字体，当前图标库未更改。
 named_icons: 图标目录
 icon_search: 搜索当前分组
@@ -404,6 +414,46 @@ form_name: 姓名
 form_email: 邮箱
 form_city: 城市
 form_submitted: 表单提交成功
+alert_basic: 基本用法
+alert_types: 语义类型
+alert_dark: 深色主题
+alert_description: 你的更改已保存。
+dialog_basic: 基本对话框
+dialog_options: 全屏、居中与无模态
+dialog_open: 打开对话框
+dialog_draggable: 可拖动
+dialog_fullscreen: 全屏
+dialog_center: 居中
+dialog_modeless: 无模态
+dialog_title: 确认更改
+dialog_body: 继续前请查看详细信息。
+dialog_cancel: 取消
+dialog_confirm: 确定
+drawer_basic: 四个方向
+drawer_no_header: 无标题栏
+drawer_open: 打开抽屉
+drawer_close: 关闭抽屉
+drawer_right: 右侧
+drawer_left: 左侧
+drawer_top: 顶部
+drawer_bottom: 底部
+drawer_title: 详细信息
+drawer_body: 抽屉正文可滚动，滚轮事件始终保留在面板内部。
+message_basic: 语义消息
+message_options: 朴素、分组、常驻与定位
+message_saved: 更改已保存
+message_warning: 继续前请检查输入
+message_persistent: 常驻消息
+message_plain: 朴素消息
+message_group: 分组消息
+message_bottom: 右下角消息
+message_clear: 清空消息
+notification_basic: 基本通知
+notification_options: 进度、位置与常驻
+notification_title: 通知
+notification_progress: 显示进度
+notification_bottom: 左下角
+notification_working: 正在处理
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

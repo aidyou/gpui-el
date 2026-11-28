@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use gpui::{
-    AnyElement, App, AppContext, Bounds, Context, Div, IntoElement, MouseButton, Render,
+    AnyElement, App, AppContext, Bounds, Context, Div, Entity, IntoElement, MouseButton, Render,
     ResizeEdge, Stateful, TitlebarOptions, Window, WindowAppearance, WindowBounds,
     WindowDecorations, WindowOptions, div, prelude::*, px, rgb, size,
 };
 use gpui_el::{
-    Direction, IconPack, Locale, MenuEvent, MenuMode, MenuTrigger, Theme, el_aside, el_container,
-    el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
+    Direction, IconPack, Locale, MenuEvent, MenuMode, MenuTrigger, MessageState, NotificationState,
+    Theme, el_aside, el_container, el_init, el_main, el_menu, el_menu_item, el_sub_menu, tokens,
 };
 
 #[path = "gallery/api.rs"]
@@ -51,6 +51,10 @@ struct Gallery {
     icon: pages::icon::State,
     link: pages::link::State,
     loading: pages::loading::State,
+    dialog: pages::dialog::State,
+    drawer: pages::drawer::State,
+    message: Option<Entity<MessageState>>,
+    notification: Option<Entity<NotificationState>>,
     menu: pages::menu::State,
     scrollbar: pages::scrollbar::State,
     splitter: pages::splitter::State,
@@ -116,6 +120,11 @@ enum Page {
     Tag,
     Menu,
     Loading,
+    Alert,
+    Dialog,
+    Drawer,
+    Message,
+    Notification,
     Switch,
     Checkbox,
     Radio,
@@ -136,7 +145,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 31] = [
+    const ALL: [Self; 36] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -151,6 +160,11 @@ impl Page {
         Self::Tag,
         Self::Menu,
         Self::Loading,
+        Self::Alert,
+        Self::Dialog,
+        Self::Drawer,
+        Self::Message,
+        Self::Notification,
         Self::Switch,
         Self::Checkbox,
         Self::Radio,
@@ -186,6 +200,11 @@ impl Page {
             Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
             Self::Loading => &s.loading_intro,
+            Self::Alert => &s.alert_intro,
+            Self::Dialog => &s.dialog_intro,
+            Self::Drawer => &s.drawer_intro,
+            Self::Message => &s.message_intro,
+            Self::Notification => &s.notification_intro,
             Self::Switch => &s.switch_intro,
             Self::Checkbox => &s.checkbox_intro,
             Self::Radio => &s.radio_intro,
@@ -222,6 +241,11 @@ impl Page {
             Self::Tag => "tag",
             Self::Menu => "menu",
             Self::Loading => "loading",
+            Self::Alert => "alert",
+            Self::Dialog => "dialog",
+            Self::Drawer => "drawer",
+            Self::Message => "message",
+            Self::Notification => "notification",
             Self::Switch => "switch",
             Self::Checkbox => "checkbox",
             Self::Radio => "radio",
@@ -258,6 +282,11 @@ impl Page {
             Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
             Self::Loading => &s.loading_page,
+            Self::Alert => &s.alert_page,
+            Self::Dialog => &s.dialog_page,
+            Self::Drawer => &s.drawer_page,
+            Self::Message => &s.message_page,
+            Self::Notification => &s.notification_page,
             Self::Switch => &s.switch_page,
             Self::Checkbox => &s.checkbox_page,
             Self::Radio => &s.radio_page,
@@ -305,6 +334,11 @@ impl Page {
                 "el-menu-item-group",
             ],
             Self::Loading => &["v-loading"],
+            Self::Alert => &["el-alert"],
+            Self::Dialog => &["el-dialog"],
+            Self::Drawer => &["el-drawer"],
+            Self::Message => &["ElMessage"],
+            Self::Notification => &["ElNotification"],
             Self::Switch => &["el-switch"],
             Self::Checkbox => &["el-checkbox", "el-checkbox-group"],
             Self::Radio => &["el-radio", "el-radio-group"],
@@ -328,6 +362,12 @@ impl Page {
 
 impl Render for Gallery {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.message.is_none() {
+            self.message = Some(MessageState::new(cx));
+        }
+        if self.notification.is_none() {
+            self.notification = Some(NotificationState::new(cx));
+        }
         let locale = Locale::current(cx);
         let s = strings(locale);
         let page = self.page;
@@ -424,7 +464,12 @@ impl Render for Gallery {
                                 .entry(
                                     el_sub_menu("feedback", s.feedback.as_str())
                                         .icon(nav_glyph(nav_icon::FEEDBACK))
-                                        .entry(item(Page::Loading)),
+                                        .entry(item(Page::Loading))
+                                        .entry(item(Page::Alert))
+                                        .entry(item(Page::Dialog))
+                                        .entry(item(Page::Drawer))
+                                        .entry(item(Page::Message))
+                                        .entry(item(Page::Notification)),
                                 )
                                 .entry(
                                     el_sub_menu("form", s.form.as_str())
@@ -466,6 +511,11 @@ impl Render for Gallery {
             Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),
             Page::Loading => self.loading(s, cx),
+            Page::Alert => self.alerts(s, cx),
+            Page::Dialog => self.dialogs(s, cx),
+            Page::Drawer => self.drawers(s, cx),
+            Page::Message => self.messages(s, cx),
+            Page::Notification => self.notifications(s, cx),
             Page::Switch => self.switches(s, cx),
             Page::Checkbox => self.checkboxes(s, cx),
             Page::Radio => self.radios(s, cx),
@@ -555,6 +605,10 @@ impl Render for Gallery {
                             ),
                     ),
             )
+            .child(self.dialog_overlay(s, cx))
+            .child(self.drawer_overlay(s, cx))
+            .child(self.message_overlay(cx))
+            .child(self.notification_overlay(cx))
             .children(resize_handles(window))
     }
 }

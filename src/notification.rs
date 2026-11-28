@@ -439,7 +439,7 @@ mod tests {
 
     #[gpui::test]
     fn auto_close_zero_duration_and_hover_pause(cx: &mut gpui::TestAppContext) {
-        let state = cx.update(|cx| NotificationState::new(cx));
+        let state = cx.update(NotificationState::new);
         let id = state.update(cx, |state, cx| {
             state.push(
                 NotificationOptions::new("Saved")

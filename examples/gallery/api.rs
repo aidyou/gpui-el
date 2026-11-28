@@ -2484,6 +2484,203 @@ const MENU_EVENTS: &[Row] = &[
     ),
 ];
 
+const ALERT: &[Row] = &[
+    (
+        "el_alert(), Alert::new, id",
+        "ElementId · call site",
+        "Create an inline alert with a stable sibling-unique ID.",
+        "创建行内提示；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "title, description, content",
+        "SharedString / IntoElement",
+        "Set the title and text or native description content.",
+        "设置标题与文本或原生描述内容。",
+    ),
+    (
+        "kind, effect",
+        "FeedbackType / FeedbackEffect · Info / Light",
+        "Choose primary/info/success/warning/error and light or dark treatment.",
+        "选择 primary/info/success/warning/error 与浅色或深色外观。",
+    ),
+    (
+        "closable, close_text, show_icon, center",
+        "bool / SharedString · true / none / false / false",
+        "Configure dismissal, custom close text, type icon, and centered content.",
+        "配置关闭、自定义关闭文字、类型图标与居中内容。",
+    ),
+    (
+        "accessibility_label",
+        "SharedString · unset",
+        "Name the alert for assistive technology.",
+        "为辅助技术命名提示。",
+    ),
+];
+const ALERT_EVENTS: &[Row] = &[(
+    "onclose",
+    "&mut Window, &mut App",
+    "The close control hides the alert and reports the action.",
+    "关闭控件隐藏提示并报告操作。",
+)];
+const DIALOG: &[Row] = &[
+    (
+        "el_dialog(), Dialog::new, id, open",
+        "ElementId / bool · call site / false",
+        "Create a controlled dialog and mount it at the window root.",
+        "创建受控对话框，并挂载到窗口根级。",
+    ),
+    (
+        "title, header, child, footer",
+        "SharedString / IntoElement",
+        "Set the title or custom header, body, and footer regions.",
+        "设置标题或自定义页眉、正文与页脚。",
+    ),
+    (
+        "width, top, fullscreen, align_center, center",
+        "f32 / f32 / bool · 50% / 15vh / false",
+        "Control geometry and header/footer alignment.",
+        "控制几何与页眉/页脚对齐。",
+    ),
+    (
+        "modal, close_on_click_modal, close_on_press_escape, show_close",
+        "bool · true / true / true / true",
+        "Configure the scrim and user close paths.",
+        "配置遮罩与用户关闭路径。",
+    ),
+    (
+        "draggable, overflow",
+        "bool · false",
+        "Drag the dialog by its panel and optionally allow viewport overflow.",
+        "通过面板拖动对话框，并可选择允许越出视口。",
+    ),
+    (
+        "before_close, accessibility_label",
+        "Fn -> bool / SharedString",
+        "Gate close requests synchronously and name the dialog.",
+        "同步拦截关闭请求并为对话框命名。",
+    ),
+];
+const DIALOG_EVENTS: &[Row] = &[(
+    "onopen, onclose",
+    "&mut Window, &mut App",
+    "The controlled open state changes or a user close request is accepted.",
+    "受控打开状态变化，或用户关闭请求被接受。",
+)];
+const DRAWER: &[Row] = &[
+    (
+        "el_drawer(), Drawer::new, id, open",
+        "ElementId / bool · call site / false",
+        "Create a controlled edge-anchored drawer at the window root.",
+        "在窗口根级创建受控贴边抽屉。",
+    ),
+    (
+        "direction, size, with_header",
+        "DrawerDirection / f32 / bool · Right / 30% / true",
+        "Choose left/right/top/bottom, cross-axis size, and header visibility.",
+        "选择左/右/上/下、横向尺寸与标题栏可见性。",
+    ),
+    (
+        "title, header, child, footer",
+        "SharedString / IntoElement",
+        "Set the title or custom header, scrollable body, and footer.",
+        "设置标题或自定义页眉、可滚动正文与页脚。",
+    ),
+    (
+        "modal, close_on_click_modal, close_on_press_escape, show_close",
+        "bool · true / true / true / true",
+        "Configure the scrim and user close paths.",
+        "配置遮罩与用户关闭路径。",
+    ),
+    (
+        "before_close, accessibility_label",
+        "Fn -> bool / SharedString",
+        "Gate close requests synchronously and name the drawer.",
+        "同步拦截关闭请求并为抽屉命名。",
+    ),
+];
+const DRAWER_EVENTS: &[Row] = &[(
+    "onopen, onclose",
+    "&mut Window, &mut App",
+    "The controlled open state changes or a user close request is accepted.",
+    "受控打开状态变化，或用户关闭请求被接受。",
+)];
+const MESSAGE: &[Row] = &[
+    (
+        "MessageState::new, push, close, close_all",
+        "Entity<MessageState> / u64",
+        "Create a queue, add a message, close one handle, or clear all messages.",
+        "创建队列、添加消息、关闭单个句柄或清空全部消息。",
+    ),
+    (
+        "el_message_stack, MessageStack::id",
+        "Entity<MessageState> / ElementId",
+        "Render the queue at the window root.",
+        "在窗口根级渲染消息队列。",
+    ),
+    (
+        "message, kind, plain, show_close",
+        "SharedString / FeedbackType / bool · Info / false / false",
+        "Set content, semantic color, plain surface, and manual close control.",
+        "设置内容、语义颜色、朴素表面与手动关闭控件。",
+    ),
+    (
+        "duration, placement, offset",
+        "Duration / MessagePlacement / f32 · 3000 ms / Top / 16",
+        "Control auto-close and viewport placement; zero duration stays open.",
+        "控制自动关闭与视口位置；零时长保持打开。",
+    ),
+    (
+        "grouping, repeat_num",
+        "bool / u32 · false / 1",
+        "Merge matching messages and show a repetition badge.",
+        "合并匹配消息并显示重复次数徽标。",
+    ),
+];
+const MESSAGE_EVENTS: &[Row] = &[(
+    "MessageOptions::onclose",
+    "&mut App",
+    "A message closes manually or when its timer expires.",
+    "消息手动关闭或计时到期时触发。",
+)];
+const NOTIFICATION: &[Row] = &[
+    (
+        "NotificationState::new, push, close, close_all",
+        "Entity<NotificationState> / u64",
+        "Create a queue, add a notification, close one handle, or clear all.",
+        "创建队列、添加通知、关闭单个句柄或清空全部。",
+    ),
+    (
+        "el_notification_stack, NotificationStack::id",
+        "Entity<NotificationState> / ElementId",
+        "Render the queue at the window root.",
+        "在窗口根级渲染通知队列。",
+    ),
+    (
+        "title, message, kind, show_close",
+        "SharedString / Option<FeedbackType> / bool · none / true",
+        "Set title/body, optional semantic icon, and close control.",
+        "设置标题/正文、可选语义图标与关闭控件。",
+    ),
+    (
+        "duration, position, offset",
+        "Duration / NotificationPosition / f32 · 4500 ms / TopRight / 0",
+        "Control auto-close and corner placement; zero duration stays open.",
+        "控制自动关闭与角落位置；零时长保持打开。",
+    ),
+    (
+        "progress, pause_on_hover",
+        "bool · false / true",
+        "Show a countdown bar and pause the timer while hovered.",
+        "显示倒计时条，并在悬停时暂停计时。",
+    ),
+];
+const NOTIFICATION_EVENTS: &[Row] = &[(
+    "NotificationOptions::onclick, onclose",
+    "&mut App",
+    "The notification is activated or closes manually/on timer.",
+    "通知被激活，或手动/计时关闭时触发。",
+)];
+
 pub(super) fn render(page: Page, locale: Locale) -> Div {
     let zh = locale == Locale::SimplifiedChinese;
     let (api, events): (&[Row], &[Row]) = match page {
@@ -2501,6 +2698,11 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
         Page::Loading => (LOADING, &[]),
+        Page::Alert => (ALERT, ALERT_EVENTS),
+        Page::Dialog => (DIALOG, DIALOG_EVENTS),
+        Page::Drawer => (DRAWER, DRAWER_EVENTS),
+        Page::Message => (MESSAGE, MESSAGE_EVENTS),
+        Page::Notification => (NOTIFICATION, NOTIFICATION_EVENTS),
         Page::Switch => (SWITCH, SWITCH_EVENTS),
         Page::Checkbox => (CHECKBOX, CHECKBOX_EVENTS),
         Page::Radio => (RADIO, RADIO_EVENTS),
@@ -2587,6 +2789,11 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
         .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
         .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))
+        .when(page == Page::Alert, |el| el.child(if zh { "原生差异：内容使用 GPUI 元素而非 HTML；关闭按钮使用桌面按钮命中区域，未移植 Vue transition 类与 CSS class。" } else { "Native differences: content uses GPUI elements instead of HTML; the close control uses a desktop button hit area, and Vue transition classes/CSS classes are not mapped." }))
+        .when(page == Page::Dialog, |el| el.child(if zh { "原生差异：需挂载到窗口根级；提供基础拖动、焦点进入/恢复与淡入淡出，但未移植完整焦点陷阱、open/close delay、自定义 transition 配置、DOM Teleport 与 z-index。" } else { "Native differences: mount at the window root; basic dragging, focus entry/restoration, and fades are provided, while full focus trapping, open/close delays, custom transition configuration, DOM Teleport, and z-index are not mapped." }))
+        .when(page == Page::Drawer, |el| el.child(if zh { "原生差异：需挂载到窗口根级；支持四向、像素/百分比尺寸、焦点进入/恢复与内部滚动，但未移植可调整大小、open/close delay、DOM Teleport 与 z-index。" } else { "Native differences: mount at the window root; four directions, pixel/percentage sizing, focus entry/restoration, and internal scrolling are supported, while resizing, open/close delays, DOM Teleport, and z-index are not mapped." }))
+        .when(page == Page::Message, |el| el.child(if zh { "原生差异：使用 MessageState 句柄而非全局 Vue 服务；支持计时、分组、位置与关闭，未移植 HTML 字符串、自定义 class、appendTo 与全局 z-index。" } else { "Native differences: a MessageState handle replaces the global Vue service; timers, grouping, placement, and closing are supported, while HTML strings, custom classes, appendTo, and global z-index are not mapped." }))
+        .when(page == Page::Notification, |el| el.child(if zh { "原生差异：使用 NotificationState 句柄而非全局 Vue 服务；支持计时、悬停暂停、进度与角落定位，未移植 HTML 字符串、自定义 class、appendTo 与全局 z-index。" } else { "Native differences: a NotificationState handle replaces the global Vue service; timers, hover pause, progress, and corner placement are supported, while HTML strings, custom classes, appendTo, and global z-index are not mapped." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))

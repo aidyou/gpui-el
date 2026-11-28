@@ -241,6 +241,19 @@ mod tests {
         assert_eq!(FeedbackType::default(), FeedbackType::Info);
         assert_eq!(FeedbackType::Success.icon(), "success-filled");
         assert_eq!(FeedbackType::Error.icon(), "circle-close-filled");
+        for kind in [
+            FeedbackType::Primary,
+            FeedbackType::Info,
+            FeedbackType::Success,
+            FeedbackType::Warning,
+            FeedbackType::Error,
+        ] {
+            assert!(
+                crate::IconPack::ElementPlus
+                    .names()
+                    .any(|name| name == kind.icon())
+            );
+        }
     }
 
     #[gpui::test]
