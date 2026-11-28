@@ -1,3 +1,8 @@
+navigation:
+  breadcrumb: 面包屑
+  dropdown_toggle: 切换下拉菜单
+  tabs_add: 添加标签页
+  tabs_close: 关闭标签页
 button:
   loading: 加载中
 menu:

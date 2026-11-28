@@ -19,6 +19,7 @@ impl Global for Locale {}
 struct Messages {
     button: ButtonMessages,
     menu: MenuMessages,
+    navigation: NavigationMessages,
     tag: TagMessages,
     table: TableMessages,
     input_number: InputNumberMessages,
@@ -38,6 +39,15 @@ struct Messages {
 #[serde(deny_unknown_fields)]
 struct MenuMessages {
     more: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NavigationMessages {
+    breadcrumb: String,
+    dropdown_toggle: String,
+    tabs_add: String,
+    tabs_close: String,
 }
 
 #[derive(Deserialize)]
@@ -158,6 +168,12 @@ impl Messages {
     /// malformed resource degrades to English instead of panicking.
     fn fallback() -> Self {
         Self {
+            navigation: NavigationMessages {
+                breadcrumb: "Breadcrumb".into(),
+                dropdown_toggle: "Toggle dropdown".into(),
+                tabs_add: "Add tab".into(),
+                tabs_close: "Close tab".into(),
+            },
             button: ButtonMessages {
                 loading: "Loading".into(),
             },
@@ -271,6 +287,18 @@ impl Locale {
     }
     pub(crate) fn menu_more(self) -> &'static str {
         &self.messages().menu.more
+    }
+    pub(crate) fn breadcrumb_label(self) -> &'static str {
+        &self.messages().navigation.breadcrumb
+    }
+    pub(crate) fn dropdown_toggle(self) -> &'static str {
+        &self.messages().navigation.dropdown_toggle
+    }
+    pub(crate) fn tabs_add(self) -> &'static str {
+        &self.messages().navigation.tabs_add
+    }
+    pub(crate) fn tabs_close(self) -> &'static str {
+        &self.messages().navigation.tabs_close
     }
     pub(crate) fn tag_close(self) -> &'static str {
         &self.messages().tag.close

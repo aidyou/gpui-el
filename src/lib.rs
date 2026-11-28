@@ -200,6 +200,7 @@
 
 mod alert;
 mod auto_complete;
+mod breadcrumb;
 mod button;
 mod capsule;
 mod cascader;
@@ -208,6 +209,7 @@ mod color_picker;
 mod date_picker;
 mod dialog;
 mod drawer;
+mod dropdown;
 mod error;
 mod feedback;
 mod form;
@@ -232,8 +234,10 @@ mod scrollbar;
 mod select;
 mod slider;
 mod splitter;
+mod steps;
 mod switch;
 mod table;
+mod tabs;
 mod tag;
 mod text;
 mod theme;
@@ -245,6 +249,7 @@ mod tree_select;
 
 pub use alert::{Alert, el_alert};
 pub use auto_complete::{AutoComplete, AutoCompleteOption, el_auto_complete};
+pub use breadcrumb::{Breadcrumb, BreadcrumbItem, el_breadcrumb};
 pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
     el_button_group,
@@ -259,6 +264,7 @@ pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use date_picker::{DatePicker, DatePickerType, el_date_picker};
 pub use dialog::{Dialog, el_dialog};
 pub use drawer::{Drawer, DrawerDirection, el_drawer};
+pub use dropdown::{Dropdown, DropdownItem, DropdownTrigger, el_dropdown};
 pub use error::{Error, Result};
 pub use feedback::{FeedbackEffect, FeedbackType};
 pub use form::{
@@ -300,8 +306,10 @@ pub use splitter::{
     Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent,
     SplitterSide, SplitterSizes, el_splitter, el_splitter_panel,
 };
+pub use steps::{StepItem, StepStatus, Steps, StepsDirection, el_steps};
 pub use switch::{Switch, SwitchSize, el_switch};
 pub use table::{Column, Table, TableAlign, TableSize, el_table};
+pub use tabs::{TabPane, TabValue, Tabs, TabsPosition, TabsType, el_tabs};
 pub use tag::{CheckTag, Tag, TagEffect, TagSize, TagType, el_check_tag, el_tag};
 pub use text::{Text, TextSize, TextType, el_text};
 pub use theme::{Theme, tokens};
