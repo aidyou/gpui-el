@@ -1533,6 +1533,88 @@ const DATE_PICKER_EVENTS: &[Row] = &[
         "内部文本字段获得或失去焦点。",
     ),
 ];
+const CASCADER: &[Row] = &[
+    (
+        "el_cascader(), Cascader::new, id",
+        "ElementId · call site",
+        "Create a hierarchical selector with a stable sibling-unique ID.",
+        "创建层级选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+    ),
+    (
+        "selection",
+        "CascaderSelection · Single(empty)",
+        "Control one value path or multiple leaf paths.",
+        "控制单个值路径或多个叶节点路径。",
+    ),
+    (
+        "options",
+        "IntoIterator<CascaderOption> · empty",
+        "Set nested value/label nodes; individual nodes may be disabled.",
+        "设置嵌套值/标签节点；单个节点可禁用。",
+    ),
+    (
+        "multiple, filterable",
+        "bool · false",
+        "Enable multiple leaf selection and path filtering.",
+        "启用多叶节点选择与路径过滤。",
+    ),
+    (
+        "show_all_levels, separator",
+        "bool / SharedString · true / \" / \"",
+        "Display the full path or only its last label, with a custom separator.",
+        "显示完整路径或仅最后一级标签，并可自定义分隔符。",
+    ),
+    (
+        "size, large, small",
+        "InputSize · Default",
+        "Use the Input field's 40/32/24 px heights.",
+        "使用 Input 字段的 40/32/24 px 外高。",
+    ),
+    (
+        "disabled, clearable",
+        "bool · false",
+        "Disable interaction and optionally show the Input clear control.",
+        "禁用交互，并可显示 Input 清空控件。",
+    ),
+    (
+        "placeholder, accessibility_label",
+        "SharedString · locale / unset",
+        "Set the empty-state hint and accessible field name.",
+        "设置空态提示与字段无障碍名称。",
+    ),
+    (
+        "header, footer",
+        "IntoElement · none",
+        "Add content above and below the cascader columns.",
+        "在级联列上方与下方添加内容。",
+    ),
+];
+const CASCADER_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "CascaderSelection, &mut Window, &mut App",
+        "A leaf path, multiple toggle, or clear changes the selection.",
+        "叶节点路径、多选切换或清空改变选择。",
+    ),
+    (
+        "onvisiblechange",
+        "bool, &mut Window, &mut App",
+        "The cascader panel opened or closed.",
+        "级联面板打开或关闭。",
+    ),
+    (
+        "onclear",
+        "&mut Window, &mut App",
+        "The Input clear control emptied the selection.",
+        "Input 清空控件清空了选择。",
+    ),
+    (
+        "onfocus, onblur",
+        "&mut Window, &mut App",
+        "The inner text field gained or lost focus.",
+        "内部文本字段获得或失去焦点。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -2072,6 +2154,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::ColorPicker => (COLOR_PICKER, COLOR_PICKER_EVENTS),
         Page::TimePicker => (TIME_PICKER, TIME_PICKER_EVENTS),
         Page::DatePicker => (DATE_PICKER, DATE_PICKER_EVENTS),
+        Page::Cascader => (CASCADER, CASCADER_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -2130,6 +2213,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
         .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：当前仅支持单选 YYYY-MM-DD 日期，未移植范围、周/月/年/季度模式、disabled-date、快捷选项、自定义 popper 配置与命令式 exposes。" } else { "Native differences: only single YYYY-MM-DD dates are supported; ranges, week/month/year/quarter modes, disabled-date callbacks, shortcuts, custom popper configuration, and imperative exposes are not mapped." }))
         .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))
         .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))

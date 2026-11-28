@@ -1,6 +1,7 @@
 pub(super) mod auto_complete;
 pub(super) mod button;
 pub(super) mod capsule;
+pub(super) mod cascader;
 pub(super) mod checkbox;
 pub(super) mod color_picker;
 pub(super) mod container;

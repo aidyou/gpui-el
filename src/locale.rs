@@ -27,6 +27,7 @@ struct Messages {
     color_picker: ColorPickerMessages,
     time_picker: TimePickerMessages,
     date_picker: DatePickerMessages,
+    cascader: CascaderMessages,
 }
 
 #[derive(Deserialize)]
@@ -100,6 +101,12 @@ struct DatePickerMessages {
     weekdays: Vec<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CascaderMessages {
+    placeholder: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -149,6 +156,9 @@ impl Messages {
                     .into_iter()
                     .map(str::to_owned)
                     .collect(),
+            },
+            cascader: CascaderMessages {
+                placeholder: "Select".into(),
             },
         }
     }
@@ -229,6 +239,9 @@ impl Locale {
     pub(crate) fn date_picker_weekdays(self) -> &'static [String] {
         &self.messages().date_picker.weekdays
     }
+    pub(crate) fn cascader_placeholder(self) -> &'static str {
+        &self.messages().cascader.placeholder
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -301,6 +314,8 @@ mod tests {
         );
         assert_eq!(Locale::default().date_picker_weekdays()[0], "Su");
         assert_eq!(Locale::SimplifiedChinese.date_picker_weekdays()[0], "日");
+        assert_eq!(Locale::default().cascader_placeholder(), "Select");
+        assert_eq!(Locale::SimplifiedChinese.cascader_placeholder(), "请选择");
     }
 
     #[test]
@@ -347,5 +362,6 @@ mod tests {
             embedded.date_picker.placeholder
         );
         assert_eq!(fallback.date_picker.weekdays, embedded.date_picker.weekdays);
+        assert_eq!(fallback.cascader.placeholder, embedded.cascader.placeholder);
     }
 }

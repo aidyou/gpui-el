@@ -364,6 +364,13 @@ date_picker_basic: 基本用法
 date_picker_sizes: 尺寸
 date_picker_states: 只读与禁用
 date_picker_custom: 自定义图标与不可编辑输入
+cascader_intro: 通过逐级列展开选择层级路径，支持叶节点选择、多选、过滤与清空显示。
+cascader_page: Cascader 级联选择器
+cascader_basic: 基本用法
+cascader_multiple: 多选
+cascader_filterable: 路径过滤
+cascader_last_level: 仅显示最后一级
+cascader_disabled: 禁用
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

@@ -364,6 +364,13 @@ date_picker_basic: Basic usage
 date_picker_sizes: Sizes
 date_picker_states: Read-only and disabled
 date_picker_custom: Custom icon and non-editable input
+cascader_intro: Select hierarchical paths with column expansion, leaf selection, multiple values, filtering, and clearable display.
+cascader_page: Cascader 级联选择器
+cascader_basic: Basic usage
+cascader_multiple: Multiple selection
+cascader_filterable: Filterable paths
+cascader_last_level: Show only the last level
+cascader_disabled: Disabled
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

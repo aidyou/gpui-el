@@ -46,6 +46,7 @@ struct Gallery {
     button: pages::button::State,
     auto_complete: pages::auto_complete::State,
     capsule: pages::capsule::State,
+    cascader: pages::cascader::State,
     select: pages::select::State,
     icon: pages::icon::State,
     link: pages::link::State,
@@ -125,10 +126,11 @@ enum Page {
     ColorPicker,
     TimePicker,
     DatePicker,
+    Cascader,
 }
 
 impl Page {
-    const ALL: [Self; 27] = [
+    const ALL: [Self; 28] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -156,6 +158,7 @@ impl Page {
         Self::ColorPicker,
         Self::TimePicker,
         Self::DatePicker,
+        Self::Cascader,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -187,6 +190,7 @@ impl Page {
             Self::ColorPicker => &s.color_picker_intro,
             Self::TimePicker => &s.time_picker_intro,
             Self::DatePicker => &s.date_picker_intro,
+            Self::Cascader => &s.cascader_intro,
         }
     }
 
@@ -219,6 +223,7 @@ impl Page {
             Self::ColorPicker => "color-picker",
             Self::TimePicker => "time-picker",
             Self::DatePicker => "date-picker",
+            Self::Cascader => "cascader",
         }
     }
 
@@ -251,6 +256,7 @@ impl Page {
             Self::ColorPicker => &s.color_picker_page,
             Self::TimePicker => &s.time_picker_page,
             Self::DatePicker => &s.date_picker_page,
+            Self::Cascader => &s.cascader_page,
         }
     }
 
@@ -294,6 +300,7 @@ impl Page {
             Self::ColorPicker => &["el-color-picker"],
             Self::TimePicker => &["el-time-picker"],
             Self::DatePicker => &["el-date-picker"],
+            Self::Cascader => &["el-cascader"],
         }
     }
 }
@@ -413,7 +420,8 @@ impl Render for Gallery {
                                         .entry(item(Page::AutoComplete))
                                         .entry(item(Page::ColorPicker))
                                         .entry(item(Page::TimePicker))
-                                        .entry(item(Page::DatePicker)),
+                                        .entry(item(Page::DatePicker))
+                                        .entry(item(Page::Cascader)),
                                 ),
                         ),
                 )
@@ -447,6 +455,7 @@ impl Render for Gallery {
             Page::ColorPicker => self.color_pickers(s, cx),
             Page::TimePicker => self.time_pickers(s, cx),
             Page::DatePicker => self.date_pickers(s, cx),
+            Page::Cascader => self.cascaders(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

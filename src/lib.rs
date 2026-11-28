@@ -176,6 +176,7 @@
 mod auto_complete;
 mod button;
 mod capsule;
+mod cascader;
 mod checkbox;
 mod color_picker;
 mod date_picker;
@@ -210,6 +211,7 @@ pub use button::{
     el_button_group,
 };
 pub use capsule::{CapsuleOption, CapsuleSegments, el_capsule_segments};
+pub use cascader::{Cascader, CascaderOption, CascaderSelection, el_cascader};
 pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
 pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use date_picker::{DatePicker, el_date_picker};
