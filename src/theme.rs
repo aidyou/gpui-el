@@ -130,6 +130,11 @@ impl Theme {
         Hsla::from(rgb(if self.dark { 0 } else { WHITE })).opacity(opacity)
     }
 
+    /// Theme Chalk `--el-overlay-color-lighter`: the default modal scrim.
+    pub(crate) fn modal_mask() -> Hsla {
+        Hsla::from(rgb(0)).opacity(0.5)
+    }
+
     pub(crate) fn motion_reduced(cx: &App) -> bool {
         cx.reduce_motion() || Self::current(cx).reduced_motion
     }

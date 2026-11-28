@@ -173,6 +173,7 @@
     )
 )]
 
+mod alert;
 mod auto_complete;
 mod button;
 mod capsule;
@@ -180,7 +181,10 @@ mod cascader;
 mod checkbox;
 mod color_picker;
 mod date_picker;
+mod dialog;
+mod drawer;
 mod error;
+mod feedback;
 mod form;
 mod grid;
 mod icon;
@@ -191,7 +195,9 @@ mod link;
 mod loading;
 mod locale;
 mod menu;
+mod message;
 pub mod motion;
+mod notification;
 mod radio;
 mod rate;
 mod scrollbar;
@@ -208,6 +214,7 @@ mod transfer;
 mod transition;
 mod tree_select;
 
+pub use alert::{Alert, el_alert};
 pub use auto_complete::{AutoComplete, AutoCompleteOption, el_auto_complete};
 pub use button::{
     Button, ButtonGroup, ButtonShape, ButtonSize, ButtonType, ButtonVariant, el_button,
@@ -221,7 +228,10 @@ pub use checkbox::{
 };
 pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use date_picker::{DatePicker, DatePickerType, el_date_picker};
+pub use dialog::{Dialog, el_dialog};
+pub use drawer::{Drawer, DrawerDirection, el_drawer};
 pub use error::{Error, Result};
+pub use feedback::{FeedbackEffect, FeedbackType};
 pub use form::{
     Form, FormError, FormHandle, FormItem, FormLabelPosition, FormLayout, FormModel, FormRule,
     FormState, FormValidateTrigger, el_form, el_form_item,
@@ -241,7 +251,12 @@ pub use menu::{
     Menu, MenuEntry, MenuEvent, MenuItem, MenuItemGroup, MenuMode, MenuPopupTheme, MenuState,
     MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
+pub use message::{MessageOptions, MessagePlacement, MessageStack, MessageState, el_message_stack};
 pub use motion::MotionSpeed;
+pub use notification::{
+    NotificationOptions, NotificationPosition, NotificationStack, NotificationState,
+    el_notification_stack,
+};
 pub use radio::{
     Radio, RadioGroup, RadioOption, RadioSize, el_radio, el_radio_button, el_radio_group,
 };
