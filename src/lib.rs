@@ -128,6 +128,18 @@
 //!     .child(el_button().label("Hover me"));
 //! ```
 //!
+//! Breadcrumb, Dropdown, Steps, and Tabs cover the navigation group. Breadcrumb
+//! renders ordered link/current levels; Dropdown reuses Tooltip for command
+//! menus; Steps derives status and connector progress from the active index;
+//! Tabs supports controlled/default selection and native pane content.
+//!
+//! ```
+//! use gpui_el::{TabPane, el_tabs};
+//! let tabs = el_tabs()
+//!     .pane(TabPane::new("first", "First").content("First pane"))
+//!     .pane(TabPane::new("second", "Second").content("Second pane"));
+//! ```
+//!
 //! Table follows `table.md`, `components/table/src`, and Theme Chalk
 //! `table.scss` for its basic subset: typed columns with fixed or distributed
 //! widths, header and cell alignment, stripes, borders, three sizes, a fixed

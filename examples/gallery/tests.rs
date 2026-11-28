@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::*;
 
 /// A missing name renders as a blank gutter instead of failing, so the catalog
@@ -371,6 +373,83 @@ fn gallery_message_and_notification_stacks_render_and_clear(cx: &mut gpui::TestA
             .debug_bounds("notification-stack")
             .is_none()
     );
+}
+
+#[gpui::test]
+fn gallery_navigation_group_renders_and_interacts(cx: &mut gpui::TestAppContext) {
+    let (_, breadcrumb_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Breadcrumb,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    breadcrumb_view.simulate_resize(size(px(1040.), px(900.)));
+    breadcrumb_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(breadcrumb_view.debug_bounds("breadcrumb").is_some());
+
+    let (_, dropdown_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Dropdown,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    dropdown_view.simulate_resize(size(px(1040.), px(900.)));
+    dropdown_view.update(|window, cx| window.draw(cx).clear(cx));
+    let trigger = dropdown_view
+        .debug_bounds("dropdown-basic-area")
+        .expect("dropdown area");
+    dropdown_view.simulate_mouse_move(trigger.center(), None, Default::default());
+    dropdown_view.run_until_parked();
+    dropdown_view
+        .executor()
+        .advance_clock(Duration::from_millis(170));
+    dropdown_view.run_until_parked();
+    dropdown_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(dropdown_view.debug_bounds("dropdown-menu").is_some());
+    let item = dropdown_view
+        .debug_bounds("dropdown-item-0")
+        .expect("dropdown item");
+    dropdown_view.simulate_click(item.center(), gpui::Modifiers::default());
+    dropdown_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(dropdown_view.debug_bounds("dropdown-menu").is_none());
+
+    let (_, steps_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Steps,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    steps_view.simulate_resize(size(px(1040.), px(900.)));
+    steps_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(steps_view.debug_bounds("step-0").is_some());
+    assert!(steps_view.debug_bounds("step-2").is_some());
+
+    let (_, tabs_view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Tabs,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    tabs_view.simulate_resize(size(px(1040.), px(900.)));
+    tabs_view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(tabs_view.debug_bounds("tabs-nav").is_some());
+    assert!(tabs_view.debug_bounds("pane-active-0").is_some());
 }
 
 #[gpui::test]

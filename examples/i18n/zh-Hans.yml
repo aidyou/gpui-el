@@ -14,6 +14,10 @@ space_intro: 为相邻元素设置间距和对齐方式。
 table_intro: 用条纹、边框、固定表头和状态色展示类型化的行列数据。
 tag_intro: 用标签标记内容，或用可选择标签切换选中状态。
 menu_intro: 试用嵌套菜单、可折叠侧栏和横向菜单。
+breadcrumb_intro: 用分隔符、图标分隔符与链接项显示当前页面位置。
+dropdown_intro: 用悬停/点击/右键切换命令菜单，支持尺寸、分裂按钮与键盘导航。
+steps_intro: 用水平/垂直步骤、状态、描述、图标与连接线进度引导流程。
+tabs_intro: 用线条/卡片/边框卡片样式、四向定位、键盘导航与可编辑标签页切换相关内容。
 loading_intro: 在指定区域显示加载提示，不影响窗口内其他区域的操作。
 alert_intro: 用语义类型、可选图标、描述与关闭操作显示重要的行内反馈。
 dialog_intro: 用标题、内容、页脚、遮罩、Esc 关闭与可选拖动呈现聚焦的模态内容。
@@ -47,6 +51,47 @@ menu_item_one: 菜单项一
 menu_item_two: 菜单项二
 menu_item_three: 菜单项三
 menu_item_four: 菜单项四
+breadcrumb_basic: 基本面包屑
+breadcrumb_icon: 图标分隔符
+breadcrumb_separator: 自定义分隔符
+breadcrumb_home: 首页
+breadcrumb_components: 组件
+breadcrumb_current: 当前页面
+dropdown_basic: 悬停下拉菜单
+dropdown_click: 点击触发并保持打开
+dropdown_sizes: 菜单尺寸
+dropdown_split: 分裂按钮
+dropdown_actions: 操作
+dropdown_edit: 编辑
+dropdown_copy: 复制
+dropdown_delete: 删除
+dropdown_save: 保存
+dropdown_disabled: 禁用
+dropdown_small: 小号
+dropdown_default: 默认
+dropdown_large: 大号
+steps_basic: 基本步骤条
+steps_status: 显式状态
+steps_centered: 居中固定宽度步骤
+steps_vertical: 垂直步骤条
+steps_simple: 简单步骤条
+steps_account: 账户
+steps_account_desc: 创建账户
+steps_profile: 资料
+steps_profile_desc: 填写资料
+steps_done: 完成
+steps_done_desc: 检查并完成
+tabs_basic: 基本标签页
+tabs_card: 卡片标签页
+tabs_border_card: 边框卡片标签页
+tabs_position: 左侧、右侧与底部
+tabs_editable: 可编辑与懒加载标签页
+tabs_first: 第一项
+tabs_first_content: 第一个标签页内容
+tabs_second: 第二项
+tabs_second_content: 第二个标签页内容
+tabs_disabled: 禁用
+tabs_disabled_content: 禁用标签页内容
 window_minimize: 最小化窗口
 window_zoom: 最大化或还原窗口
 window_close: 关闭窗口
@@ -67,6 +112,10 @@ space_page: Space 间距
 table_page: Table 表格
 tag_page: Tag 标签
 menu_page: Menu 菜单
+breadcrumb_page: Breadcrumb 面包屑
+dropdown_page: Dropdown 下拉菜单
+steps_page: Steps 步骤条
+tabs_page: Tabs 标签页
 loading_page: Loading 加载
 alert_page: Alert 提示
 dialog_page: Dialog 对话框

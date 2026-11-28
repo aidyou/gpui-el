@@ -506,6 +506,14 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.transfer_left_title(), "列表");
         assert_eq!(Locale::default().transfer_to_right(), "Move right");
         assert_eq!(Locale::SimplifiedChinese.transfer_to_left(), "向左移动");
+        assert_eq!(Locale::default().breadcrumb_label(), "Breadcrumb");
+        assert_eq!(Locale::SimplifiedChinese.breadcrumb_label(), "面包屑");
+        assert_eq!(Locale::default().dropdown_toggle(), "Toggle dropdown");
+        assert_eq!(Locale::SimplifiedChinese.dropdown_toggle(), "切换下拉菜单");
+        assert_eq!(Locale::default().tabs_add(), "Add tab");
+        assert_eq!(Locale::SimplifiedChinese.tabs_add(), "添加标签页");
+        assert_eq!(Locale::default().tabs_close(), "Close tab");
+        assert_eq!(Locale::SimplifiedChinese.tabs_close(), "关闭标签页");
         assert_eq!(Locale::default().popconfirm_confirm(), "Confirm");
         assert_eq!(Locale::SimplifiedChinese.popconfirm_confirm(), "确定");
         assert_eq!(Locale::default().popconfirm_cancel(), "Cancel");
@@ -526,6 +534,19 @@ mod tests {
         let fallback = Messages::fallback();
         assert_eq!(fallback.button.loading, embedded.button.loading);
         assert_eq!(fallback.menu.more, embedded.menu.more);
+        assert_eq!(
+            fallback.navigation.breadcrumb,
+            embedded.navigation.breadcrumb
+        );
+        assert_eq!(
+            fallback.navigation.dropdown_toggle,
+            embedded.navigation.dropdown_toggle
+        );
+        assert_eq!(fallback.navigation.tabs_add, embedded.navigation.tabs_add);
+        assert_eq!(
+            fallback.navigation.tabs_close,
+            embedded.navigation.tabs_close
+        );
         assert_eq!(fallback.tag.close, embedded.tag.close);
         assert_eq!(fallback.table.copy, embedded.table.copy);
         assert_eq!(fallback.table.copied, embedded.table.copied);

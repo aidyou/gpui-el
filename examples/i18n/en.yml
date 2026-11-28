@@ -14,6 +14,10 @@ space_intro: Set the spacing and alignment between adjacent elements.
 table_intro: Present typed rows and columns with stripes, borders, a fixed header, and status colors.
 tag_intro: Mark content with tags, or toggle a selection with check tags.
 menu_intro: Navigate with nested entries, collapsible sidebars, and horizontal menus.
+breadcrumb_intro: Show the current page location with separators, icon separators, and link items.
+dropdown_intro: Toggle a menu of commands with hover/click/contextmenu, sizes, split buttons, and keyboard navigation.
+steps_intro: Guide a process with horizontal/vertical steps, statuses, descriptions, icons, and connector progress.
+tabs_intro: Switch related content with line/card/border-card styles, four positions, keyboard navigation, and editable panes.
 loading_intro: Show progress over a specific region without blocking the rest of the window.
 alert_intro: Display important inline feedback with semantic types, optional icons, descriptions, and dismiss actions.
 dialog_intro: Present focused modal content with a title, body, footer, backdrop, Escape closing, and optional dragging.
@@ -47,6 +51,47 @@ menu_item_one: Item one
 menu_item_two: Item two
 menu_item_three: Item three
 menu_item_four: Item four
+breadcrumb_basic: Basic breadcrumb
+breadcrumb_icon: Icon separator
+breadcrumb_separator: Custom separators
+breadcrumb_home: Home
+breadcrumb_components: Components
+breadcrumb_current: Current page
+dropdown_basic: Hover dropdown
+dropdown_click: Click and keep open
+dropdown_sizes: Menu sizes
+dropdown_split: Split button
+dropdown_actions: Actions
+dropdown_edit: Edit
+dropdown_copy: Copy
+dropdown_delete: Delete
+dropdown_save: Save
+dropdown_disabled: Disabled
+dropdown_small: Small
+dropdown_default: Default
+dropdown_large: Large
+steps_basic: Basic steps
+steps_status: Explicit statuses
+steps_centered: Centered fixed-width steps
+steps_vertical: Vertical steps
+steps_simple: Simple steps
+steps_account: Account
+steps_account_desc: Create your account
+steps_profile: Profile
+steps_profile_desc: Fill in profile details
+steps_done: Done
+steps_done_desc: Review and finish
+tabs_basic: Basic tabs
+tabs_card: Card tabs
+tabs_border_card: Border card tabs
+tabs_position: Left, right, and bottom
+tabs_editable: Editable and lazy tabs
+tabs_first: First
+tabs_first_content: First tab content
+tabs_second: Second
+tabs_second_content: Second tab content
+tabs_disabled: Disabled
+tabs_disabled_content: Disabled tab content
 window_minimize: Minimize window
 window_zoom: Maximize or restore window
 window_close: Close window
@@ -67,6 +112,10 @@ space_page: Space
 table_page: Table
 tag_page: Tag
 menu_page: Menu
+breadcrumb_page: Breadcrumb
+dropdown_page: Dropdown
+steps_page: Steps
+tabs_page: Tabs
 loading_page: Loading
 alert_page: Alert
 dialog_page: Dialog

@@ -119,6 +119,10 @@ enum Page {
     Table,
     Tag,
     Menu,
+    Breadcrumb,
+    Dropdown,
+    Steps,
+    Tabs,
     Loading,
     Alert,
     Dialog,
@@ -148,7 +152,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 39] = [
+    const ALL: [Self; 43] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -162,6 +166,10 @@ impl Page {
         Self::Table,
         Self::Tag,
         Self::Menu,
+        Self::Breadcrumb,
+        Self::Dropdown,
+        Self::Steps,
+        Self::Tabs,
         Self::Loading,
         Self::Alert,
         Self::Dialog,
@@ -205,6 +213,10 @@ impl Page {
             Self::Table => &s.table_intro,
             Self::Tag => &s.tag_intro,
             Self::Menu => &s.menu_intro,
+            Self::Breadcrumb => &s.breadcrumb_intro,
+            Self::Dropdown => &s.dropdown_intro,
+            Self::Steps => &s.steps_intro,
+            Self::Tabs => &s.tabs_intro,
             Self::Loading => &s.loading_intro,
             Self::Alert => &s.alert_intro,
             Self::Dialog => &s.dialog_intro,
@@ -249,6 +261,10 @@ impl Page {
             Self::Table => "table",
             Self::Tag => "tag",
             Self::Menu => "menu",
+            Self::Breadcrumb => "breadcrumb",
+            Self::Dropdown => "dropdown",
+            Self::Steps => "steps",
+            Self::Tabs => "tabs",
             Self::Loading => "loading",
             Self::Alert => "alert",
             Self::Dialog => "dialog",
@@ -293,6 +309,10 @@ impl Page {
             Self::Table => &s.table_page,
             Self::Tag => &s.tag_page,
             Self::Menu => &s.menu_page,
+            Self::Breadcrumb => &s.breadcrumb_page,
+            Self::Dropdown => &s.dropdown_page,
+            Self::Steps => &s.steps_page,
+            Self::Tabs => &s.tabs_page,
             Self::Loading => &s.loading_page,
             Self::Alert => &s.alert_page,
             Self::Dialog => &s.dialog_page,
@@ -348,6 +368,10 @@ impl Page {
                 "el-menu-item",
                 "el-menu-item-group",
             ],
+            Self::Breadcrumb => &["el-breadcrumb", "el-breadcrumb-item"],
+            Self::Dropdown => &["el-dropdown"],
+            Self::Steps => &["el-steps", "el-step"],
+            Self::Tabs => &["el-tabs", "el-tab-pane"],
             Self::Loading => &["v-loading"],
             Self::Alert => &["el-alert"],
             Self::Dialog => &["el-dialog"],
@@ -477,7 +501,11 @@ impl Render for Gallery {
                                 .entry(
                                     el_sub_menu("navigation", s.navigation.as_str())
                                         .icon(nav_glyph(nav_icon::NAVIGATION))
-                                        .entry(item(Page::Menu)),
+                                        .entry(item(Page::Menu))
+                                        .entry(item(Page::Breadcrumb))
+                                        .entry(item(Page::Dropdown))
+                                        .entry(item(Page::Steps))
+                                        .entry(item(Page::Tabs)),
                                 )
                                 .entry(
                                     el_sub_menu("feedback", s.feedback.as_str())
@@ -531,6 +559,10 @@ impl Render for Gallery {
             Page::Table => self.tables(s, cx),
             Page::Tag => self.tags(s, cx),
             Page::Menu => self.menus(s, cx),
+            Page::Breadcrumb => self.breadcrumbs(s, cx),
+            Page::Dropdown => self.dropdowns(s, cx),
+            Page::Steps => self.steps(s, cx),
+            Page::Tabs => self.tabs(s, cx),
             Page::Loading => self.loading(s, cx),
             Page::Alert => self.alerts(s, cx),
             Page::Dialog => self.dialogs(s, cx),

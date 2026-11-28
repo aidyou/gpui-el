@@ -2681,6 +2681,145 @@ const NOTIFICATION_EVENTS: &[Row] = &[(
     "通知被激活，或手动/计时关闭时触发。",
 )];
 
+const BREADCRUMB: &[Row] = &[
+    (
+        "el_breadcrumb(), Breadcrumb::new, id, item",
+        "ElementId / BreadcrumbItem · call site",
+        "Create a breadcrumb trail and append levels in order.",
+        "创建面包屑并按顺序添加层级。",
+    ),
+    (
+        "separator, separator_icon",
+        "SharedString / Icon · /",
+        "Choose a text separator or an icon that replaces it.",
+        "选择文字分隔符或替换它的图标。",
+    ),
+    (
+        "BreadcrumbItem::new, href, onclick, accessibility_label",
+        "SharedString / handler · unset",
+        "Set each label, optional URL/action, and the trail's accessible name.",
+        "设置每级文字、可选 URL/操作与面包屑辅助技术名称。",
+    ),
+];
+const DROPDOWN: &[Row] = &[
+    (
+        "el_dropdown(), Dropdown::new, id, child, item",
+        "ElementId / IntoElement / DropdownItem · call site",
+        "Wrap a trigger and append command items.",
+        "包装触发器并添加命令项。",
+    ),
+    (
+        "placement, effect, trigger, visible, disabled",
+        "PopupPlacement / TooltipEffect / DropdownTrigger / bool · Bottom / Light / Hover",
+        "Configure geometry, theme, activation, controlled visibility, and disabled state.",
+        "配置几何、主题、触发、受控显隐与禁用状态。",
+    ),
+    (
+        "hide_on_click, show_arrow, show_timeout, hide_timeout, max_height",
+        "bool / Duration / f32 · true / true / 150 ms / 150 ms",
+        "Configure closing, arrow, hover delays, and menu scroll height.",
+        "配置关闭行为、箭头、悬停延迟与菜单滚动高度。",
+    ),
+    (
+        "size, split_button, button_type, label",
+        "ButtonSize / bool / ButtonType / SharedString · Default",
+        "Configure menu sizing and the optional split-button trigger.",
+        "配置菜单尺寸与可选分裂按钮触发器。",
+    ),
+    (
+        "DropdownItem::new, icon, disabled, divided",
+        "SharedString / Icon / bool · false / false",
+        "Set command, label, optional icon, disabled state, and divider.",
+        "设置命令、文字、可选图标、禁用状态与分隔线。",
+    ),
+];
+const DROPDOWN_EVENTS: &[Row] = &[
+    (
+        "oncommand",
+        "SharedString, &mut Window, &mut App",
+        "An enabled item is activated.",
+        "启用项被激活时触发。",
+    ),
+    (
+        "onvisible_change, onclick",
+        "bool, &mut App / &mut Window, &mut App",
+        "The menu opens/closes, or the split button's main action is clicked.",
+        "菜单打开/关闭，或分裂按钮主操作被点击时触发。",
+    ),
+];
+const STEPS: &[Row] = &[
+    (
+        "el_steps(), Steps::new, id, step, active",
+        "ElementId / StepItem / usize · call site / 0",
+        "Create a step bar, append steps, and choose the active index.",
+        "创建步骤条、添加步骤并选择当前索引。",
+    ),
+    (
+        "direction, align_center, simple, space",
+        "StepsDirection / bool / f32 · Horizontal",
+        "Choose horizontal/vertical, centered content, simple style, or fixed spacing.",
+        "选择水平/垂直、居中、简单样式或固定间距。",
+    ),
+    (
+        "process_status, finish_status",
+        "StepStatus · Process / Finish",
+        "Choose automatic current and completed statuses.",
+        "选择自动当前与完成状态。",
+    ),
+    (
+        "StepItem::new, description, icon, status",
+        "SharedString / Icon / StepStatus · unset",
+        "Set title, description, custom icon, or explicit status.",
+        "设置标题、描述、自定义图标或显式状态。",
+    ),
+];
+const STEPS_EVENTS: &[Row] = &[(
+    "onchange",
+    "usize, usize, &mut App",
+    "The controlled active index changes.",
+    "受控 active 索引变化时触发。",
+)];
+const TABS: &[Row] = &[
+    (
+        "el_tabs(), Tabs::new, id, pane",
+        "ElementId / TabPane · call site",
+        "Create tabs and append panes in order.",
+        "创建标签页并按顺序添加面板。",
+    ),
+    (
+        "active, default_value, kind, position, stretch",
+        "TabValue / TabsType / TabsPosition / bool · Top",
+        "Choose controlled/default selection, line/card/border-card, four positions, and stretch.",
+        "选择受控/默认选中、线条/卡片/边框卡片、四向与拉伸。",
+    ),
+    (
+        "closable, addable, editable, before_leave",
+        "bool / handler · false",
+        "Configure editing and synchronous switch interception.",
+        "配置编辑与同步切换拦截。",
+    ),
+    (
+        "TabPane::new, content, disabled, closable, lazy",
+        "TabValue / IntoElement / bool · false",
+        "Set string/number name, label, native content, disabled/close/lazy behavior.",
+        "设置字符串/数字名称、标签、原生内容与禁用/关闭/懒加载行为。",
+    ),
+];
+const TABS_EVENTS: &[Row] = &[
+    (
+        "ontabclick, onchange",
+        "TabValue, &mut Window, &mut App / TabValue, &mut App",
+        "A tab is clicked, or the active pane changes.",
+        "标签被点击，或当前面板变化时触发。",
+    ),
+    (
+        "onremove, onadd",
+        "TabValue, &mut Window, &mut App / &mut Window, &mut App",
+        "A close or add control is activated; the caller updates the pane list.",
+        "关闭或添加控件被激活；调用方负责更新面板列表。",
+    ),
+];
+
 const TOOLTIP: &[Row] = &[
     (
         "el_tooltip(), Tooltip::new, id, child, content",
@@ -2812,6 +2951,10 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Table => (TABLE, TABLE_EVENTS),
         Page::Tag => (TAG, TAG_EVENTS),
         Page::Menu => (MENU, MENU_EVENTS),
+        Page::Breadcrumb => (BREADCRUMB, &[]),
+        Page::Dropdown => (DROPDOWN, DROPDOWN_EVENTS),
+        Page::Steps => (STEPS, STEPS_EVENTS),
+        Page::Tabs => (TABS, TABS_EVENTS),
         Page::Loading => (LOADING, &[]),
         Page::Alert => (ALERT, ALERT_EVENTS),
         Page::Dialog => (DIALOG, DIALOG_EVENTS),
@@ -2915,6 +3058,10 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Tooltip, |el| el.child(if zh { "原生差异：使用 GPUI 锚点定位与路径箭头，不依赖 DOM Teleport；支持十二向、回退、延迟与四种触发，但未移植 HTML 字符串、popper.js 选项、虚拟触发器、singleton、自定义 class/style 与全局 z-index；进入淡入，关闭即时移除。" } else { "Native differences: positioning and arrows use GPUI anchors and paths instead of DOM Teleport; twelve placements, fallbacks, delays, and four triggers are supported, while HTML strings, popper.js options, virtual triggering, singleton mode, custom classes/styles, and global z-index are not mapped. Entry fades in; closing removes the popup immediately." }))
         .when(page == Page::Popover, |el| el.child(if zh { "原生差异：Popover 复用原生 Tooltip；支持标题、富内容、150 px 最小宽度与嵌套操作，未移植 HTML 字符串、虚拟引用、指令用法、popper.js 选项、自定义 class/style 与全局 z-index。" } else { "Native differences: Popover reuses native Tooltip; titles, rich content, a 150 px minimum width, and nested actions are supported, while HTML strings, virtual references, directive usage, popper.js options, custom classes/styles, and global z-index are not mapped." }))
         .when(page == Page::Popconfirm, |el| el.child(if zh { "原生差异：Popconfirm 复用原生 Tooltip 的 click 触发；支持警告图标、按钮类型、确认/取消与自动关闭，未移植虚拟引用、popper.js 选项、自定义 class/style 与全局 z-index。" } else { "Native differences: Popconfirm reuses native Tooltip's click trigger; warning icon, button types, confirm/cancel, and automatic closing are supported, while virtual references, popper.js options, custom classes/styles, and global z-index are not mapped." }))
+        .when(page == Page::Breadcrumb, |el| el.child(if zh { "原生差异：href 通过平台处理器打开，onclick 用于应用内导航；未移植 Vue Router 的 replace 历史语义与任意路由对象。最后一级自动使用普通文字色。" } else { "Native differences: href opens through the platform handler and onclick serves in-app navigation; Vue Router replace history semantics and arbitrary route objects are not mapped. The last level automatically uses regular text color." }))
+        .when(page == Page::Dropdown, |el| el.child(if zh { "原生差异：复用原生 Tooltip 与窗口键控状态；支持 hover/click/contextmenu、150 ms 延迟、三档尺寸、禁用/分隔项、command、hide-on-click、键盘与 split-button。未移植虚拟引用、popper.js 选项、自定义 class/style、全局 z-index 与命令式 handleOpen/handleClose；visible 提供受控显隐。" } else { "Native differences: native Tooltip and window-keyed state are reused; hover/click/contextmenu, 150 ms delays, three sizes, disabled/divided items, command, hide-on-click, keyboard navigation, and split-button are supported. Virtual references, popper.js options, custom classes/styles, global z-index, and imperative handleOpen/handleClose are not mapped; visible provides controlled visibility." }))
+        .when(page == Page::Steps, |el| el.child(if zh { "原生差异：使用像素 space，不支持百分比字符串；连接线进度即时切换，不重放上游按步数延迟的 150 ms 动画。simple 模式固定为横向，忽略 description、direction、align-center 与 space。" } else { "Native differences: space is pixel-based rather than a percentage string; connector progress changes immediately instead of replaying upstream's per-step 150 ms delay. Simple mode is horizontal and ignores description, direction, align-center, and space." }))
+        .when(page == Page::Tabs, |el| el.child(if zh { "原生差异：before-leave 为同步谓词，未移植 Promise；active bar 使用静态边框而非滑动动画；未移植拖拽排序、滚动导航按钮、自定义 add-icon 与命令式 tabNavRef。onremove/onadd 只报告事件，调用方负责更新 panes。" } else { "Native differences: before-leave is a synchronous predicate rather than a Promise; the active bar is a static border instead of a sliding animation. Drag sorting, scroll navigation buttons, custom add-icon, and imperative tabNavRef are not mapped. onremove/onadd report events and the caller updates panes." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
         .when(page == Page::Link, |el| el.child(if zh { "原生差异：href 由平台处理器打开，没有当前视图导航；target 未移植；布尔 underline 已废弃故未支持；上游 outline: none 改为可见聚焦环。" } else { "Native differences: href opens through the platform handler instead of navigating the current view; target is not reproduced; the deprecated boolean underline is not supported; the upstream outline: none is replaced by a visible focus ring." }))
         .when(page == Page::Text, |el| el.child(if zh { "原生差异：tag 属性没有 GPUI 对应物；isTruncated 是 truncated 在确定宽度下的排版结果而非可监听状态；修饰由 GPUI 的下划线与删除线实现，没有 CSS text-decoration 合并写法。" } else { "Native differences: tag has no GPUI equivalent; isTruncated is the layout effect of truncated under a definite width rather than a watched ref; decorations come from GPUI underline and strikethrough instead of a CSS text-decoration shorthand." }))

@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn statuses_follow_active_process_and_finish_rules() {
-        let items = vec![
+        let items = [
             StepItem::new("One"),
             StepItem::new("Two"),
             StepItem::new("Three"),
