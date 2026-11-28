@@ -62,6 +62,7 @@ struct Gallery {
     date_picker: pages::date_picker::State,
     tree_select: pages::tree_select::State,
     transfer: pages::transfer::State,
+    form: pages::form::State,
     radio: pages::radio::State,
     rate: pages::rate::State,
     slider: pages::slider::State,
@@ -131,10 +132,11 @@ enum Page {
     Cascader,
     TreeSelect,
     Transfer,
+    Form,
 }
 
 impl Page {
-    const ALL: [Self; 30] = [
+    const ALL: [Self; 31] = [
         Self::Init,
         Self::Button,
         Self::Icon,
@@ -165,6 +167,7 @@ impl Page {
         Self::Cascader,
         Self::TreeSelect,
         Self::Transfer,
+        Self::Form,
     ];
 
     fn description(self, s: &'static Copy) -> &'static str {
@@ -199,6 +202,7 @@ impl Page {
             Self::Cascader => &s.cascader_intro,
             Self::TreeSelect => &s.tree_select_intro,
             Self::Transfer => &s.transfer_intro,
+            Self::Form => &s.form_intro,
         }
     }
 
@@ -234,6 +238,7 @@ impl Page {
             Self::Cascader => "cascader",
             Self::TreeSelect => "tree-select",
             Self::Transfer => "transfer",
+            Self::Form => "form",
         }
     }
 
@@ -269,6 +274,7 @@ impl Page {
             Self::Cascader => &s.cascader_page,
             Self::TreeSelect => &s.tree_select_page,
             Self::Transfer => &s.transfer_page,
+            Self::Form => &s.form_page,
         }
     }
 
@@ -315,6 +321,7 @@ impl Page {
             Self::Cascader => &["el-cascader"],
             Self::TreeSelect => &["el-tree-select"],
             Self::Transfer => &["el-transfer"],
+            Self::Form => &["el-form", "el-form-item"],
         }
     }
 }
@@ -437,7 +444,8 @@ impl Render for Gallery {
                                         .entry(item(Page::DatePicker))
                                         .entry(item(Page::Cascader))
                                         .entry(item(Page::TreeSelect))
-                                        .entry(item(Page::Transfer)),
+                                        .entry(item(Page::Transfer))
+                                        .entry(item(Page::Form)),
                                 ),
                         ),
                 )
@@ -474,6 +482,7 @@ impl Render for Gallery {
             Page::Cascader => self.cascaders(s, cx),
             Page::TreeSelect => self.tree_selects(s, cx),
             Page::Transfer => self.transfers(s, cx),
+            Page::Form => self.forms(s, cx),
         };
         let secondary = rgb(if self.dark { 0xa3a6ad } else { 0x606266 });
         let chip = rgb(if self.dark { 0x262727 } else { 0xf2f3f5 });

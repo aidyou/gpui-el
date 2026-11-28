@@ -384,6 +384,16 @@ transfer_basic: 基本用法
 transfer_filterable: 可过滤列表
 transfer_target_order: 目标排序
 transfer_custom: 自定义标题与按钮
+form_intro: 通过共享模型状态、校验规则、标签与行内错误消息收集、校验、重置和提交字符串字段。
+form_page: Form 表单
+form_horizontal: 横向校验
+form_vertical: 顶部标签
+form_inline: 行内表单
+form_disabled: 禁用表单
+form_name: 姓名
+form_email: 邮箱
+form_city: 城市
+form_submitted: 表单提交成功
 rate_bad: 很差
 rate_poor: 较差
 rate_fair: 一般

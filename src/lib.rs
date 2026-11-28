@@ -181,6 +181,7 @@ mod checkbox;
 mod color_picker;
 mod date_picker;
 mod error;
+mod form;
 mod grid;
 mod icon;
 mod input;
@@ -218,6 +219,10 @@ pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkb
 pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use date_picker::{DatePicker, el_date_picker};
 pub use error::{Error, Result};
+pub use form::{
+    Form, FormError, FormHandle, FormItem, FormLabelPosition, FormLayout, FormModel, FormRule,
+    FormState, el_form, el_form_item,
+};
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};
 pub use input::{Input, InputRadius, InputSize, el_input};

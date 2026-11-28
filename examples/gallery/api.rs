@@ -1743,6 +1743,76 @@ const TRANSFER_EVENTS: &[Row] = &[
         "任一列表的项目或全选勾选状态改变。",
     ),
 ];
+const FORM: &[Row] = &[
+    (
+        "FormState::new, el_form, Form::new",
+        "Entity<FormState>",
+        "Create shared model/rule/error state and a form container.",
+        "创建共享模型/规则/错误状态与表单容器。",
+    ),
+    (
+        "set_model, set_initial_model, set_field, field",
+        "FormModel / SharedString",
+        "Control string values and the reset baseline.",
+        "控制字符串值与重置基线。",
+    ),
+    (
+        "set_rules, validate, clear_validate, reset",
+        "FormRule / Option<prop>",
+        "Run synchronous required/length/custom validation, clear errors, or restore initial values.",
+        "执行同步必填/长度/自定义校验、清除错误或恢复初始值。",
+    ),
+    (
+        "layout, inline, vertical, label_position, label_width",
+        "FormLayout / FormLabelPosition / f32",
+        "Choose horizontal, vertical, or inline rows and label geometry.",
+        "选择横向、纵向或行内行与标签几何。",
+    ),
+    (
+        "label_suffix, hide_required_asterisk, required_mark_left",
+        "SharedString / bool",
+        "Customize label suffix and required-mark visibility/position.",
+        "自定义标签后缀与必填标记显示/位置。",
+    ),
+    (
+        "show_message, inline_message, status_icon",
+        "bool",
+        "Control validation text and success/error icons.",
+        "控制校验文本与成功/错误图标。",
+    ),
+    (
+        "disabled, show_actions",
+        "bool · false",
+        "Disable built-in submit/reset actions and show them when requested.",
+        "禁用内置提交/重置操作，并按需显示。",
+    ),
+    (
+        "el_form_item, FormItem::new",
+        "Entity<FormState>, prop",
+        "Bind a label/content row to a model key and its validation error.",
+        "将标签/内容行绑定到模型键与校验错误。",
+    ),
+];
+const FORM_EVENTS: &[Row] = &[
+    (
+        "onvalidate",
+        "&FormModel, bool, &[FormError], &mut Window, &mut App",
+        "Submit validation finishes with the model, validity, and errors.",
+        "提交校验完成，返回模型、有效性与错误。",
+    ),
+    (
+        "onsubmit",
+        "&FormModel, &mut Window, &mut App",
+        "Validation succeeds and the form submits.",
+        "校验成功并提交表单。",
+    ),
+    (
+        "onreset",
+        "&mut Window, &mut App",
+        "The built-in reset action restores initial values.",
+        "内置重置操作恢复初始值。",
+    ),
+];
 const SLIDER: &[Row] = &[
     (
         "el_slider(), Slider::new, id",
@@ -2285,6 +2355,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         Page::Cascader => (CASCADER, CASCADER_EVENTS),
         Page::TreeSelect => (TREE_SELECT, TREE_SELECT_EVENTS),
         Page::Transfer => (TRANSFER, TRANSFER_EVENTS),
+        Page::Form => (FORM, FORM_EVENTS),
     };
     let table = |key: &'static str, headers: [&'static str; 3], rows: &[Row]| {
         el_table(rows.iter().copied())
@@ -2343,6 +2414,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
+        .when(page == Page::Form, |el| el.child(if zh { "原生差异：使用共享 FormState 句柄与同步字符串规则；未移植嵌套属性路径、异步校验器、自动字段注册/触发校验、滚动定位与命令式 focus/blur。字段控件需调用方自行绑定 set_field。" } else { "Native differences: a shared FormState handle and synchronous string rules are used; nested property paths, async validators, automatic field registration/trigger validation, scroll-to-error, and imperative focus/blur are not mapped. Callers bind field controls through set_field." }))
         .when(page == Page::Transfer, |el| el.child(if zh { "原生差异：当前仅支持静态数据与文本标签，未移植属性别名、自定义项目渲染、页脚/空态插槽、虚拟滚动与命令式 panel/query exposes。" } else { "Native differences: only static data and text labels are supported; prop aliases, custom item rendering, footer/empty slots, virtual scrolling, and imperative panel/query exposes are not mapped." }))
         .when(page == Page::TreeSelect, |el| el.child(if zh { "原生差异：当前仅支持静态树与节点键值，未移植懒加载、cache-data、自定义节点渲染、虚拟滚动与命令式 tree/select exposes。" } else { "Native differences: only static trees and node-key values are supported; lazy loading, cache-data, custom node rendering, virtual scrolling, and imperative tree/select exposes are not mapped." }))
         .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))

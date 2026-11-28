@@ -41,3 +41,9 @@ transfer:
   filter_placeholder: 搜索
   no_data: 暂无数据
   checked: "已选 {count} 项"
+form:
+  submit: 提交
+  reset: 重置
+  required: "请填写{label}"
+  min: "{label}至少需要 {min} 个字符"
+  max: "{label}最多需要 {max} 个字符"

@@ -384,6 +384,16 @@ transfer_basic: Basic usage
 transfer_filterable: Filterable lists
 transfer_target_order: Target ordering
 transfer_custom: Custom titles and buttons
+form_intro: Collect, validate, reset, and submit string fields with shared model state, rules, labels, and inline error messages.
+form_page: Form 表单
+form_horizontal: Horizontal validation
+form_vertical: Vertical labels
+form_inline: Inline form
+form_disabled: Disabled form
+form_name: Name
+form_email: Email
+form_city: City
+form_submitted: Form submitted successfully
 rate_bad: Bad
 rate_poor: Poor
 rate_fair: Fair

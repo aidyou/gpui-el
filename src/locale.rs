@@ -30,6 +30,7 @@ struct Messages {
     cascader: CascaderMessages,
     tree_select: TreeSelectMessages,
     transfer: TransferMessages,
+    form: FormMessages,
 }
 
 #[derive(Deserialize)]
@@ -127,6 +128,16 @@ struct TransferMessages {
     checked: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FormMessages {
+    submit: String,
+    reset: String,
+    required: String,
+    min: String,
+    max: String,
+}
+
 impl Messages {
     /// Fallback for a broken embedded locale file. The values mirror
     /// `i18n/en.yml`, and a unit test fails when the two drift apart, so a
@@ -191,6 +202,13 @@ impl Messages {
                 filter_placeholder: "Search".into(),
                 no_data: "No data".into(),
                 checked: "{count} selected".into(),
+            },
+            form: FormMessages {
+                submit: "Submit".into(),
+                reset: "Reset".into(),
+                required: "{label} is required".into(),
+                min: "{label} must be at least {min} characters".into(),
+                max: "{label} must be at most {max} characters".into(),
             },
         }
     }
@@ -298,6 +316,21 @@ impl Locale {
     pub(crate) fn transfer_checked(self) -> &'static str {
         &self.messages().transfer.checked
     }
+    pub(crate) fn form_submit(self) -> &'static str {
+        &self.messages().form.submit
+    }
+    pub(crate) fn form_reset(self) -> &'static str {
+        &self.messages().form.reset
+    }
+    pub(crate) fn form_required(self) -> &'static str {
+        &self.messages().form.required
+    }
+    pub(crate) fn form_min(self) -> &'static str {
+        &self.messages().form.min
+    }
+    pub(crate) fn form_max(self) -> &'static str {
+        &self.messages().form.max
+    }
 
     fn messages(self) -> &'static Messages {
         static ENGLISH: OnceLock<Messages> = OnceLock::new();
@@ -381,6 +414,13 @@ mod tests {
         assert_eq!(Locale::SimplifiedChinese.transfer_left_title(), "列表");
         assert_eq!(Locale::default().transfer_to_right(), "Move right");
         assert_eq!(Locale::SimplifiedChinese.transfer_to_left(), "向左移动");
+        assert_eq!(Locale::default().form_submit(), "Submit");
+        assert_eq!(Locale::SimplifiedChinese.form_reset(), "重置");
+        assert_eq!(Locale::default().form_required(), "{label} is required");
+        assert_eq!(
+            Locale::SimplifiedChinese.form_min(),
+            "{label}至少需要 {min} 个字符"
+        );
     }
 
     #[test]
@@ -442,5 +482,10 @@ mod tests {
         );
         assert_eq!(fallback.transfer.no_data, embedded.transfer.no_data);
         assert_eq!(fallback.transfer.checked, embedded.transfer.checked);
+        assert_eq!(fallback.form.submit, embedded.form.submit);
+        assert_eq!(fallback.form.reset, embedded.form.reset);
+        assert_eq!(fallback.form.required, embedded.form.required);
+        assert_eq!(fallback.form.min, embedded.form.min);
+        assert_eq!(fallback.form.max, embedded.form.max);
     }
 }
