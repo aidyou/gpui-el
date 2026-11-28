@@ -1467,14 +1467,20 @@ const DATE_PICKER: &[Row] = &[
     (
         "el_date_picker(), DatePicker::new, id",
         "ElementId · call site",
-        "Create a single-date picker with a stable sibling-unique ID.",
-        "创建单选日期选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
+        "Create a date picker with a stable sibling-unique ID.",
+        "创建日期选择器；同一调用位置生成多个时提供稳定且同级唯一的 ID。",
     ),
     (
-        "value",
-        "Option<SharedString> · None",
-        "Control the bound `YYYY-MM-DD` date string.",
-        "控制绑定的 `YYYY-MM-DD` 日期字符串。",
+        "picker_type",
+        "DatePickerType · Date",
+        "Choose date, date range, month, month range, year, year range, quarter, quarter range, week, or multiple dates/months/years/quarters.",
+        "选择日期、日期范围、月、月范围、年、年范围、季度、季度范围、周，或多选日期/月/年/季度。",
+    ),
+    (
+        "value, value_range, values",
+        "Option<SharedString> / tuple / Vec · empty",
+        "Control a single value, a two-ended range, or multiple values. Strings use YYYY-MM-DD unless value_format is set.",
+        "控制单值、两端范围或多选值。未设置 value_format 时使用 YYYY-MM-DD 字符串。",
     ),
     (
         "size, large, small",
@@ -1495,24 +1501,66 @@ const DATE_PICKER: &[Row] = &[
         "显示 Input 清空控件。",
     ),
     (
-        "placeholder, accessibility_label",
-        "SharedString · locale / unset",
-        "Set the empty-state hint and accessible field name.",
-        "设置空态提示与字段无障碍名称。",
+        "placeholder, start_placeholder, end_placeholder, range_separator",
+        "SharedString · locale / locale / locale / -",
+        "Set single/range hints and the range separator.",
+        "设置单选/范围提示与范围分隔符。",
     ),
     (
-        "prefix_icon",
-        "Icon · Calendar",
-        "Replace the leading calendar icon.",
-        "替换前置日历图标。",
+        "accessibility_label, prefix_icon",
+        "SharedString / Icon · unset / Calendar",
+        "Set the accessible field name and leading icon.",
+        "设置字段无障碍名称与前置图标。",
+    ),
+    (
+        "format, value_format",
+        "String · picker default / ISO",
+        "Format displayed and bound strings with YYYY, YY, MM, DD, MMM, Q, WW, HH, mm, and ss tokens.",
+        "使用 YYYY、YY、MM、DD、MMM、Q、WW、HH、mm、ss 标记格式化显示值与绑定值。",
+    ),
+    (
+        "default_value",
+        "SharedString · unset",
+        "Set the calendar's initial date when no controlled value exists.",
+        "没有受控值时设置日历初始日期。",
+    ),
+    (
+        "unlink_panels, single_panel",
+        "bool · false / false",
+        "Unlink range panels or show only the left panel.",
+        "取消范围面板联动，或仅显示左侧面板。",
+    ),
+    (
+        "disabled_date",
+        "Fn(NaiveDate) -> bool · unset",
+        "Disable individual days; month/year/quarter cells disable when their whole unit is disabled.",
+        "禁用单个日期；整个月/年/季度均禁用时对应单元格也禁用。",
+    ),
+    (
+        "show_now, show_confirm, show_week_number",
+        "bool · true / false / false",
+        "Show the Now action, optional confirm action, and ISO week-number column.",
+        "显示“现在”操作、可选确认操作与 ISO 周数列。",
     ),
 ];
 const DATE_PICKER_EVENTS: &[Row] = &[
     (
         "onchange",
         "Option<SharedString>, &mut Window, &mut App",
-        "A day, keyboard move, blur, clear, or confirm changes the date.",
-        "日期选择、键盘移动、失焦、清空或确认改变日期。",
+        "A single date, keyboard move, blur, clear, or confirm changes the value.",
+        "单选日期、键盘移动、失焦、清空或确认改变值。",
+    ),
+    (
+        "onrangechange",
+        "Option<SharedString>, Option<SharedString>, &mut Window, &mut App",
+        "A range is completed, edited, or cleared.",
+        "范围完成、编辑或清空时触发。",
+    ),
+    (
+        "onmultiplechange",
+        "Vec<SharedString>, &mut Window, &mut App",
+        "A multiple-date/month/year/quarter selection changes.",
+        "多选日期/月/年/季度选择变化时触发。",
     ),
     (
         "onvisiblechange",
@@ -1523,8 +1571,8 @@ const DATE_PICKER_EVENTS: &[Row] = &[
     (
         "onclear",
         "&mut Window, &mut App",
-        "The Input clear control emptied the date.",
-        "Input 清空控件清空了日期。",
+        "The Input clear control emptied the value.",
+        "Input 清空控件清空值时触发。",
     ),
     (
         "onfocus, onblur",
@@ -2418,7 +2466,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Transfer, |el| el.child(if zh { "原生差异：当前仅支持静态数据与文本标签，未移植属性别名、自定义项目渲染、页脚/空态插槽、虚拟滚动与命令式 panel/query exposes。" } else { "Native differences: only static data and text labels are supported; prop aliases, custom item rendering, footer/empty slots, virtual scrolling, and imperative panel/query exposes are not mapped." }))
         .when(page == Page::TreeSelect, |el| el.child(if zh { "原生差异：当前仅支持静态树与节点键值，未移植懒加载、cache-data、自定义节点渲染、虚拟滚动与命令式 tree/select exposes。" } else { "Native differences: only static trees and node-key values are supported; lazy loading, cache-data, custom node rendering, virtual scrolling, and imperative tree/select exposes are not mapped." }))
         .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
-        .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：当前仅支持单选 YYYY-MM-DD 日期，未移植范围、周/月/年/季度模式、disabled-date、快捷选项、自定义 popper 配置与命令式 exposes。" } else { "Native differences: only single YYYY-MM-DD dates are supported; ranges, week/month/year/quarter modes, disabled-date callbacks, shortcuts, custom popper configuration, and imperative exposes are not mapped." }))
+        .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：使用字符串而非 Date 对象；支持日期/范围/月/年/季度/周与多选，但尚未提供 datetime 时间面板、shortcuts、DOM slots、popper 配置与命令式 exposes。" } else { "Native differences: values are strings rather than Date objects; date/range/month/year/quarter/week and multiple selection are supported, but datetime time panels, shortcuts, DOM slots, popper configuration, and imperative exposes are not mapped yet." }))
         .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))
         .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))
         .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))

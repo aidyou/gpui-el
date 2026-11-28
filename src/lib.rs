@@ -217,7 +217,7 @@ pub use capsule::{CapsuleOption, CapsuleSegments, el_capsule_segments};
 pub use cascader::{Cascader, CascaderOption, CascaderSelection, el_cascader};
 pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
 pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
-pub use date_picker::{DatePicker, el_date_picker};
+pub use date_picker::{DatePicker, DatePickerType, el_date_picker};
 pub use error::{Error, Result};
 pub use form::{
     Form, FormError, FormHandle, FormItem, FormLabelPosition, FormLayout, FormModel, FormRule,

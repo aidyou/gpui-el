@@ -101,7 +101,12 @@ struct TimePickerMessages {
 #[serde(deny_unknown_fields)]
 struct DatePickerMessages {
     placeholder: String,
+    start_placeholder: String,
+    end_placeholder: String,
     weekdays: Vec<String>,
+    months: Vec<String>,
+    now: String,
+    confirm: String,
 }
 
 #[derive(Deserialize)]
@@ -183,10 +188,31 @@ impl Messages {
             },
             date_picker: DatePickerMessages {
                 placeholder: "Select date".into(),
+                start_placeholder: "Start date".into(),
+                end_placeholder: "End date".into(),
                 weekdays: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
                     .into_iter()
                     .map(str::to_owned)
                     .collect(),
+                months: [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                ]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+                now: "Now".into(),
+                confirm: "Confirm".into(),
             },
             cascader: CascaderMessages {
                 placeholder: "Select".into(),
@@ -286,8 +312,23 @@ impl Locale {
     pub(crate) fn date_picker_placeholder(self) -> &'static str {
         &self.messages().date_picker.placeholder
     }
+    pub(crate) fn date_picker_start_placeholder(self) -> &'static str {
+        &self.messages().date_picker.start_placeholder
+    }
+    pub(crate) fn date_picker_end_placeholder(self) -> &'static str {
+        &self.messages().date_picker.end_placeholder
+    }
     pub(crate) fn date_picker_weekdays(self) -> &'static [String] {
         &self.messages().date_picker.weekdays
+    }
+    pub(crate) fn date_picker_months(self) -> &'static [String] {
+        &self.messages().date_picker.months
+    }
+    pub(crate) fn date_picker_now(self) -> &'static str {
+        &self.messages().date_picker.now
+    }
+    pub(crate) fn date_picker_confirm(self) -> &'static str {
+        &self.messages().date_picker.confirm
     }
     pub(crate) fn cascader_placeholder(self) -> &'static str {
         &self.messages().cascader.placeholder

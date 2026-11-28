@@ -358,9 +358,12 @@ time_picker_seconds: 包含秒
 time_picker_sizes: 尺寸
 time_picker_states: 只读与禁用
 time_picker_custom: 自定义图标与不可编辑输入
-date_picker_intro: 从月历中选择单个 YYYY-MM-DD 日期，支持键盘移动、清空输入与原生日期校验。
+date_picker_intro: 选择日期、范围、月、年或季度，支持联动面板、键盘移动、禁用日期与原生校验。
 date_picker_page: DatePicker 日期选择器
 date_picker_basic: 基本用法
+date_picker_range: 日期范围
+date_picker_measurements: 月、年与季度
+date_picker_multiple: 多选日期
 date_picker_sizes: 尺寸
 date_picker_states: 只读与禁用
 date_picker_custom: 自定义图标与不可编辑输入

@@ -147,6 +147,77 @@ fn gallery_time_picker_panel_is_visible_and_selects_hours(cx: &mut gpui::TestApp
 }
 
 #[gpui::test]
+fn gallery_date_picker_switches_views_and_range_selects(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::DatePicker,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let basic = view
+        .debug_bounds("date-picker-basic")
+        .expect("gallery date picker bounds");
+    view.simulate_click(basic.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let date_panel = view.debug_bounds("date-picker-panel").expect("date panel");
+    let year_label = view
+        .debug_bounds("date-picker-year-label-left")
+        .expect("year label");
+    view.simulate_click(year_label.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let year_panel = view.debug_bounds("date-picker-panel").expect("year panel");
+    assert!(
+        year_panel.size.height < date_panel.size.height,
+        "date={date_panel:?}, year={year_panel:?}"
+    );
+    let year = view
+        .debug_bounds("date-picker-left-Year-6")
+        .expect("2026 year cell");
+    view.simulate_click(year.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let month = view
+        .debug_bounds("date-picker-left-Month-10")
+        .expect("November month cell");
+    view.simulate_click(month.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(view.debug_bounds("date-picker-month-label-left").is_some());
+    view.simulate_keystrokes("escape");
+
+    let range = view
+        .debug_bounds("date-picker-range")
+        .expect("gallery date range bounds");
+    view.simulate_click(range.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let range_panel = view
+        .debug_bounds("date-picker-panel")
+        .expect("date range panel");
+    assert!(range_panel.size.width > px(500.), "range={range_panel:?}");
+    let start = view
+        .debug_bounds("date-picker-left-day-3")
+        .expect("range start cell");
+    view.simulate_click(start.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let end = view
+        .debug_bounds("date-picker-left-day-28")
+        .expect("range end cell");
+    view.simulate_click(end.center(), gpui::Modifiers::default());
+    gallery.update(cx, |gallery, _| {
+        let (start, end) = pages::date_picker::range_value(&gallery.date_picker);
+        assert_eq!(
+            start.as_ref().map(|value| value.as_ref()),
+            Some("2026-11-04")
+        );
+        assert_eq!(end.as_ref().map(|value| value.as_ref()), Some("2026-11-29"));
+    });
+}
+
+#[gpui::test]
 fn all_pages_draw_at_wide_and_narrow_sizes_in_both_languages_and_themes(
     cx: &mut gpui::TestAppContext,
 ) {

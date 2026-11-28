@@ -28,7 +28,12 @@ time_picker:
   placeholder: Select time
 date_picker:
   placeholder: Select date
+  start_placeholder: Start date
+  end_placeholder: End date
   weekdays: [Su, Mo, Tu, We, Th, Fr, Sa]
+  months: [January, February, March, April, May, June, July, August, September, October, November, December]
+  now: Now
+  confirm: Confirm
 cascader:
   placeholder: Select
 tree_select:
