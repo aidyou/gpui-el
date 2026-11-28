@@ -639,6 +639,16 @@ impl RenderOnce for AutoComplete {
                     window.refresh();
                 }
             })
+            .on_mouse_down_filter({
+                let state = state.clone();
+                move |_, window, cx| {
+                    if !disabled {
+                        state.update(cx, |state, cx| state.focus(window, cx));
+                        window.refresh();
+                    }
+                    false
+                }
+            })
             .onchange({
                 let state = state.clone();
                 move |reported, window, cx| {
@@ -692,14 +702,18 @@ impl RenderOnce for AutoComplete {
             input = input.prefix(prefix);
         }
         let measure = state.clone();
+        let control_height = size.height();
         let mut root = div()
             .id(id.clone())
             .relative()
             .w_full()
-            .child(input)
             .child(
                 gpui::canvas(
                     move |bounds: Bounds<Pixels>, window: &mut Window, cx: &mut App| {
+                        let bounds = gpui::Bounds::new(
+                            bounds.origin,
+                            gpui::size(bounds.size.width, px(control_height)),
+                        );
                         if measure.read(cx).bounds != Some(bounds) {
                             measure.update(cx, |state, _| state.bounds = Some(bounds));
                             window.refresh();
@@ -707,9 +721,10 @@ impl RenderOnce for AutoComplete {
                     },
                     |_, _, _, _| {},
                 )
-                .absolute()
-                .inset_0(),
+                .w_full()
+                .h(px(0.)),
             )
+            .child(input)
             .on_mouse_down_out({
                 let state = state.clone();
                 move |event, window, cx| {
@@ -717,13 +732,10 @@ impl RenderOnce for AutoComplete {
                         .read(cx)
                         .popup_bounds
                         .is_some_and(|bounds| bounds.contains(&event.position))
-                        || state.read(cx).bounds.is_some_and(|target| {
-                            gpui::Bounds::new(
-                                point(target.left(), target.bottom() + px(4.)),
-                                gpui::size(target.size.width, px(280.)),
-                            )
-                            .contains(&event.position)
-                        });
+                        || state
+                            .read(cx)
+                            .bounds
+                            .is_some_and(|bounds| bounds.contains(&event.position));
                     if !inside_popup {
                         state.update(cx, |state, cx| state.set_open(false, window, cx));
                         window.refresh();
@@ -735,6 +747,7 @@ impl RenderOnce for AutoComplete {
             let below = viewport.height - target.bottom() >= px(284.) || target.top() < px(284.);
             let mut popup = div()
                 .id(ElementId::NamedChild(Arc::new(id.clone()), "popup".into()))
+                .debug_selector(|| "autocomplete-popup".into())
                 .flex()
                 .flex_col()
                 .py(px(10.))

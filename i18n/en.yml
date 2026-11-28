@@ -16,6 +16,7 @@ select:
   no_match: No matching data
   clear: Clear selection
   placeholder: Select
+  create: 'Create "{value}"'
 auto_complete:
   loading: Loading
 color_picker:

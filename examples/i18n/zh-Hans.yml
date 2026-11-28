@@ -317,6 +317,10 @@ select_intro: 从可过滤的下拉列表选择一个或多个值，支持原生
 select_page: Select 选择器
 select_basic: 基本用法
 select_filterable: 可过滤
+select_grouped: 选项分组
+select_create: 创建新选项
+select_group_one: 分组一
+select_group_two: 分组二
 select_multiple: 多选
 select_clearable: 可清空与清空值
 select_sizes: 尺寸

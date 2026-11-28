@@ -21,6 +21,11 @@ impl Default for State {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn basic_value(state: &State) -> &SharedString {
+    &state.basic
+}
+
 fn options<'a>(items: impl IntoIterator<Item = (&'a str, &'a str)>) -> Vec<AutoCompleteOption> {
     items
         .into_iter()
@@ -54,11 +59,16 @@ impl Gallery {
                     })
                 })
         };
-        let basic = row().child(div().w(px(280.)).child(field(
-            0,
-            "auto-complete-basic".into(),
-            self.auto_complete.basic.clone(),
-        )));
+        let basic = row().child(
+            div()
+                .w(px(280.))
+                .debug_selector(|| "auto-complete-basic".into())
+                .child(field(
+                    0,
+                    "auto-complete-basic".into(),
+                    self.auto_complete.basic.clone(),
+                )),
+        );
         let remote = row().child(
             div().w(px(280.)).child(
                 field(

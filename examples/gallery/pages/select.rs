@@ -1,11 +1,13 @@
 use gpui::{Context, Div, SharedString, div, prelude::*, px};
-use gpui_el::{SelectOption, SelectValue, el_button, el_icon, el_select};
+use gpui_el::{SelectOption, SelectOptionGroup, SelectValue, el_button, el_icon, el_select};
 
 use crate::{Gallery, copy::Copy, demo::row};
 
 pub(crate) struct State {
     basic: Option<SharedString>,
     filterable: Option<SharedString>,
+    grouped: Option<SharedString>,
+    created: Option<SharedString>,
     multiple: Vec<SharedString>,
     clearable: Option<SharedString>,
     sized: Option<SharedString>,
@@ -18,6 +20,8 @@ impl Default for State {
         Self {
             basic: Some("daily".into()),
             filterable: Some("interval".into()),
+            grouped: Some("daily".into()),
+            created: Some("daily".into()),
             multiple: vec!["daily".into(), "once".into()],
             clearable: Some("daily".into()),
             sized: Some("default".into()),
@@ -30,6 +34,11 @@ impl Default for State {
 #[cfg(test)]
 pub(crate) fn basic_value(state: &State) -> Option<&SharedString> {
     state.basic.as_ref()
+}
+
+#[cfg(test)]
+pub(crate) fn created_value(state: &State) -> Option<&SharedString> {
+    state.created.as_ref()
 }
 
 fn options<'a>(items: impl IntoIterator<Item = (&'a str, &'a str)>) -> Vec<SelectOption> {
@@ -85,6 +94,66 @@ impl Gallery {
                 )
                 .filterable(true),
             ),
+        );
+        let grouped = row().child(
+            div().w(px(240.)).child(
+                el_select()
+                    .id("select-grouped")
+                    .value(self.select.grouped.clone())
+                    .option_groups([
+                        SelectOptionGroup::new(
+                            s.select_group_one.as_str(),
+                            options([
+                                ("daily", s.select_daily.as_str()),
+                                ("interval", s.select_interval.as_str()),
+                            ]),
+                        ),
+                        SelectOptionGroup::new(
+                            s.select_group_two.as_str(),
+                            options([("once", s.select_once.as_str())]),
+                        ),
+                    ])
+                    .onchange({
+                        let view = view.clone();
+                        move |value, _, cx| {
+                            if let SelectValue::Single(value) = value {
+                                view.update(cx, |this, cx| {
+                                    this.select.grouped = value;
+                                    cx.notify();
+                                });
+                            }
+                        }
+                    }),
+            ),
+        );
+        let created = row().child(
+            div()
+                .w(px(240.))
+                .debug_selector(|| "select-create".into())
+                .child(
+                    el_select()
+                        .id("select-create")
+                        .value(self.select.created.clone())
+                        .filterable(true)
+                        .allow_create(true)
+                        .default_first_option(true)
+                        .options(options([
+                            ("daily", s.select_daily.as_str()),
+                            ("interval", s.select_interval.as_str()),
+                            ("once", s.select_once.as_str()),
+                        ]))
+                        .onchange({
+                            let view = view.clone();
+                            move |value, _, cx| {
+                                if let SelectValue::Single(value) = value {
+                                    view.update(cx, |this, cx| {
+                                        this.select.created = value;
+                                        cx.notify();
+                                    });
+                                }
+                            }
+                        }),
+                ),
         );
         let multiple = row().child(
             div().w(px(320.)).child(
@@ -210,6 +279,20 @@ impl Gallery {
                 &s.select_filterable,
                 || "el_select().filterable(true);".into(),
                 filterable.into_any_element(),
+            ))
+            .child(self.section(
+                cx,
+                "select-grouped",
+                &s.select_grouped,
+                || "el_select().option_groups([\n    SelectOptionGroup::new(\"Group One\", [\n        SelectOption::new(\"daily\", \"Daily\"),\n        SelectOption::new(\"interval\", \"Interval\"),\n    ]),\n    SelectOptionGroup::new(\"Group Two\", [\n        SelectOption::new(\"once\", \"Once\"),\n    ]),\n]);".into(),
+                grouped.into_any_element(),
+            ))
+            .child(self.section(
+                cx,
+                "select-create",
+                &s.select_create,
+                || "el_select().filterable(true).allow_create(true).default_first_option(true);".into(),
+                created.into_any_element(),
             ))
             .child(self.section(
                 cx,

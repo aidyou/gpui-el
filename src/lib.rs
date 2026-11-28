@@ -247,7 +247,7 @@ pub use radio::{
 };
 pub use rate::{Rate, RateSize, el_rate};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
-pub use select::{Select, SelectOption, SelectValue, el_select};
+pub use select::{Select, SelectOption, SelectOptionGroup, SelectValue, el_select};
 pub use slider::{Slider, SliderMark, SliderSize, SliderValue, el_slider};
 pub use splitter::{
     Splitter, SplitterCollapseEvent, SplitterLayout, SplitterPanel, SplitterResizeEvent,

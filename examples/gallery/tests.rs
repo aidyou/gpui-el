@@ -147,6 +147,74 @@ fn gallery_time_picker_panel_is_visible_and_selects_hours(cx: &mut gpui::TestApp
 }
 
 #[gpui::test]
+fn gallery_select_can_create_a_new_option(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::Select,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(900.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("select-create")
+        .expect("gallery creatable select bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.simulate_input("new");
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let create = view
+        .debug_bounds("select-create-option")
+        .expect("create option row");
+    view.simulate_click(create.center(), gpui::Modifiers::default());
+    gallery.update(cx, |gallery, _| {
+        assert_eq!(
+            pages::select::created_value(&gallery.select).map(|value| value.as_ref()),
+            Some("new")
+        );
+    });
+}
+
+#[gpui::test]
+fn gallery_autocomplete_popup_is_anchored_and_selects(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::AutoComplete,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("auto-complete-basic")
+        .expect("gallery autocomplete bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let popup = view
+        .debug_bounds("autocomplete-popup")
+        .expect("autocomplete popup");
+    assert!(
+        popup.top() >= target.bottom() && popup.top() < target.bottom() + px(20.),
+        "popup={popup:?}, target={target:?}"
+    );
+    view.simulate_keystrokes("down");
+    view.simulate_keystrokes("enter");
+    gallery.update(cx, |gallery, _| {
+        assert_eq!(
+            pages::auto_complete::basic_value(&gallery.auto_complete).as_ref(),
+            "gpui"
+        );
+    });
+}
+
+#[gpui::test]
 fn gallery_date_picker_switches_views_and_range_selects(cx: &mut gpui::TestAppContext) {
     let (gallery, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);

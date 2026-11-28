@@ -317,6 +317,10 @@ select_intro: Choose one or more values from a filterable dropdown with native t
 select_page: Select
 select_basic: Basic usage
 select_filterable: Filterable
+select_grouped: Option groups
+select_create: Create new options
+select_group_one: Group One
+select_group_two: Group Two
 select_multiple: Multiple selection
 select_clearable: Clearable and value on clear
 select_sizes: Sizes

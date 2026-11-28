@@ -9,8 +9,8 @@
 //! Native differences: multiple selections are summarized as comma-separated
 //! labels instead of removable Tag chips; `Backspace` removes the last
 //! enabled selection and `onremove` reports it. Remote search is caller-driven
-//! through `filter_method`; debounce, option groups, custom option rendering,
-//! collapse-tag tooltips, and imperative focus/blur exposes are not mapped.
+//! through `filter_method`; debounce, custom option rendering, collapse-tag
+//! tooltips, and imperative focus/blur exposes are not mapped.
 
 use std::{collections::BTreeMap, rc::Rc, sync::Arc};
 
@@ -41,6 +41,25 @@ impl SelectOption {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+}
+
+/// A labeled group of select options.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SelectOptionGroup {
+    pub label: SharedString,
+    pub options: Vec<SelectOption>,
+}
+
+impl SelectOptionGroup {
+    pub fn new(
+        label: impl Into<SharedString>,
+        options: impl IntoIterator<Item = SelectOption>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            options: options.into_iter().collect(),
+        }
     }
 }
 
@@ -84,6 +103,8 @@ struct SelectProps {
     reserve_keyword: bool,
     value_on_clear: Option<SharedString>,
     filter_method: Option<FilterMethod>,
+    allow_create: bool,
+    default_first_option: bool,
 }
 
 impl Default for SelectProps {
@@ -99,6 +120,8 @@ impl Default for SelectProps {
             reserve_keyword: true,
             value_on_clear: None,
             filter_method: None,
+            allow_create: false,
+            default_first_option: false,
         }
     }
 }
@@ -165,10 +188,12 @@ impl SelectState {
         }
         self.query = query;
         self.set_open(true, window, cx);
-        self.active = first_enabled(
-            &filtered_indices(&self.props, &self.query),
-            &self.props.options,
-        );
+        let filtered = filtered_indices(&self.props, &self.query);
+        self.active = if self.props.default_first_option {
+            first_enabled_or_create(&self.props, &filtered, &self.query)
+        } else {
+            None
+        };
         if let Some(handler) = self.props.filter_method.clone() {
             handler(&self.query, window, cx);
         }
@@ -176,13 +201,19 @@ impl SelectState {
 
     fn navigate(&mut self, direction: i32) {
         let filtered = filtered_indices(&self.props, &self.query);
-        if filtered.is_empty() {
+        let create = created_option(&self.props, &self.query);
+        let count = filtered.len() + usize::from(create.is_some());
+        if count == 0 {
             self.active = None;
             return;
         }
-        let mut current = self.active.unwrap_or(0).min(filtered.len() - 1);
-        for _ in 0..filtered.len() {
-            current = (current as i32 + direction).rem_euclid(filtered.len() as i32) as usize;
+        let mut current = self.active.unwrap_or(0).min(count - 1);
+        for _ in 0..count {
+            current = (current as i32 + direction).rem_euclid(count as i32) as usize;
+            if current == filtered.len() {
+                self.active = Some(current);
+                return;
+            }
             let Some(option_index) = filtered.get(current) else {
                 self.active = None;
                 return;
@@ -203,15 +234,18 @@ impl SelectState {
     fn focus_edge(&mut self, end: bool) {
         let filtered = filtered_indices(&self.props, &self.query);
         self.active = if end {
-            filtered.into_iter().rposition(|index| {
-                !self
-                    .props
-                    .options
-                    .get(index)
-                    .is_some_and(|option| option.disabled)
-            })
+            filtered
+                .iter()
+                .rposition(|index| {
+                    !self
+                        .props
+                        .options
+                        .get(*index)
+                        .is_some_and(|option| option.disabled)
+                })
+                .or_else(|| created_option(&self.props, &self.query).map(|_| filtered.len()))
         } else {
-            first_enabled(&filtered, &self.props.options)
+            first_enabled_or_create(&self.props, &filtered, &self.query)
         };
     }
 
@@ -219,14 +253,18 @@ impl SelectState {
         let Some(active) = self.active else {
             return;
         };
-        let Some(option) = filtered_indices(&self.props, &self.query)
-            .get(active)
-            .and_then(|index| self.props.options.get(*index))
-            .cloned()
-        else {
-            return;
+        let filtered = filtered_indices(&self.props, &self.query);
+        let option = if active == filtered.len() {
+            created_option(&self.props, &self.query)
+        } else {
+            filtered
+                .get(active)
+                .and_then(|index| self.props.options.get(*index))
+                .cloned()
         };
-        self.select_option(option, window, cx);
+        if let Some(option) = option {
+            self.select_option(option, window, cx);
+        }
     }
 
     fn select_option(&mut self, option: SelectOption, window: &mut Window, cx: &mut App) {
@@ -431,6 +469,22 @@ fn first_enabled(indices: &[usize], options: &[SelectOption]) -> Option<usize> {
         .position(|index| !options.get(*index).is_some_and(|option| option.disabled))
 }
 
+fn created_option(props: &SelectProps, query: &str) -> Option<SelectOption> {
+    if !props.allow_create || !props.filterable {
+        return None;
+    }
+    let query = query.trim();
+    if query.is_empty() || props.options.iter().any(|option| option.value == query) {
+        return None;
+    }
+    Some(SelectOption::new(query, query))
+}
+
+fn first_enabled_or_create(props: &SelectProps, indices: &[usize], query: &str) -> Option<usize> {
+    first_enabled(indices, &props.options)
+        .or_else(|| created_option(props, query).map(|_| indices.len()))
+}
+
 /// An Element Plus select field.
 #[derive(IntoElement)]
 #[must_use]
@@ -440,6 +494,7 @@ pub struct Select {
     value: Option<SharedString>,
     values: Vec<SharedString>,
     options: Vec<SelectOption>,
+    option_groups: Vec<SelectOptionGroup>,
     multiple: bool,
     multiple_limit: usize,
     size: InputSize,
@@ -447,6 +502,8 @@ pub struct Select {
     clearable: bool,
     filterable: bool,
     loading: bool,
+    allow_create: bool,
+    default_first_option: bool,
     remote: bool,
     reserve_keyword: bool,
     value_on_clear: Option<SharedString>,
@@ -482,6 +539,7 @@ impl Default for Select {
             value: None,
             values: Vec::new(),
             options: Vec::new(),
+            option_groups: Vec::new(),
             multiple: false,
             multiple_limit: 0,
             size: InputSize::Default,
@@ -489,6 +547,8 @@ impl Default for Select {
             clearable: false,
             filterable: false,
             loading: false,
+            allow_create: false,
+            default_first_option: false,
             remote: false,
             reserve_keyword: true,
             value_on_clear: None,
@@ -545,6 +605,25 @@ impl Select {
 
     pub fn options(mut self, options: impl IntoIterator<Item = SelectOption>) -> Self {
         self.options = options.into_iter().collect();
+        self
+    }
+
+    /// Adds labeled option groups. Their options participate in filtering,
+    /// keyboard navigation, and selection like flat options.
+    pub fn option_groups(mut self, groups: impl IntoIterator<Item = SelectOptionGroup>) -> Self {
+        self.option_groups = groups.into_iter().collect();
+        self
+    }
+
+    /// Allows a filtered query to become a new option.
+    pub fn allow_create(mut self, allow: bool) -> Self {
+        self.allow_create = allow;
+        self
+    }
+
+    /// Highlights the first matching option as soon as the query changes.
+    pub fn default_first_option(mut self, default_first: bool) -> Self {
+        self.default_first_option = default_first;
         self
     }
 
@@ -729,6 +808,7 @@ impl RenderOnce for Select {
             value,
             values,
             options,
+            option_groups,
             multiple,
             multiple_limit,
             size,
@@ -736,6 +816,8 @@ impl RenderOnce for Select {
             clearable,
             filterable,
             loading,
+            allow_create,
+            default_first_option,
             remote,
             reserve_keyword,
             value_on_clear,
@@ -756,6 +838,14 @@ impl RenderOnce for Select {
             onfocus,
             onblur,
         } = self;
+        let mut options = options;
+        let mut group_labels = BTreeMap::new();
+        for group in option_groups {
+            for option in group.options {
+                group_labels.insert(option.value.clone(), group.label.clone());
+                options.push(option);
+            }
+        }
         let value = if multiple {
             SelectValue::Multiple(values)
         } else {
@@ -772,6 +862,8 @@ impl RenderOnce for Select {
             reserve_keyword,
             value_on_clear,
             filter_method,
+            allow_create,
+            default_first_option,
         };
         let handlers = SelectHandlers {
             onchange,
@@ -1029,6 +1121,7 @@ impl RenderOnce for Select {
             if let Some(header) = header {
                 popup = popup.child(div().px(px(10.)).py(px(8.)).child(header));
             }
+            let create = created_option(&props, &query);
             if loading {
                 popup = popup.child(
                     div()
@@ -1046,7 +1139,7 @@ impl RenderOnce for Select {
                         )
                         .child(loading_text.unwrap_or_else(|| locale.select_loading().into())),
                 );
-            } else if filtered.is_empty() {
+            } else if filtered.is_empty() && create.is_none() {
                 let text = if query.is_empty() {
                     no_data_text.unwrap_or_else(|| locale.select_no_data().into())
                 } else {
@@ -1063,10 +1156,24 @@ impl RenderOnce for Select {
                         .child(text),
                 );
             } else {
+                let mut last_group = None;
                 for (active_index, option_index) in filtered.iter().copied().enumerate() {
                     let Some(option) = options.get(option_index) else {
                         continue;
                     };
+                    let group = group_labels.get(&option.value).cloned();
+                    if group.is_some() && group != last_group {
+                        popup = popup.child(
+                            div()
+                                .px(px(20.))
+                                .py(px(6.))
+                                .text_size(px(12.))
+                                .font_weight(gpui::FontWeight::MEDIUM)
+                                .text_color(rgb(theme.secondary_text()))
+                                .child(group.clone().unwrap_or_default()),
+                        );
+                    }
+                    last_group = group;
                     let selected = match &value {
                         SelectValue::Single(selected) => selected.as_ref() == Some(&option.value),
                         SelectValue::Multiple(selected) => selected.contains(&option.value),
@@ -1157,6 +1264,64 @@ impl RenderOnce for Select {
                     );
                     popup = popup.child(row);
                 }
+                if let Some(option) = create {
+                    let active_index = filtered.len();
+                    let active = state.read(cx).active == Some(active_index);
+                    let label = locale.select_create(option.label.as_ref());
+                    let mut row = div()
+                        .id(ElementId::NamedChild(
+                            Arc::new(id.clone()),
+                            "create-option".into(),
+                        ))
+                        .debug_selector(|| "select-create-option".into())
+                        .h(px(34.))
+                        .flex()
+                        .items_center()
+                        .px(px(20.))
+                        .text_size(px(14.))
+                        .text_color(rgb(theme.regular_text()))
+                        .cursor_pointer()
+                        .when(active, |el| {
+                            el.bg(rgb(theme.fill(crate::theme::Fill::Light)))
+                        })
+                        .hover(|style| style.bg(rgb(theme.fill(crate::theme::Fill::Light))))
+                        .child(label)
+                        .on_hover({
+                            let state = state.clone();
+                            move |_, window, cx| {
+                                state.update(cx, |state, _| state.active = Some(active_index));
+                                window.refresh();
+                            }
+                        })
+                        .on_click({
+                            let state = state.clone();
+                            let option = option.clone();
+                            move |_, window, cx| {
+                                cx.stop_propagation();
+                                state.update(cx, |state, cx| {
+                                    state.select_option(option.clone(), window, cx)
+                                });
+                                window.refresh();
+                            }
+                        });
+                    let measure = state.clone();
+                    let value_key = option.value.clone();
+                    row = row.child(
+                        gpui::canvas(
+                            move |bounds: Bounds<Pixels>, _, cx: &mut App| {
+                                if measure.read(cx).option_bounds.get(&value_key) != Some(&bounds) {
+                                    measure.update(cx, |state, _| {
+                                        state.option_bounds.insert(value_key.clone(), bounds);
+                                    });
+                                }
+                            },
+                            |_, _, _, _| {},
+                        )
+                        .absolute()
+                        .inset_0(),
+                    );
+                    popup = popup.child(row);
+                }
             }
             if let Some(footer) = footer {
                 popup = popup.child(div().px(px(10.)).py(px(8.)).child(footer));
@@ -1222,6 +1387,25 @@ mod tests {
         assert_eq!(filtered_indices(&props, "report"), [0]);
         assert_eq!(filtered_indices(&props, "REPORT"), [0]);
         assert_eq!(filtered_indices(&props, "missing"), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn allow_create_offers_only_new_nonempty_queries() {
+        let mut props = SelectProps {
+            options: options(),
+            filterable: true,
+            allow_create: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            created_option(&props, "  new value  "),
+            Some(SelectOption::new("new value", "new value"))
+        );
+        assert!(created_option(&props, "daily").is_none());
+        assert!(created_option(&props, "   ").is_none());
+        assert_eq!(first_enabled_or_create(&props, &[], "new"), Some(0));
+        props.allow_create = false;
+        assert!(created_option(&props, "new").is_none());
     }
 
     #[test]

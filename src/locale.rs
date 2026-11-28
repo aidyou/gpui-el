@@ -73,6 +73,7 @@ struct SelectMessages {
     no_match: String,
     clear: String,
     placeholder: String,
+    create: String,
 }
 
 #[derive(Deserialize)]
@@ -172,6 +173,7 @@ impl Messages {
                 no_match: "No matching data".into(),
                 clear: "Clear selection".into(),
                 placeholder: "Select".into(),
+                create: "Create \"{value}\"".into(),
             },
             auto_complete: AutoCompleteMessages {
                 loading: "Loading".into(),
@@ -287,6 +289,9 @@ impl Locale {
     }
     pub(crate) fn select_placeholder(self) -> &'static str {
         &self.messages().select.placeholder
+    }
+    pub(crate) fn select_create(self, value: &str) -> String {
+        self.messages().select.create.replace("{value}", value)
     }
     pub(crate) fn auto_complete_loading(self) -> &'static str {
         &self.messages().auto_complete.loading
