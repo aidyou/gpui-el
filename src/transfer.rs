@@ -5,13 +5,14 @@
 //! filtering, disabled items, counts, and change/check-change events.
 //!
 //! Native differences: this implementation covers static data and text labels;
-//! prop aliases, custom item rendering, footer/empty slots, virtual scrolling,
-//! and imperative panel/query exposes are not mapped.
+//! prop aliases, custom item rendering, virtual scrolling, and imperative
+//! panel/query exposes are not mapped.
 
 use std::{collections::BTreeSet, rc::Rc, sync::Arc};
 
 use gpui::{
-    App, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px, rgb,
+    AnyElement, App, ElementId, IntoElement, RenderOnce, SharedString, Window, div, prelude::*, px,
+    rgb,
 };
 
 use crate::{Locale, Theme, el_button, el_checkbox, el_icon, el_input};
@@ -285,6 +286,10 @@ pub struct Transfer {
     button_texts: Option<[SharedString; 2]>,
     filter_placeholder: Option<SharedString>,
     filter_method: Option<FilterMethod>,
+    left_footer: Option<AnyElement>,
+    right_footer: Option<AnyElement>,
+    left_empty: Option<AnyElement>,
+    right_empty: Option<AnyElement>,
     onchange: Option<ChangeHandler>,
     onleftcheckchange: Option<CheckHandler>,
     onrightcheckchange: Option<CheckHandler>,
@@ -308,6 +313,10 @@ impl Default for Transfer {
             button_texts: None,
             filter_placeholder: None,
             filter_method: None,
+            left_footer: None,
+            right_footer: None,
+            left_empty: None,
+            right_empty: None,
             onchange: None,
             onleftcheckchange: None,
             onrightcheckchange: None,
@@ -365,6 +374,26 @@ impl Transfer {
         self
     }
 
+    pub fn left_footer(mut self, footer: impl IntoElement) -> Self {
+        self.left_footer = Some(footer.into_any_element());
+        self
+    }
+
+    pub fn right_footer(mut self, footer: impl IntoElement) -> Self {
+        self.right_footer = Some(footer.into_any_element());
+        self
+    }
+
+    pub fn left_empty(mut self, empty: impl IntoElement) -> Self {
+        self.left_empty = Some(empty.into_any_element());
+        self
+    }
+
+    pub fn right_empty(mut self, empty: impl IntoElement) -> Self {
+        self.right_empty = Some(empty.into_any_element());
+        self
+    }
+
     #[track_caller]
     pub fn onchange(
         mut self,
@@ -406,6 +435,10 @@ impl RenderOnce for Transfer {
             button_texts,
             filter_placeholder,
             filter_method,
+            mut left_footer,
+            mut right_footer,
+            mut left_empty,
+            mut right_empty,
             onchange,
             onleftcheckchange,
             onrightcheckchange,
@@ -441,7 +474,7 @@ impl RenderOnce for Transfer {
         });
         state.update(cx, |state, _| state.sync_value(value));
         let theme = Theme::current(cx);
-        let panel = |right: bool| {
+        let mut panel = |right: bool| {
             let side = if right { "right" } else { "left" };
             let items = state.read(cx).visible(right);
             let checked = state.read(cx).checked(right).clone();
@@ -543,6 +576,12 @@ impl RenderOnce for Transfer {
                 .py(px(6.))
                 .overflow_y_scroll();
             if items.is_empty() {
+                let empty = if right {
+                    right_empty.take()
+                } else {
+                    left_empty.take()
+                };
+                let has_empty = empty.is_some();
                 list = list.child(
                     div()
                         .h_full()
@@ -551,7 +590,8 @@ impl RenderOnce for Transfer {
                         .justify_center()
                         .text_size(px(13.))
                         .text_color(rgb(theme.secondary_text()))
-                        .child(locale.transfer_no_data()),
+                        .when_some(empty, |el, empty| el.child(empty))
+                        .when(!has_empty, |el| el.child(locale.transfer_no_data())),
                 );
             }
             for (index, item) in items.into_iter().enumerate() {
@@ -587,7 +627,24 @@ impl RenderOnce for Transfer {
                         ),
                 );
             }
-            root = root.child(list).child(
+            root = root.child(list);
+            let footer = if right {
+                right_footer.take()
+            } else {
+                left_footer.take()
+            };
+            if let Some(footer) = footer {
+                root = root.child(
+                    div()
+                        .px(px(12.))
+                        .py(px(6.))
+                        .border_t_1()
+                        .text_size(px(12.))
+                        .text_color(rgb(theme.secondary_text()))
+                        .child(footer),
+                );
+            }
+            root = root.child(
                 div()
                     .h(px(30.))
                     .flex()

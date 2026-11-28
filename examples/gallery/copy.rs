@@ -309,6 +309,7 @@ copy_fields!(
     cascader_basic,
     cascader_multiple,
     cascader_filterable,
+    cascader_strict,
     cascader_last_level,
     cascader_disabled,
     tree_select_basic,

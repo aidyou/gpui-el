@@ -378,6 +378,7 @@ cascader_page: Cascader
 cascader_basic: Basic usage
 cascader_multiple: Multiple selection
 cascader_filterable: Filterable paths
+cascader_strict: Select parent nodes directly
 cascader_last_level: Show only the last level
 cascader_disabled: Disabled
 tree_select_intro: Select from an expandable tree with single or multiple node values, strict parent selection, filtering, and clearable display.

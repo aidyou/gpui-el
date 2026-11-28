@@ -147,6 +147,39 @@ fn gallery_time_picker_panel_is_visible_and_selects_hours(cx: &mut gpui::TestApp
 }
 
 #[gpui::test]
+fn gallery_cascader_and_tree_select_panels_are_anchored(cx: &mut gpui::TestAppContext) {
+    for (page, target_selector, panel_selector) in [
+        (Page::Cascader, "cascader-basic", "cascader-panel"),
+        (Page::TreeSelect, "tree-select-basic", "tree-select-panel"),
+    ] {
+        let (_, view) = cx.add_window_view(|_, cx| {
+            Locale::English.set(cx);
+            cx.set_reduce_motion(true);
+            let gallery = Gallery {
+                page,
+                ..Gallery::default()
+            };
+            gallery.apply_theme(cx);
+            gallery
+        });
+        view.simulate_resize(size(px(1040.), px(660.)));
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        let target = view
+            .debug_bounds(target_selector)
+            .expect("complex selector bounds");
+        view.simulate_click(target.center(), gpui::Modifiers::default());
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        let panel = view
+            .debug_bounds(panel_selector)
+            .expect("complex selector panel");
+        assert!(
+            panel.top() >= target.bottom() && panel.top() < target.bottom() + px(20.),
+            "panel={panel_selector}, panel={panel:?}, target={target:?}"
+        );
+    }
+}
+
+#[gpui::test]
 fn gallery_color_picker_panel_opens(cx: &mut gpui::TestAppContext) {
     let (_, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);

@@ -74,7 +74,11 @@ impl Gallery {
                 .titles(["Available".into(), "Chosen".into()])
                 .button_texts(["Add".into(), "Remove".into()])
                 .filterable(true)
-                .filter_placeholder("Find item"),
+                .filter_placeholder("Find item")
+                .left_footer(div().child("Custom left footer"))
+                .right_footer(div().child("Custom right footer"))
+                .left_empty(div().child("Nothing available"))
+                .right_empty(div().child("Nothing chosen")),
         );
 
         div()

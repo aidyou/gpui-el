@@ -493,9 +493,18 @@ impl TreeSelect {
     }
 }
 
-fn measure(state: gpui::Entity<TreeSelectState>, popup: bool) -> AnyElement {
-    gpui::canvas(
+fn measure(
+    state: gpui::Entity<TreeSelectState>,
+    popup: bool,
+    control_height: Option<f32>,
+) -> AnyElement {
+    let canvas = gpui::canvas(
         move |bounds: Bounds<Pixels>, _, cx: &mut App| {
+            let bounds = if let Some(height) = control_height {
+                gpui::Bounds::new(bounds.origin, gpui::size(bounds.size.width, px(height)))
+            } else {
+                bounds
+            };
             state.update(cx, |state, _| {
                 if popup {
                     state.popup_bounds = Some(bounds);
@@ -505,10 +514,12 @@ fn measure(state: gpui::Entity<TreeSelectState>, popup: bool) -> AnyElement {
             });
         },
         |_, _, _, _| {},
-    )
-    .absolute()
-    .inset_0()
-    .into_any_element()
+    );
+    if popup {
+        canvas.absolute().inset_0().into_any_element()
+    } else {
+        canvas.w_full().h(px(0.)).into_any_element()
+    }
 }
 
 impl RenderOnce for TreeSelect {
@@ -645,8 +656,8 @@ impl RenderOnce for TreeSelect {
             .id(id.clone())
             .relative()
             .w_full()
+            .child(measure(state.clone(), false, Some(size.height())))
             .child(input)
-            .child(measure(state.clone(), false))
             .on_mouse_down_out({
                 let state = state.clone();
                 move |event, window, cx| {
@@ -673,6 +684,7 @@ impl RenderOnce for TreeSelect {
             let rows = state.read(cx).rows();
             let mut panel = div()
                 .id(ElementId::NamedChild(Arc::new(id.clone()), "panel".into()))
+                .debug_selector(|| "tree-select-panel".into())
                 .w(px(280.))
                 .max_h(px(300.))
                 .py(px(6.))
@@ -769,7 +781,7 @@ impl RenderOnce for TreeSelect {
                 });
                 panel = panel.child(node);
             }
-            panel = panel.child(measure(state.clone(), true));
+            panel = panel.child(measure(state.clone(), true, None));
             root = root.child(
                 deferred(
                     anchored()

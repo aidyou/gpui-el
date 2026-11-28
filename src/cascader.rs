@@ -4,10 +4,9 @@
 //! `cascader.scss`: hierarchical options, path values, column expansion,
 //! single/multiple leaf selection, filtering, and clearable display.
 //!
-//! Native differences: this implementation covers static options and leaf
-//! selection; lazy loading, check-strictly parent selection, collapse-tag
-//! tooltips, custom rendering, virtual scrolling, and imperative exposes are
-//! not mapped.
+//! Native differences: this implementation covers static options and leaf or
+//! strict parent selection; lazy loading, collapse-tag tooltips, custom
+//! rendering, virtual scrolling, and imperative exposes are not mapped.
 
 use std::{rc::Rc, sync::Arc};
 
@@ -80,6 +79,7 @@ impl Default for CascaderSelection {
 type ChangeHandler = Rc<dyn Fn(CascaderSelection, &mut Window, &mut App)>;
 type VisibleHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;
 type FocusHandler = Rc<dyn Fn(&mut Window, &mut App)>;
+type FilterMethod = Rc<dyn Fn(&CascaderOption, &str) -> bool>;
 
 #[derive(Clone)]
 struct CascaderProps {
@@ -87,6 +87,8 @@ struct CascaderProps {
     options: Vec<CascaderOption>,
     multiple: bool,
     filterable: bool,
+    check_strictly: bool,
+    filter_method: Option<FilterMethod>,
     disabled: bool,
 }
 
@@ -125,6 +127,8 @@ impl Default for CascaderState {
                 options: Vec::new(),
                 multiple: false,
                 filterable: false,
+                check_strictly: false,
+                filter_method: None,
                 disabled: false,
             },
             handlers: CascaderHandlers::default(),
@@ -189,7 +193,7 @@ impl CascaderState {
         if self.props.disabled || node.disabled {
             return;
         }
-        if node.children.is_empty() {
+        if node.children.is_empty() || self.props.check_strictly {
             self.select_path(path, window, cx);
         } else {
             self.expanded = path;
@@ -265,7 +269,12 @@ impl CascaderState {
             return false;
         }
         if !self.query.is_empty() {
-            let paths = filtered_paths(&self.props.options, &self.query);
+            let paths = filtered_paths(
+                &self.props.options,
+                &self.query,
+                self.props.check_strictly,
+                self.props.filter_method.as_ref(),
+            );
             match key {
                 "up" | "down" => {
                     if !paths.is_empty() {
@@ -382,18 +391,43 @@ fn leaf_paths(
     }
 }
 
-fn filtered_paths(options: &[CascaderOption], query: &str) -> Vec<Vec<SharedString>> {
+fn filtered_paths(
+    options: &[CascaderOption],
+    query: &str,
+    check_strictly: bool,
+    filter_method: Option<&FilterMethod>,
+) -> Vec<Vec<SharedString>> {
     let query = query.to_lowercase();
     let mut paths = Vec::new();
-    leaf_paths(options, &[], &mut paths);
+    if check_strictly {
+        all_paths(options, &[], &mut paths);
+    } else {
+        leaf_paths(options, &[], &mut paths);
+    }
     paths.retain(|path| {
         path.iter().enumerate().any(|(index, _)| {
             path.get(..=index)
                 .and_then(|prefix| node_for_path(options, prefix))
-                .is_some_and(|node| node.label.to_lowercase().contains(&query))
+                .is_some_and(|node| {
+                    filter_method.is_some_and(|method| method(node, &query))
+                        || node.label.to_lowercase().contains(&query)
+                })
         })
     });
     paths
+}
+
+fn all_paths(
+    options: &[CascaderOption],
+    prefix: &[SharedString],
+    out: &mut Vec<Vec<SharedString>>,
+) {
+    for option in options {
+        let mut path = prefix.to_vec();
+        path.push(option.value.clone());
+        out.push(path.clone());
+        all_paths(&option.children, &path, out);
+    }
 }
 
 fn node_for_path<'a>(
@@ -411,11 +445,16 @@ fn node_for_path<'a>(
 }
 
 fn path_labels(path: &[SharedString], options: &[CascaderOption]) -> Vec<SharedString> {
-    path.iter()
-        .filter_map(|value| {
-            node_for_path(options, std::slice::from_ref(value)).map(|node| node.label.clone())
-        })
-        .collect()
+    let mut nodes = options;
+    let mut labels = Vec::new();
+    for value in path {
+        let Some(node) = nodes.iter().find(|node| node.value == *value) else {
+            break;
+        };
+        labels.push(node.label.clone());
+        nodes = &node.children;
+    }
+    labels
 }
 
 fn selection_paths(selection: &CascaderSelection) -> Vec<&Vec<SharedString>> {
@@ -434,6 +473,8 @@ pub struct Cascader {
     options: Vec<CascaderOption>,
     multiple: bool,
     filterable: bool,
+    check_strictly: bool,
+    filter_method: Option<FilterMethod>,
     show_all_levels: bool,
     separator: SharedString,
     size: InputSize,
@@ -464,6 +505,8 @@ impl Default for Cascader {
             options: Vec::new(),
             multiple: false,
             filterable: false,
+            check_strictly: false,
+            filter_method: None,
             show_all_levels: true,
             separator: " / ".into(),
             size: InputSize::Default,
@@ -509,6 +552,21 @@ impl Cascader {
 
     pub fn filterable(mut self, filterable: bool) -> Self {
         self.filterable = filterable;
+        self
+    }
+
+    /// Allows parent nodes to be selected directly, like `check-strictly`.
+    pub fn check_strictly(mut self, strict: bool) -> Self {
+        self.check_strictly = strict;
+        self
+    }
+
+    /// Overrides the default label/path filtering.
+    pub fn filter_method(
+        mut self,
+        method: impl Fn(&CascaderOption, &str) -> bool + 'static,
+    ) -> Self {
+        self.filter_method = Some(Rc::new(method));
         self
     }
 
@@ -600,9 +658,18 @@ impl Cascader {
     }
 }
 
-fn measure(state: gpui::Entity<CascaderState>, popup: bool) -> AnyElement {
-    gpui::canvas(
+fn measure(
+    state: gpui::Entity<CascaderState>,
+    popup: bool,
+    control_height: Option<f32>,
+) -> AnyElement {
+    let canvas = gpui::canvas(
         move |bounds: Bounds<Pixels>, _, cx: &mut App| {
+            let bounds = if let Some(height) = control_height {
+                gpui::Bounds::new(bounds.origin, gpui::size(bounds.size.width, px(height)))
+            } else {
+                bounds
+            };
             state.update(cx, |state, _| {
                 if popup {
                     state.popup_bounds = Some(bounds);
@@ -612,10 +679,12 @@ fn measure(state: gpui::Entity<CascaderState>, popup: bool) -> AnyElement {
             });
         },
         |_, _, _, _| {},
-    )
-    .absolute()
-    .inset_0()
-    .into_any_element()
+    );
+    if popup {
+        canvas.absolute().inset_0().into_any_element()
+    } else {
+        canvas.w_full().h(px(0.)).into_any_element()
+    }
 }
 
 impl RenderOnce for Cascader {
@@ -626,6 +695,8 @@ impl RenderOnce for Cascader {
             options,
             multiple,
             filterable,
+            check_strictly,
+            filter_method,
             show_all_levels,
             separator,
             size,
@@ -646,6 +717,8 @@ impl RenderOnce for Cascader {
             options: options.clone(),
             multiple,
             filterable,
+            check_strictly,
+            filter_method,
             disabled,
         };
         let handlers = CascaderHandlers {
@@ -761,8 +834,8 @@ impl RenderOnce for Cascader {
             .id(id.clone())
             .relative()
             .w_full()
+            .child(measure(state.clone(), false, Some(size.height())))
             .child(input)
-            .child(measure(state.clone(), false))
             .on_mouse_down_out({
                 let state = state.clone();
                 move |event, window, cx| {
@@ -788,6 +861,7 @@ impl RenderOnce for Cascader {
             let below = viewport.height - target.bottom() >= px(304.) || target.top() < px(304.);
             let mut panel = div()
                 .id(ElementId::NamedChild(Arc::new(id.clone()), "panel".into()))
+                .debug_selector(|| "cascader-panel".into())
                 .flex()
                 .rounded(px(4.))
                 .border_1()
@@ -879,7 +953,12 @@ impl RenderOnce for Cascader {
                     panel = panel.child(list);
                 }
             } else {
-                let paths = filtered_paths(&options, &query);
+                let paths = filtered_paths(
+                    &options,
+                    &query,
+                    props.check_strictly,
+                    props.filter_method.as_ref(),
+                );
                 let mut list = div()
                     .id(ElementId::NamedChild(
                         Arc::new(id.clone()),
@@ -929,7 +1008,7 @@ impl RenderOnce for Cascader {
             if let Some(footer) = footer {
                 panel = panel.child(div().px(px(10.)).py(px(8.)).border_t_1().child(footer));
             }
-            panel = panel.child(measure(state.clone(), true));
+            panel = panel.child(measure(state.clone(), true, None));
             root = root.child(
                 deferred(
                     anchored()
@@ -990,7 +1069,7 @@ mod tests {
     #[test]
     fn filtering_matches_parent_labels_and_returns_leaf_paths() {
         assert_eq!(
-            filtered_paths(&options(), "component"),
+            filtered_paths(&options(), "component", false, None),
             [
                 vec![
                     SharedString::from("guide"),
@@ -1005,11 +1084,39 @@ mod tests {
             ]
         );
         assert_eq!(
-            filtered_paths(&options(), "input"),
+            filtered_paths(&options(), "input", false, None),
             [vec![
                 SharedString::from("guide"),
                 SharedString::from("components"),
                 SharedString::from("input"),
+            ]]
+        );
+    }
+
+    #[test]
+    fn path_labels_include_every_nested_level() {
+        assert_eq!(
+            path_labels(
+                &["guide".into(), "components".into(), "input".into()],
+                &options(),
+            ),
+            ["Guide", "Components", "Input"]
+        );
+    }
+
+    #[test]
+    fn strict_filtering_can_select_parents_and_use_custom_methods() {
+        let strict = filtered_paths(&options(), "component", true, None);
+        assert!(strict.contains(&vec!["guide".into(), "components".into()]));
+        let method: FilterMethod = Rc::new(|node: &CascaderOption, query: &str| {
+            node.value.as_ref() == "button" && query == "custom"
+        });
+        assert_eq!(
+            filtered_paths(&options(), "custom", false, Some(&method)),
+            [vec![
+                SharedString::from("guide"),
+                SharedString::from("components"),
+                SharedString::from("button"),
             ]]
         );
     }

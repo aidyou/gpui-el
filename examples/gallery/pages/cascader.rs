@@ -7,6 +7,7 @@ pub(crate) struct State {
     basic: CascaderSelection,
     multiple: CascaderSelection,
     filterable: CascaderSelection,
+    strict: CascaderSelection,
     disabled: CascaderSelection,
 }
 
@@ -27,6 +28,7 @@ impl Default for State {
                 "components".into(),
                 "input".into(),
             ]),
+            strict: CascaderSelection::Single(vec!["guide".into()]),
             disabled: CascaderSelection::Single(vec![
                 "guide".into(),
                 "components".into(),
@@ -63,18 +65,24 @@ impl Gallery {
                             0 => this.cascader.basic = selection,
                             1 => this.cascader.multiple = selection,
                             2 => this.cascader.filterable = selection,
-                            3 => this.cascader.disabled = selection,
+                            3 => this.cascader.strict = selection,
+                            4 => this.cascader.disabled = selection,
                             _ => unreachable!("unknown cascader demo slot"),
                         }
                         cx.notify();
                     })
                 })
         };
-        let basic = row().child(div().w(px(320.)).child(field(
-            0,
-            "cascader-basic".into(),
-            self.cascader.basic.clone(),
-        )));
+        let basic = row().child(
+            div()
+                .w(px(320.))
+                .debug_selector(|| "cascader-basic".into())
+                .child(field(
+                    0,
+                    "cascader-basic".into(),
+                    self.cascader.basic.clone(),
+                )),
+        );
         let multiple = row().child(
             div().w(px(360.)).child(
                 field(
@@ -104,10 +112,13 @@ impl Gallery {
                     .separator(" > "),
             ),
         );
+        let strict = row().child(div().w(px(320.)).child(
+            field(3, "cascader-strict".into(), self.cascader.strict.clone()).check_strictly(true),
+        ));
         let disabled = row().child(
             div().w(px(320.)).child(
                 field(
-                    3,
+                    4,
                     "cascader-disabled".into(),
                     self.cascader.disabled.clone(),
                 )
@@ -146,6 +157,13 @@ impl Gallery {
                 &s.cascader_last_level,
                 || "el_cascader().show_all_levels(false).separator(\" > \");".into(),
                 last_level.into_any_element(),
+            ))
+            .child(self.section(
+                cx,
+                "cascader-strict",
+                &s.cascader_strict,
+                || "el_cascader().check_strictly(true);".into(),
+                strict.into_any_element(),
             ))
             .child(self.section(
                 cx,

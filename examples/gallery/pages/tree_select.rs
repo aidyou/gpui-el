@@ -56,11 +56,16 @@ impl Gallery {
                     })
                 })
         };
-        let basic = row().child(div().w(px(300.)).child(field(
-            0,
-            "tree-select-basic".into(),
-            self.tree_select.basic.clone(),
-        )));
+        let basic = row().child(
+            div()
+                .w(px(300.))
+                .debug_selector(|| "tree-select-basic".into())
+                .child(field(
+                    0,
+                    "tree-select-basic".into(),
+                    self.tree_select.basic.clone(),
+                )),
+        );
         let multiple = row().child(
             div().w(px(340.)).child(
                 field(

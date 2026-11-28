@@ -378,6 +378,7 @@ cascader_page: Cascader 级联选择器
 cascader_basic: 基本用法
 cascader_multiple: 多选
 cascader_filterable: 路径过滤
+cascader_strict: 直接选择父节点
 cascader_last_level: 仅显示最后一级
 cascader_disabled: 禁用
 tree_select_intro: 从可展开的树中选择单个或多个节点值，支持父节点严格选择、过滤与清空显示。
