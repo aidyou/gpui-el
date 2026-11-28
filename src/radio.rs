@@ -5,6 +5,8 @@
 //! pseudo element, and the checked state is exposed through the accessibility
 //! toggle attribute because GPUI has no native radio input.
 
+use std::rc::Rc;
+
 use gpui::{
     AnyElement, App, ElementId, Hsla, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
     prelude::*, px, rgb,
@@ -17,6 +19,7 @@ use crate::{
 };
 
 type ChangeHandler = Box<dyn Fn(bool, &mut Window, &mut App)>;
+type GroupChangeHandler = Rc<dyn Fn(SharedString, &mut Window, &mut App)>;
 
 /// Radio sizes map to `$radio-height` and `$radio-font-size`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -78,6 +81,11 @@ pub fn el_radio() -> Radio {
     Radio::default().id(ElementId::CodeLocation(*std::panic::Location::caller()))
 }
 
+/// Creates a radio-button variant.
+pub fn el_radio_button() -> Radio {
+    el_radio().button(true)
+}
+
 /// One option of a mutually exclusive group, like upstream `el-radio`.
 ///
 /// The application owns the selection and marks the chosen radio with
@@ -93,10 +101,12 @@ pub fn el_radio() -> Radio {
 pub struct Radio {
     id: Option<ElementId>,
     label: Option<SharedString>,
+    value: Option<SharedString>,
     accessibility_label: Option<SharedString>,
     content: Option<AnyElement>,
     checked: bool,
     disabled: bool,
+    button: bool,
     /// Whether `disabled` was set explicitly, so a group cannot override it.
     explicit_disabled: bool,
     size: RadioSize,
@@ -124,6 +134,19 @@ impl Radio {
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
         self.label = Some(label.into());
         self.content = None;
+        self
+    }
+
+    /// Sets the value reported by a containing radio group. Defaults to the
+    /// label when no explicit value is provided, like upstream.
+    pub fn value(mut self, value: impl Into<SharedString>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    /// Uses the filled radio-button presentation instead of a circle and label.
+    pub fn button(mut self, button: bool) -> Self {
+        self.button = button;
         self
     }
 
@@ -251,54 +274,85 @@ impl RenderOnce for Radio {
         let content = self
             .content
             .or_else(|| self.label.map(|label| label.into_any_element()));
-        let root = div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .h(px(metrics.height))
-            .text_size(px(metrics.font_size))
-            .text_color(label_color)
-            .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
-            .when(self.border, |el| {
-                el.border_1()
-                    .border_color(if self.disabled {
-                        rgb(theme.border_lighter()).into()
-                    } else if self.checked {
-                        active_color
-                    } else {
-                        inactive_color
-                    })
-                    .rounded(px(metrics.radius))
-                    .pl(px(metrics.padding_left))
-                    .pr(px(metrics.padding_right))
-            })
-            .child(
-                div()
-                    .flex()
-                    .flex_none()
-                    .items_center()
-                    .justify_center()
-                    .size(px(input))
-                    .rounded_full()
-                    .border_1()
-                    .border_color(input_border)
-                    .bg(input_bg)
-                    .when(!self.disabled, |el| {
-                        el.hover(move |style| style.border_color(active_color))
-                    })
-                    .when(self.checked, |el| {
-                        // `$radio` `::after`: a 4 px dot at half the input.
-                        el.child(
-                            div()
-                                .size(px((input / 2.) - 3.))
-                                .rounded_full()
-                                .bg(rgb(dot)),
-                        )
-                    }),
-            )
-            .when_some(content, |el, content| {
-                el.child(div().ml(px(8.)).line_height(px(1.)).child(content))
-            });
+        let root = if self.button {
+            div()
+                .flex()
+                .flex_none()
+                .items_center()
+                .justify_center()
+                .h(px(metrics.height))
+                .px(px(metrics.padding_left + metrics.padding_right))
+                .text_size(px(metrics.font_size))
+                .rounded(px(metrics.radius))
+                .border_1()
+                .border_color(if self.checked {
+                    active_color
+                } else {
+                    inactive_color
+                })
+                .bg(if self.checked {
+                    active_color
+                } else {
+                    rgb(theme.background()).into()
+                })
+                .text_color(if self.checked {
+                    rgb(WHITE)
+                } else if self.disabled {
+                    rgb(theme.disabled_text())
+                } else {
+                    rgb(theme.regular_text())
+                })
+                .when_some(content, |el, content| el.child(content))
+        } else {
+            div()
+                .flex()
+                .flex_none()
+                .items_center()
+                .h(px(metrics.height))
+                .text_size(px(metrics.font_size))
+                .text_color(label_color)
+                .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
+                .when(self.border, |el| {
+                    el.border_1()
+                        .border_color(if self.disabled {
+                            rgb(theme.border_lighter()).into()
+                        } else if self.checked {
+                            active_color
+                        } else {
+                            inactive_color
+                        })
+                        .rounded(px(metrics.radius))
+                        .pl(px(metrics.padding_left))
+                        .pr(px(metrics.padding_right))
+                })
+                .child(
+                    div()
+                        .flex()
+                        .flex_none()
+                        .items_center()
+                        .justify_center()
+                        .size(px(input))
+                        .rounded_full()
+                        .border_1()
+                        .border_color(input_border)
+                        .bg(input_bg)
+                        .when(!self.disabled, |el| {
+                            el.hover(move |style| style.border_color(active_color))
+                        })
+                        .when(self.checked, |el| {
+                            // `$radio` `::after`: a 4 px dot at half the input.
+                            el.child(
+                                div()
+                                    .size(px((input / 2.) - 3.))
+                                    .rounded_full()
+                                    .bg(rgb(dot)),
+                            )
+                        }),
+                )
+                .when_some(content, |el, content| {
+                    el.child(div().ml(px(8.)).line_height(px(1.)).child(content))
+                })
+        };
         let Some(id) = self.id else {
             return root.into_any_element();
         };
@@ -351,12 +405,34 @@ pub fn el_radio_group() -> RadioGroup {
     RadioGroup::default().id(ElementId::CodeLocation(*std::panic::Location::caller()))
 }
 
+/// One data-driven radio-group option.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RadioOption {
+    pub value: SharedString,
+    pub label: SharedString,
+    pub disabled: bool,
+}
+
+impl RadioOption {
+    pub fn new(value: impl Into<SharedString>, label: impl Into<SharedString>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            disabled: false,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
 /// Lays out mutually exclusive radios and propagates shared settings to them.
 ///
-/// Native differences: the group does not report the picked value; each
-/// [`Radio`] reports its own activation and the application moves the
-/// selection. Upstream's arrow-key navigation between group items is not
-/// reproduced; native Tab order applies instead.
+/// The group controls the selected value and reports the next value through
+/// `onchange`, matching upstream's `v-model`. Individual radio handlers still
+/// run before the group handler.
 #[derive(Default, IntoElement)]
 #[must_use]
 pub struct RadioGroup {
@@ -370,6 +446,9 @@ pub struct RadioGroup {
     /// Upstream spaces siblings with `margin-right: 30px`.
     gap: Option<f32>,
     accessibility_label: Option<SharedString>,
+    value: Option<SharedString>,
+    button: bool,
+    onchange: Option<GroupChangeHandler>,
     radios: Vec<Radio>,
 }
 
@@ -439,6 +518,43 @@ impl RadioGroup {
         self
     }
 
+    /// Controls the selected value.
+    pub fn value(mut self, value: impl Into<SharedString>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    /// Uses radio-button children.
+    pub fn button(mut self, button: bool) -> Self {
+        self.button = button;
+        self
+    }
+
+    /// Reports the next selected value.
+    pub fn onchange(
+        mut self,
+        handler: impl Fn(SharedString, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.onchange = Some(Rc::new(handler));
+        self
+    }
+
+    /// Builds children from data-driven options.
+    pub fn options(mut self, options: impl IntoIterator<Item = RadioOption>) -> Self {
+        self.radios
+            .extend(options.into_iter().enumerate().map(|(index, option)| {
+                let mut radio = el_radio()
+                    .id(ElementId::named_usize("radio-option", index))
+                    .value(option.value)
+                    .label(option.label);
+                if option.disabled {
+                    radio = radio.disabled(true);
+                }
+                radio
+            }));
+        self
+    }
+
     pub fn radio(mut self, radio: Radio) -> Self {
         self.radios.push(radio);
         self
@@ -448,6 +564,8 @@ impl RadioGroup {
     /// its own. Called while rendering, so settings added after a child keep
     /// winning, like upstream's reactive propagation.
     fn apply_defaults(&mut self) {
+        let selected = self.value.clone();
+        let group_handler = self.onchange.clone();
         for radio in &mut self.radios {
             if radio.size == RadioSize::Default
                 && let Some(size) = self.size
@@ -473,6 +591,24 @@ impl RadioGroup {
                 && let Some(inactive_color) = self.inactive_color
             {
                 radio.inactive_color = Some(inactive_color);
+            }
+            if self.button {
+                radio.button = true;
+            }
+            let value = radio.value.clone().or_else(|| radio.label.clone());
+            if let Some(value) = &value {
+                radio.checked = selected.as_ref() == Some(value);
+            }
+            if let Some(handler) = group_handler.clone()
+                && let Some(value) = value
+            {
+                let child_handler = radio.onchange.take();
+                radio.onchange = Some(Box::new(move |_, window, cx| {
+                    if let Some(child_handler) = &child_handler {
+                        child_handler(true, window, cx);
+                    }
+                    handler(value.clone(), window, cx);
+                }));
             }
         }
     }
@@ -584,6 +720,41 @@ mod tests {
         assert_eq!(second.active_color, Some(rgb(0x13ce66).into()));
         assert_eq!(second.inactive_color, Some(rgb(0xff4949).into()));
         // The 30 px sibling gap is the render default, not a stored setting.
+    }
+
+    #[gpui::test]
+    fn controlled_group_reports_selected_value(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            selected: Rc<std::cell::RefCell<Option<SharedString>>>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
+                let selected = self.selected.clone();
+                let current = selected.borrow().clone().unwrap_or_default();
+                let view = cx.entity();
+                div().p(px(0.)).child(
+                    el_radio_group()
+                        .vertical()
+                        .value(current)
+                        .options([RadioOption::new("a", "A"), RadioOption::new("b", "B")])
+                        .onchange(move |next, _, cx| {
+                            *selected.borrow_mut() = Some(next);
+                            view.update(cx, |_, cx| cx.notify());
+                        }),
+                )
+            }
+        }
+        let selected = Rc::new(std::cell::RefCell::new(None));
+        let (_, view) = cx.add_window_view({
+            let selected = selected.clone();
+            move |_, _| Harness { selected }
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.simulate_click(gpui::point(px(8.), px(78.)), gpui::Modifiers::default());
+        assert_eq!(
+            selected.borrow().as_ref().map(|value| value.as_ref()),
+            Some("b")
+        );
     }
 
     struct Harness {

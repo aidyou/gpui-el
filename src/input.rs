@@ -132,6 +132,7 @@ struct InputState {
     /// Last caret rectangle reported to the platform for IME positioning.
     ime_bounds: RefCell<Option<gpui::Bounds<Pixels>>>,
     password_visible: bool,
+    autofocused: bool,
     /// Textarea scrolling, kept with the field so caret visibility can be
     /// maintained without making callers own another handle.
     scroll: ScrollHandle,
@@ -201,6 +202,7 @@ impl InputState {
             layout: RefCell::new(TextLayout::default()),
             ime_bounds: RefCell::new(None),
             password_visible: false,
+            autofocused: false,
             scroll: ScrollHandle::new(),
             props,
             handlers,
@@ -250,6 +252,7 @@ pub struct Input {
     show_password: bool,
     maxlength: Option<usize>,
     show_word_limit: bool,
+    autofocus: bool,
     prefix: Option<AnyElement>,
     suffix: Option<AnyElement>,
     padding_x: Option<(f32, f32)>,
@@ -293,6 +296,7 @@ impl Default for Input {
             show_password: false,
             maxlength: None,
             show_word_limit: false,
+            autofocus: false,
             prefix: None,
             suffix: None,
             padding_x: None,
@@ -441,6 +445,12 @@ impl Input {
     /// Shows a `length / maxlength` count, like `show-word-limit`.
     pub fn show_word_limit(mut self, show_word_limit: bool) -> Self {
         self.show_word_limit = show_word_limit;
+        self
+    }
+
+    /// Focuses the field on its first render, like upstream `autofocus`.
+    pub fn autofocus(mut self, autofocus: bool) -> Self {
+        self.autofocus = autofocus;
         self
     }
 
@@ -1175,6 +1185,7 @@ impl RenderOnce for Input {
             show_password,
             maxlength,
             show_word_limit,
+            autofocus,
             prefix,
             suffix,
             padding_x,
@@ -1196,6 +1207,11 @@ impl RenderOnce for Input {
             return div().into_any_element();
         };
         let state = window.use_keyed_state(id.clone(), cx, InputState::new);
+        if autofocus && !disabled && !state.read(cx).autofocused {
+            state.update(cx, |state, _| state.autofocused = true);
+            let focus = state.read(cx).focus.clone();
+            focus.focus(window, cx);
+        }
 
         // Refresh the props and handlers the focus subscriptions read, without
         // notifying: this runs on every render. While an IME composition is

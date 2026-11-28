@@ -19,6 +19,7 @@ use crate::{
 };
 
 type ChangeHandler = Box<dyn Fn(bool, &mut Window, &mut App)>;
+type ValueChangeHandler = Box<dyn Fn(SharedString, &mut Window, &mut App)>;
 type Guard = Box<dyn Fn() -> bool>;
 
 /// `$switch-height`: the outer height, in logical pixels. The core keeps its
@@ -137,6 +138,8 @@ pub struct Switch {
     inactive_color: Option<Hsla>,
     active_text: Option<SharedString>,
     inactive_text: Option<SharedString>,
+    active_value: Option<SharedString>,
+    inactive_value: Option<SharedString>,
     active_icon: Option<AnyElement>,
     inactive_icon: Option<AnyElement>,
     active_action_icon: Option<AnyElement>,
@@ -144,6 +147,7 @@ pub struct Switch {
     accessibility_label: Option<SharedString>,
     before_change: Option<Guard>,
     onchange: Option<ChangeHandler>,
+    onvaluechange: Option<ValueChangeHandler>,
 }
 
 impl Switch {
@@ -240,6 +244,18 @@ impl Switch {
         self
     }
 
+    /// Sets the value reported by [`Self::onvaluechange`] while checked.
+    pub fn active_value(mut self, value: impl Into<SharedString>) -> Self {
+        self.active_value = Some(value.into());
+        self
+    }
+
+    /// Sets the value reported by [`Self::onvaluechange`] while unchecked.
+    pub fn inactive_value(mut self, value: impl Into<SharedString>) -> Self {
+        self.inactive_value = Some(value.into());
+        self
+    }
+
     /// Content shown beside the core while checked, replacing
     /// [`Self::active_text`].
     pub fn active_icon(mut self, icon: impl IntoElement) -> Self {
@@ -286,6 +302,18 @@ impl Switch {
     #[track_caller]
     pub fn onchange(mut self, handler: impl Fn(bool, &mut Window, &mut App) + 'static) -> Self {
         self.onchange = Some(Box::new(handler));
+        self.ensure_id();
+        self
+    }
+
+    /// Reports the configured active/inactive value, like upstream's
+    /// string/number `active-value` and `inactive-value` model.
+    #[track_caller]
+    pub fn onvaluechange(
+        mut self,
+        handler: impl Fn(SharedString, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.onvaluechange = Some(Box::new(handler));
         self.ensure_id();
         self
     }
@@ -488,7 +516,11 @@ impl RenderOnce for Switch {
         }
         let checked = self.checked;
         let guard = self.before_change;
-        if let Some(handler) = self.onchange {
+        let onchange = self.onchange;
+        let onvaluechange = self.onvaluechange;
+        let active_value = self.active_value.unwrap_or_else(|| "true".into());
+        let inactive_value = self.inactive_value.unwrap_or_else(|| "false".into());
+        if onchange.is_some() || onvaluechange.is_some() {
             root = root
                 .cursor_pointer()
                 .focusable()
@@ -509,7 +541,21 @@ impl RenderOnce for Switch {
                     if guard.as_ref().is_some_and(|guard| !guard()) {
                         return;
                     }
-                    handler(!checked, window, cx);
+                    let next = !checked;
+                    if let Some(handler) = &onchange {
+                        handler(next, window, cx);
+                    }
+                    if let Some(handler) = &onvaluechange {
+                        handler(
+                            if next {
+                                active_value.clone()
+                            } else {
+                                inactive_value.clone()
+                            },
+                            window,
+                            cx,
+                        );
+                    }
                 });
         }
         root.into_any_element()
@@ -589,6 +635,11 @@ mod tests {
         assert!(widget.inline_prompt);
         assert!(el_switch().checked(true).small().checked);
         assert!(!el_switch().inline_prompt(false).inline_prompt);
+        let values = el_switch()
+            .active_value("enabled")
+            .inactive_value("disabled");
+        assert_eq!(values.active_value.as_deref(), Some("enabled"));
+        assert_eq!(values.inactive_value.as_deref(), Some("disabled"));
     }
 
     struct Harness {

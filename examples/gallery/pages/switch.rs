@@ -45,6 +45,20 @@ impl Gallery {
                     })
                 })
         });
+        let values = row().child({
+            let view = cx.entity();
+            el_switch()
+                .id("switch-values")
+                .checked(self.switch.basic)
+                .active_value("enabled")
+                .inactive_value("disabled")
+                .onvaluechange(move |value, _, cx| {
+                    view.update(cx, |this, cx| {
+                        this.switch.basic = value == "enabled";
+                        cx.notify();
+                    })
+                })
+        });
         let sizes = row().children(self.switch.sizes.iter().enumerate().map(|(i, &checked)| {
             let view = cx.entity();
             let size = [SwitchSize::Large, SwitchSize::Default, SwitchSize::Small]
@@ -199,6 +213,20 @@ el_switch().id("switch-basic").checked(self.switch.basic)
         });
     });"#,
                 basic.into_any_element(),
+            ))
+            .child(section(
+                "switch-values",
+                &s.switch_values,
+                r#"el_switch().checked(self.switch.basic)
+    .active_value("enabled")
+    .inactive_value("disabled")
+    .onvaluechange(move |value, _, cx| {
+        view.update(cx, |this, cx| {
+            this.switch.basic = value == "enabled";
+            cx.notify();
+        });
+    });"#,
+                values.into_any_element(),
             ))
             .child(section(
                 "switch-sizes",

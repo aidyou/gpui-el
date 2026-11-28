@@ -1,5 +1,5 @@
-use gpui::{Context, Div, div, prelude::*, px, rgb};
-use gpui_el::{RadioSize, el_button, el_icon, el_radio, el_radio_group};
+use gpui::{Context, Div, SharedString, div, prelude::*, px, rgb};
+use gpui_el::{RadioOption, RadioSize, el_button, el_icon, el_radio, el_radio_group};
 
 use crate::{Gallery, copy::Copy};
 
@@ -33,27 +33,35 @@ impl Gallery {
             s.radio_ship.as_str(),
             s.radio_pickup.as_str(),
         ];
-        // A whole group shares one selection, so the builder captures the
-        // chosen index and each radio reports its own activation.
-        let group = |selection: usize| {
+        // The group owns the controlled value and reports the next value.
+        let make_group = |button: bool| {
             let view = view.clone();
             el_radio_group()
                 .vertical()
                 .gap(12.)
-                .radios(options.into_iter().enumerate().map(|(index, label)| {
-                    let view = view.clone();
-                    el_radio()
-                        .id(("radio", index))
-                        .label(label)
-                        .checked(selection == index)
-                        .onchange(move |_, _, cx| {
-                            view.update(cx, |this, cx| {
-                                this.radio.basic = index;
-                                cx.notify();
-                            })
-                        })
-                }))
+                .button(button)
+                .value(SharedString::from(self.radio.basic.to_string()))
+                .options(
+                    options
+                        .into_iter()
+                        .enumerate()
+                        .map(|(index, label)| RadioOption::new(index.to_string(), label)),
+                )
+                .onchange(move |value, _, cx| {
+                    if let Ok(index) = value.parse::<usize>() {
+                        view.update(cx, |this, cx| {
+                            this.radio.basic = index;
+                            cx.notify();
+                        });
+                    }
+                })
         };
+        let group = div()
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(make_group(false))
+            .child(make_group(true));
         let disabled =
             el_radio_group()
                 .vertical()
@@ -147,22 +155,24 @@ impl Gallery {
             .child(section(
                 "radio-basic",
                 &s.radio_basic,
-                r#"// One selection per group: the application stores the index and each
-// radio reports its own activation.
-el_radio_group().vertical().gap(12.).radios(
-    options.enumerate().map(|(index, label)| {
-        let view = cx.entity();
-        el_radio().id(("radio", index)).label(label)
-            .checked(self.radio.basic == index)
-            .onchange(move |_, _, cx| {
-                view.update(cx, |this, cx| {
-                    this.radio.basic = index;
-                    cx.notify();
-                });
-            })
-    })
-);"#,
-                group(self.radio.basic).into_any_element(),
+                r#"// The group owns the controlled value and reports the next value.
+el_radio_group().vertical().gap(12.)
+    .value(self.radio.basic.to_string())
+    .options([
+        RadioOption::new("0", "Prepare"),
+        RadioOption::new("1", "Ship"),
+        RadioOption::new("2", "Pickup"),
+    ])
+    .onchange(move |value, _, cx| {
+        view.update(cx, |this, cx| {
+            this.radio.basic = value.parse().unwrap_or(0);
+            cx.notify();
+        });
+    });
+
+// RadioButton uses the same controlled group API.
+el_radio_group().button(true).options(options);"#,
+                group.into_any_element(),
             ))
             .child(section(
                 "radio-disabled",

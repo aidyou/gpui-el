@@ -9,18 +9,17 @@
 //! `onchange` reports the committed value, like upstream's `input` and `change`
 //! events.
 //!
-//! Native differences: there is no DOM, so `show-input` (the embedded
-//! `el-input-number`) is not reproduced, and `step` accepts only a number, not
-//! the upstream `'mark'` string — snap to marks by passing a `step` that lands
-//! on them. GPUI cannot scale an element on hover, so the handle's 1.2× hover
-//! and drag enlargement is a 20 → 24 px size change instead, and the value
-//! tooltip keeps the text it was built with rather than following a drag frame
-//! by frame. The whole slider row (or vertical strip) is an interaction
-//! target, and grabbing the handle preserves the pointer's offset from its
-//! center so the 36 px hit area does not jump the value. A drag keeps tracking
-//! the pointer after it leaves the slider through a window-level move listener,
-//! which gpui-fast needs because it only reports an element exit at the window
-//! edge.
+//! Native differences: there is no DOM, so tooltip placement/classes and
+//! persistent tooltip lifetime are not reproduced. `step_at_marks` maps the
+//! upstream `step: 'mark'` mode. GPUI cannot scale an element on hover, so the
+//! handle's 1.2× hover and drag enlargement is a 20 → 24 px size change instead,
+//! and the value tooltip keeps the text it was built with rather than following
+//! a drag frame by frame. The whole slider row (or vertical strip) is an
+//! interaction target, and grabbing the handle preserves the pointer's offset
+//! from its center so the 36 px hit area does not jump the value. A drag keeps
+//! tracking the pointer after it leaves the slider through a window-level move
+//! listener, which gpui-fast needs because it only reports an element exit at
+//! the window edge.
 
 use std::{cell::Cell as BoundsCell, rc::Rc, sync::Arc};
 
@@ -30,7 +29,7 @@ use gpui::{
     px, relative, rgb,
 };
 
-use crate::{Theme, tokens};
+use crate::{InputSize, Theme, el_input_number, tokens};
 
 /// Outer height, from `$slider-height`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -140,6 +139,10 @@ pub struct Slider {
     height: f32,
     show_stops: bool,
     show_tooltip: bool,
+    show_input: bool,
+    show_input_controls: bool,
+    input_size: Option<InputSize>,
+    step_marks: bool,
     active_color: Option<Hsla>,
     inactive_color: Option<Hsla>,
     format_tooltip: Option<TooltipFormatter>,
@@ -169,6 +172,10 @@ impl Default for Slider {
             height: 200.,
             show_stops: false,
             show_tooltip: true,
+            show_input: false,
+            show_input_controls: true,
+            input_size: None,
+            step_marks: false,
             active_color: None,
             inactive_color: None,
             format_tooltip: None,
@@ -266,6 +273,30 @@ impl Slider {
     /// Shows the value in a tooltip on the handles; on by default.
     pub fn show_tooltip(mut self, show_tooltip: bool) -> Self {
         self.show_tooltip = show_tooltip;
+        self
+    }
+
+    /// Shows an InputNumber beside a single horizontal slider.
+    pub fn show_input(mut self, show: bool) -> Self {
+        self.show_input = show;
+        self
+    }
+
+    /// Shows the InputNumber's increase/decrease controls.
+    pub fn show_input_controls(mut self, show: bool) -> Self {
+        self.show_input_controls = show;
+        self
+    }
+
+    /// Sets the InputNumber size; defaults to the slider size.
+    pub fn input_size(mut self, size: InputSize) -> Self {
+        self.input_size = Some(size);
+        self
+    }
+
+    /// Restricts values to the configured marks, like upstream `step: 'mark'`.
+    pub fn step_at_marks(mut self, step_marks: bool) -> Self {
+        self.step_marks = step_marks;
         self
     }
 
@@ -406,6 +437,23 @@ fn quantize(percent: f32, min: f32, max: f32, step: f32) -> f32 {
     (value * factor).round() / factor
 }
 
+fn quantize_marks(percent: f32, min: f32, max: f32, marks: &[f32]) -> f32 {
+    if marks.is_empty() {
+        return min + percent / 100. * (max - min);
+    }
+    let target = min + percent / 100. * (max - min);
+    marks
+        .iter()
+        .copied()
+        .min_by(|left, right| {
+            (*left - target)
+                .abs()
+                .partial_cmp(&(*right - target).abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or(target)
+}
+
 /// The handle a click at this percent should move: the nearest end of the
 /// current bar, like upstream's `getButtonRefByPercent`.
 fn handle_at(
@@ -473,6 +521,10 @@ impl RenderOnce for Slider {
             height,
             show_stops,
             show_tooltip,
+            show_input,
+            show_input_controls,
+            input_size,
+            step_marks,
             active_color,
             inactive_color,
             format_tooltip,
@@ -525,6 +577,15 @@ impl RenderOnce for Slider {
         let release_state = state.clone();
         let release_cfg = (range, min, single);
         let release_change = onchange.clone();
+        let input_oninput = oninput.clone();
+        let input_onchange = onchange.clone();
+        let input_size = input_size.unwrap_or(match size {
+            SliderSize::Large => InputSize::Large,
+            SliderSize::Default => InputSize::Default,
+            SliderSize::Small => InputSize::Small,
+        });
+        let mark_points: Vec<f32> = marks.iter().map(|mark| mark.point).collect();
+        let drag_mark_points = mark_points.clone();
         let bounds_cell = state.read(cx).bounds.clone();
         let runway = div()
             .id(ElementId::NamedChild(Arc::new(id.clone()), "runway".into()))
@@ -558,7 +619,7 @@ impl RenderOnce for Slider {
             )
             .children({
                 // Stops at every step boundary.
-                let stop_count = if show_stops && step > 0. && span > 0. {
+                let stop_count = if show_stops && !step_marks && step > 0. && span > 0. {
                     (span / step).ceil()
                 } else {
                     0.
@@ -777,6 +838,7 @@ impl RenderOnce for Slider {
                     |_, _, _| {},
                     move |bounds, _, window, _| {
                         bounds_cell.set(Some(bounds));
+                        let mark_points = drag_mark_points.clone();
                         let state = drag_state.clone();
                         window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
                             if phase != gpui::DispatchPhase::Bubble || disabled {
@@ -788,12 +850,21 @@ impl RenderOnce for Slider {
                             let Some(bounds) = state.read(cx).bounds.get() else {
                                 return;
                             };
-                            let value = quantize(
-                                percent_at(event.position, &bounds, vertical) - drag.offset,
-                                min,
-                                max,
-                                step,
-                            );
+                            let value = if step_marks {
+                                quantize_marks(
+                                    percent_at(event.position, &bounds, vertical) - drag.offset,
+                                    min,
+                                    max,
+                                    &mark_points,
+                                )
+                            } else {
+                                quantize(
+                                    percent_at(event.position, &bounds, vertical) - drag.offset,
+                                    min,
+                                    max,
+                                    step,
+                                )
+                            };
                             state.update(cx, |state, cx| {
                                 state.last = Some(value);
                                 cx.notify();
@@ -831,7 +902,7 @@ impl RenderOnce for Slider {
                 .inset_0(),
             );
 
-        div()
+        let mut root = div()
             .when(vertical, |el| {
                 el.flex()
                     .flex_col()
@@ -846,6 +917,7 @@ impl RenderOnce for Slider {
             .on_mouse_down(MouseButton::Left, {
                 let state = state.clone();
                 let oninput = oninput.clone();
+                let mark_points = mark_points.clone();
                 move |event, window, cx| {
                     if disabled {
                         return;
@@ -859,7 +931,11 @@ impl RenderOnce for Slider {
                     // width while preserving the upstream geometry.
                     let percent = percent_at(event.position, &bounds, vertical);
                     let handle = handle_at(percent, min, max, single, range);
-                    let value = quantize(percent, min, max, step);
+                    let value = if step_marks {
+                        quantize_marks(percent, min, max, &mark_points)
+                    } else {
+                        quantize(percent, min, max, step)
+                    };
                     state.update(cx, |state, cx| {
                         state.drag = Some(Drag { handle, offset: 0. });
                         state.last = Some(value);
@@ -876,8 +952,43 @@ impl RenderOnce for Slider {
                     cx.stop_propagation();
                 }
             })
-            .child(runway)
-            .into_any_element()
+            .child(runway);
+        if show_input && !vertical && range.is_none() && !step_marks {
+            root = root.child(
+                div().w(px(120.)).ml(px(16.)).child(
+                    el_input_number()
+                        .id(ElementId::NamedChild(Arc::new(id.clone()), "input".into()))
+                        .value(single.map(|value| value as f64))
+                        .min(min as f64)
+                        .max(max as f64)
+                        .step(step as f64)
+                        .size(input_size)
+                        .controls(show_input_controls)
+                        .disabled(disabled)
+                        .oninput({
+                            let handler = input_oninput.clone();
+                            move |value, window, cx| {
+                                if let Some(value) = value
+                                    && let Some(handler) = &handler
+                                {
+                                    handler(SliderValue::Single(value as f32), window, cx);
+                                }
+                            }
+                        })
+                        .onchange({
+                            let handler = input_onchange.clone();
+                            move |value, _, window, cx| {
+                                if let Some(value) = value
+                                    && let Some(handler) = &handler
+                                {
+                                    handler(SliderValue::Single(value as f32), window, cx);
+                                }
+                            }
+                        }),
+                ),
+            );
+        }
+        root.into_any_element()
     }
 }
 
@@ -926,6 +1037,32 @@ mod tests {
         // Degenerate ranges and steps fall back to the endpoints.
         assert_eq!(quantize(50., 5., 5., 1.), 5.);
         assert_eq!(quantize(50., 0., 100., 0.), 50.);
+    }
+
+    #[test]
+    fn quantize_marks_snaps_to_the_nearest_mark() {
+        assert_eq!(quantize_marks(14., 0., 100., &[0., 20., 80., 100.]), 20.);
+        assert_eq!(quantize_marks(90., 0., 100., &[0., 20., 80., 100.]), 80.);
+        assert_eq!(quantize_marks(50., 0., 100., &[]), 50.);
+    }
+
+    #[test]
+    fn input_and_mark_settings_do_not_reset_other_dimensions() {
+        let widget = el_slider()
+            .value(42.)
+            .show_input(true)
+            .show_input_controls(false)
+            .input_size(InputSize::Small)
+            .step_at_marks(true)
+            .marks([SliderMark {
+                point: 20.,
+                label: "Low".into(),
+            }]);
+        assert!(widget.show_input);
+        assert!(!widget.show_input_controls);
+        assert_eq!(widget.input_size, Some(InputSize::Small));
+        assert!(widget.step_marks);
+        assert_eq!(widget.single, Some(42.));
     }
 
     #[test]

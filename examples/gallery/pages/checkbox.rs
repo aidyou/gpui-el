@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use gpui::{Context, Div, div, prelude::*, px, rgb};
-use gpui_el::{CheckboxSize, el_button, el_checkbox, el_checkbox_group, el_icon};
+use gpui::{Context, Div, SharedString, div, prelude::*, px, rgb};
+use gpui_el::{CheckboxOption, CheckboxSize, el_button, el_checkbox, el_checkbox_group, el_icon};
 
 use crate::{Gallery, copy::Copy, demo::row};
 
@@ -11,7 +11,7 @@ pub(crate) struct State {
     bordered: [bool; 3],
     /// The options the indeterminate parent controls.
     children: [bool; 3],
-    group: HashSet<&'static str>,
+    group: HashSet<String>,
     custom: bool,
     colors: bool,
 }
@@ -23,7 +23,7 @@ impl Default for State {
             sized: [true, true, false],
             bordered: [true, false, true],
             children: [true, true, false],
-            group: HashSet::from(["A", "B"]),
+            group: HashSet::from(["A".to_string(), "B".to_string()]),
             custom: true,
             colors: true,
         }
@@ -153,28 +153,35 @@ impl Gallery {
             },
         ));
         let values: [&str; 3] = ["A", "B", "C"];
-        let group =
+        let make_group = |button: bool| {
+            let view = view.clone();
             el_checkbox_group()
                 .vertical()
                 .gap(12.)
-                .checkboxes(values.into_iter().enumerate().map(|(index, value)| {
-                    let view = view.clone();
-                    let group = self.checkbox.group.clone();
-                    el_checkbox()
-                        .id(("checkbox-group", index as u32))
-                        .label(format!("{} {}", s.checkbox_option, value))
-                        .checked(group.contains(value))
-                        .onchange(move |checked, _, cx| {
-                            view.update(cx, |this, cx| {
-                                if checked {
-                                    this.checkbox.group.insert(value);
-                                } else {
-                                    this.checkbox.group.remove(value);
-                                }
-                                cx.notify();
-                            })
-                        })
-                }));
+                .button(button)
+                .values(
+                    self.checkbox
+                        .group
+                        .iter()
+                        .map(|value| SharedString::from(value.clone())),
+                )
+                .options(values.into_iter().map(|value| {
+                    CheckboxOption::new(value, format!("{} {}", s.checkbox_option, value))
+                }))
+                .onchange(move |next, _, cx| {
+                    view.update(cx, |this, cx| {
+                        this.checkbox.group =
+                            next.into_iter().map(|value| value.to_string()).collect();
+                        cx.notify();
+                    })
+                })
+        };
+        let group = div()
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(make_group(false))
+            .child(make_group(true));
         let custom = row().child({
             let view = view.clone();
             el_checkbox()
@@ -268,23 +275,23 @@ el_checkbox().small().label("Option");"#,
             .child(section(
                 "checkbox-group",
                 &s.checkbox_group,
-                r#"// The application keeps the set; each checkbox reports its own
-// next state, so the group only arranges and defaults them.
-el_checkbox_group().vertical().gap(12.).checkboxes(
-    ["A", "B", "C"].map(|value| {
-        let view = cx.entity();
-        el_checkbox().id(("checkbox-group", value))
-            .label(format!("Option {value}"))
-            .checked(self.checkbox.group.contains(value))
-            .onchange(move |checked, _, cx| {
-                view.update(cx, |this, cx| {
-                    if checked { this.checkbox.group.insert(value); }
-                    else { this.checkbox.group.remove(value); }
-                    cx.notify();
-                });
-            })
-    })
-);"#,
+                r#"// The group owns the controlled value array and reports the next array.
+el_checkbox_group().vertical().gap(12.)
+    .values(self.checkbox.group.iter().map(SharedString::from))
+    .options([
+        CheckboxOption::new("A", "Option A"),
+        CheckboxOption::new("B", "Option B"),
+        CheckboxOption::new("C", "Option C"),
+    ])
+    .onchange(move |next, _, cx| {
+        view.update(cx, |this, cx| {
+            this.checkbox.group = next.into_iter().map(|v| v.to_string()).collect();
+            cx.notify();
+        });
+    });
+
+// CheckboxButton uses the same controlled group API.
+el_checkbox_group().button(true).options(options);"#,
                 group.into_any_element(),
             ))
             .child(section(

@@ -70,6 +70,13 @@ impl Gallery {
             "slider-basic".into(),
             self.slider.basic,
         )));
+        let input = row().child(
+            horizontal_demo().child(
+                slider(0, "slider-input".into(), self.slider.basic)
+                    .show_input(true)
+                    .show_input_controls(true),
+            ),
+        );
         let sizes = row().children((0..3u32).map(|index| {
             horizontal_demo().child(
                 slider(1, ("slider-sized", index).into(), self.slider.sizes)
@@ -158,6 +165,13 @@ impl Gallery {
                 &s.slider_basic,
                 || "el_slider().value(30.);".into(),
                 basic.into_any_element(),
+            ))
+            .child(self.section(
+                cx,
+                "slider-input",
+                &s.slider_input,
+                || "el_slider().value(30.).show_input(true).show_input_controls(true);".into(),
+                input.into_any_element(),
             ))
             .child(self.section(
                 cx,

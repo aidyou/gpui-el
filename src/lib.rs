@@ -215,7 +215,10 @@ pub use button::{
 };
 pub use capsule::{CapsuleOption, CapsuleSegments, el_capsule_segments};
 pub use cascader::{Cascader, CascaderOption, CascaderSelection, el_cascader};
-pub use checkbox::{Checkbox, CheckboxGroup, CheckboxSize, el_checkbox, el_checkbox_group};
+pub use checkbox::{
+    Checkbox, CheckboxGroup, CheckboxOption, CheckboxSize, el_checkbox, el_checkbox_button,
+    el_checkbox_group,
+};
 pub use color_picker::{ColorFormat, ColorPicker, el_color_picker};
 pub use date_picker::{DatePicker, DatePickerType, el_date_picker};
 pub use error::{Error, Result};
@@ -239,7 +242,9 @@ pub use menu::{
     MenuStyle, MenuTrigger, SubMenu, el_menu, el_menu_item, el_menu_item_group, el_sub_menu,
 };
 pub use motion::MotionSpeed;
-pub use radio::{Radio, RadioGroup, RadioSize, el_radio, el_radio_group};
+pub use radio::{
+    Radio, RadioGroup, RadioOption, RadioSize, el_radio, el_radio_button, el_radio_group,
+};
 pub use rate::{Rate, RateSize, el_rate};
 pub use scrollbar::{Scrollbar, ScrollbarDirection, ScrollbarEvent, el_scrollbar};
 pub use select::{Select, SelectOption, SelectValue, el_select};

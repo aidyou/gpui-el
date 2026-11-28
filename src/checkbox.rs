@@ -6,6 +6,8 @@
 //! and the indeterminate dash is a rounded bar rather than a scaled pseudo
 //! element.
 
+use std::rc::Rc;
+
 use gpui::{
     AnyElement, App, ElementId, Hsla, IntoElement, RenderOnce, SharedString, Toggled, Window, div,
     prelude::*, px, rgb,
@@ -19,6 +21,7 @@ use crate::{
 };
 
 type ChangeHandler = Box<dyn Fn(bool, &mut Window, &mut App)>;
+type GroupChangeHandler = Rc<dyn Fn(Vec<SharedString>, &mut Window, &mut App)>;
 
 /// Checkbox sizes map to `$checkbox-height` and `$checkbox-font-size`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -81,6 +84,11 @@ pub fn el_checkbox() -> Checkbox {
     Checkbox::default().id(ElementId::CodeLocation(*std::panic::Location::caller()))
 }
 
+/// Creates a checkbox-button variant.
+pub fn el_checkbox_button() -> Checkbox {
+    el_checkbox().button(true)
+}
+
 /// A box that toggles a boolean, like upstream `el-checkbox`.
 ///
 /// The application owns the checked state and feeds it back through
@@ -98,11 +106,13 @@ pub fn el_checkbox() -> Checkbox {
 pub struct Checkbox {
     id: Option<ElementId>,
     label: Option<SharedString>,
+    value: Option<SharedString>,
     accessibility_label: Option<SharedString>,
     content: Option<AnyElement>,
     checked: bool,
     indeterminate: bool,
     disabled: bool,
+    button: bool,
     /// Whether `disabled` was set explicitly, so a group cannot override it.
     explicit_disabled: bool,
     size: CheckboxSize,
@@ -130,6 +140,19 @@ impl Checkbox {
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
         self.label = Some(label.into());
         self.content = None;
+        self
+    }
+
+    /// Sets the value reported by a containing checkbox group. Defaults to
+    /// the label when no explicit value is provided, like upstream.
+    pub fn value(mut self, value: impl Into<SharedString>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    /// Uses the filled checkbox-button presentation instead of a box and label.
+    pub fn button(mut self, button: bool) -> Self {
+        self.button = button;
         self
     }
 
@@ -275,46 +298,74 @@ impl RenderOnce for Checkbox {
         let content = self
             .content
             .or_else(|| self.label.map(|label| label.into_any_element()));
-        let root = div()
-            .flex()
-            .flex_none()
-            .items_center()
-            .h(px(metrics.height))
-            .text_size(px(metrics.font_size))
-            .text_color(label_color)
-            .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
-            .when(self.border, |el| {
-                el.border_1()
-                    .border_color(if self.disabled {
-                        rgb(theme.border_lighter()).into()
-                    } else if self.checked {
-                        active_color
-                    } else {
-                        inactive_color
-                    })
-                    .rounded(px(metrics.radius))
-                    .pl(px(metrics.padding_left))
-                    .pr(px(metrics.padding_right))
-            })
-            .child(
-                div()
-                    .flex()
-                    .flex_none()
-                    .items_center()
-                    .justify_center()
-                    .size(px(box_size))
-                    .rounded(px(tokens::radius::SMALL))
-                    .border_1()
-                    .border_color(box_border)
-                    .bg(box_bg)
-                    .when(!self.disabled, |el| {
-                        el.hover(move |style| style.border_color(active_color))
-                    })
-                    .child(mark),
-            )
-            .when_some(content, |el, content| {
-                el.child(div().ml(px(8.)).line_height(px(1.)).child(content))
-            });
+        let root = if self.button {
+            let active = self.checked || self.indeterminate;
+            div()
+                .flex()
+                .flex_none()
+                .items_center()
+                .justify_center()
+                .h(px(metrics.height))
+                .px(px(metrics.padding_left + metrics.padding_right))
+                .text_size(px(metrics.font_size))
+                .rounded(px(metrics.radius))
+                .border_1()
+                .border_color(if active { active_color } else { inactive_color })
+                .bg(if active {
+                    active_color
+                } else {
+                    rgb(theme.background()).into()
+                })
+                .text_color(if active {
+                    rgb(WHITE)
+                } else if self.disabled {
+                    rgb(theme.disabled_text())
+                } else {
+                    rgb(theme.regular_text())
+                })
+                .when_some(content, |el, content| el.child(content))
+        } else {
+            div()
+                .flex()
+                .flex_none()
+                .items_center()
+                .h(px(metrics.height))
+                .text_size(px(metrics.font_size))
+                .text_color(label_color)
+                .when_some(theme.resolved_font(cx), |el, family| el.font_family(family))
+                .when(self.border, |el| {
+                    el.border_1()
+                        .border_color(if self.disabled {
+                            rgb(theme.border_lighter()).into()
+                        } else if self.checked {
+                            active_color
+                        } else {
+                            inactive_color
+                        })
+                        .rounded(px(metrics.radius))
+                        .pl(px(metrics.padding_left))
+                        .pr(px(metrics.padding_right))
+                })
+                .child(
+                    div()
+                        .flex()
+                        .flex_none()
+                        .items_center()
+                        .justify_center()
+                        .size(px(box_size))
+                        .rounded(px(tokens::radius::SMALL))
+                        .border_1()
+                        .border_color(box_border)
+                        .bg(box_bg)
+                        .when(!self.disabled, |el| {
+                            el.hover(move |style| style.border_color(active_color))
+                        })
+                        .child(mark),
+                )
+                .when_some(content, |el, content| {
+                    el.child(div().ml(px(8.)).line_height(px(1.)).child(content))
+                })
+        };
         let Some(id) = self.id else {
             return root.into_any_element();
         };
@@ -368,12 +419,34 @@ pub fn el_checkbox_group() -> CheckboxGroup {
     CheckboxGroup::default().id(ElementId::CodeLocation(*std::panic::Location::caller()))
 }
 
+/// One data-driven checkbox-group option.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CheckboxOption {
+    pub value: SharedString,
+    pub label: SharedString,
+    pub disabled: bool,
+}
+
+impl CheckboxOption {
+    pub fn new(value: impl Into<SharedString>, label: impl Into<SharedString>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            disabled: false,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+}
+
 /// Lays out related checkboxes and propagates shared settings to them.
 ///
-/// Native differences: the group does not collect the checked values into an
-/// array; each [`Checkbox`] reports its own next state through `onchange` and
-/// the application keeps the set. Upstream's arrow-key navigation between
-/// group items is not reproduced; native Tab order applies instead.
+/// The group controls the checked value array and reports the next array
+/// through `onchange`, matching upstream's `v-model`. Individual checkbox
+/// handlers still run before the group handler.
 #[derive(Default, IntoElement)]
 #[must_use]
 pub struct CheckboxGroup {
@@ -387,6 +460,11 @@ pub struct CheckboxGroup {
     /// Upstream spaces siblings with `margin-right: 30px`.
     gap: Option<f32>,
     accessibility_label: Option<SharedString>,
+    values: Option<Vec<SharedString>>,
+    min: usize,
+    max: usize,
+    button: bool,
+    onchange: Option<GroupChangeHandler>,
     checkboxes: Vec<Checkbox>,
 }
 
@@ -457,6 +535,50 @@ impl CheckboxGroup {
         self
     }
 
+    /// Controls the checked value array.
+    pub fn values(mut self, values: impl IntoIterator<Item = SharedString>) -> Self {
+        self.values = Some(values.into_iter().collect());
+        self
+    }
+
+    /// Sets the minimum and maximum checked count. Zero maximum means no limit.
+    pub fn limits(mut self, min: usize, max: usize) -> Self {
+        self.min = min;
+        self.max = max;
+        self
+    }
+
+    /// Uses checkbox-button children.
+    pub fn button(mut self, button: bool) -> Self {
+        self.button = button;
+        self
+    }
+
+    /// Reports the next checked value array.
+    pub fn onchange(
+        mut self,
+        handler: impl Fn(Vec<SharedString>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.onchange = Some(Rc::new(handler));
+        self
+    }
+
+    /// Builds children from data-driven options.
+    pub fn options(mut self, options: impl IntoIterator<Item = CheckboxOption>) -> Self {
+        self.checkboxes
+            .extend(options.into_iter().enumerate().map(|(index, option)| {
+                let mut checkbox = el_checkbox()
+                    .id(ElementId::named_usize("checkbox-option", index))
+                    .value(option.value)
+                    .label(option.label);
+                if option.disabled {
+                    checkbox = checkbox.disabled(true);
+                }
+                checkbox
+            }));
+        self
+    }
+
     pub fn checkbox(mut self, checkbox: Checkbox) -> Self {
         self.checkboxes.push(checkbox);
         self
@@ -466,6 +588,16 @@ impl CheckboxGroup {
     /// its own. Called while rendering, so settings added after a child keep
     /// winning, like upstream's reactive propagation.
     fn apply_defaults(&mut self) {
+        let current = self.values.clone().unwrap_or_else(|| {
+            self.checkboxes
+                .iter()
+                .filter(|checkbox| checkbox.checked)
+                .filter_map(|checkbox| checkbox.value.clone().or_else(|| checkbox.label.clone()))
+                .collect()
+        });
+        let group_handler = self.onchange.clone();
+        let min = self.min;
+        let max = self.max;
         for checkbox in &mut self.checkboxes {
             if checkbox.size == CheckboxSize::Default
                 && let Some(size) = self.size
@@ -491,6 +623,47 @@ impl CheckboxGroup {
                 && let Some(inactive_color) = self.inactive_color
             {
                 checkbox.inactive_color = Some(inactive_color);
+            }
+            if self.button {
+                checkbox.button = true;
+            }
+            let value = checkbox.value.clone().or_else(|| checkbox.label.clone());
+            if let Some(value) = &value {
+                checkbox.checked = current.contains(value);
+            }
+            if let Some(handler) = group_handler.clone()
+                && let Some(value) = value
+            {
+                let current = current.clone();
+                let child_handler = checkbox.onchange.take();
+                checkbox.onchange = Some(Box::new(move |next, window, cx| {
+                    let mut values = current.clone();
+                    let changed = if next {
+                        if values.contains(&value) {
+                            false
+                        } else if max == 0 || values.len() < max {
+                            values.push(value.clone());
+                            true
+                        } else {
+                            false
+                        }
+                    } else if values.len() <= min {
+                        false
+                    } else if let Some(index) =
+                        values.iter().position(|candidate| candidate == &value)
+                    {
+                        values.remove(index);
+                        true
+                    } else {
+                        false
+                    };
+                    if changed {
+                        if let Some(child_handler) = &child_handler {
+                            child_handler(next, window, cx);
+                        }
+                        handler(values, window, cx);
+                    }
+                }));
             }
         }
     }
@@ -613,6 +786,43 @@ mod tests {
         // The 30 px sibling gap is the render default, not a stored setting.
         let vertical = el_checkbox_group().vertical();
         assert_eq!(vertical.direction, Some(Direction::Vertical));
+    }
+
+    #[gpui::test]
+    fn controlled_group_reports_values_and_enforces_limits(cx: &mut gpui::TestAppContext) {
+        struct Harness {
+            values: Rc<std::cell::RefCell<Vec<SharedString>>>,
+        }
+        impl gpui::Render for Harness {
+            fn render(&mut self, _: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
+                let values = self.values.clone();
+                let current = values.borrow().clone();
+                let view = cx.entity();
+                div().p(px(0.)).child(
+                    el_checkbox_group()
+                        .vertical()
+                        .values(current)
+                        .limits(0, 1)
+                        .options([CheckboxOption::new("a", "A"), CheckboxOption::new("b", "B")])
+                        .onchange(move |next, _, cx| {
+                            *values.borrow_mut() = next;
+                            view.update(cx, |_, cx| cx.notify());
+                        }),
+                )
+            }
+        }
+        let values = Rc::new(std::cell::RefCell::new(Vec::new()));
+        let (_, view) = cx.add_window_view({
+            let values = values.clone();
+            move |_, _| Harness { values }
+        });
+        view.update(|window, cx| window.draw(cx).clear(cx));
+        view.simulate_click(gpui::point(px(8.), px(16.)), gpui::Modifiers::default());
+        assert_eq!(values.borrow().as_slice(), ["a".to_string()]);
+        view.simulate_click(gpui::point(px(8.), px(78.)), gpui::Modifiers::default());
+        assert_eq!(values.borrow().as_slice(), ["a".to_string()]);
+        view.simulate_click(gpui::point(px(8.), px(16.)), gpui::Modifiers::default());
+        assert!(values.borrow().is_empty());
     }
 
     struct Harness {

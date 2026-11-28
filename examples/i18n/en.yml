@@ -210,6 +210,7 @@ form: Form
 switch_intro: Toggle between two opposing states, with sizes, text, icons, and activation guards.
 switch_page: Switch
 switch_basic: Basic usage
+switch_values: Custom active and inactive values
 switch_sizes: Sizes
 switch_text: Text description
 switch_icons: Icons
@@ -258,6 +259,7 @@ rate_clearable: Clearable
 slider_intro: Drag or click the runway, step with the keyboard, and pick a range, marks, or a vertical layout.
 slider_page: Slider
 slider_basic: Basic usage
+slider_input: Slider with numeric input
 slider_sizes: Sizes
 slider_steps: Steps and stops
 slider_range: Range
