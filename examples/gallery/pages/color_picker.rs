@@ -23,6 +23,11 @@ impl Default for State {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn basic_value(state: &State) -> Option<&SharedString> {
+    state.basic.as_ref()
+}
+
 fn presets() -> Vec<SharedString> {
     [
         "#409eff", "#67c23a", "#e6a23c", "#f56c6c", "#909399", "#303133", "#ffffff", "#000000",

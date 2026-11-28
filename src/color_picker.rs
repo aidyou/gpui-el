@@ -229,6 +229,7 @@ struct ColorPickerState {
     props: ColorPickerProps,
     handlers: ColorPickerHandlers,
     last_value: Option<SharedString>,
+    text_draft: Option<String>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -279,6 +280,7 @@ impl ColorPickerState {
             },
             handlers: ColorPickerHandlers::default(),
             last_value: None,
+            text_draft: None,
             _subscriptions: vec![focus_in, focus_out],
         }
     }
@@ -308,6 +310,11 @@ impl ColorPickerState {
             .as_deref()
             .and_then(Color::parse)
             .unwrap_or(Color::PRIMARY);
+        self.text_draft = open.then(|| {
+            self.color
+                .format(self.props.format, self.props.show_alpha)
+                .to_string()
+        });
         let _ = window;
         let _ = cx;
     }
@@ -317,11 +324,44 @@ impl ColorPickerState {
             return;
         }
         self.color = color;
+        self.text_draft = Some(
+            color
+                .format(self.props.format, self.props.show_alpha)
+                .to_string(),
+        );
         if let Some(handler) = self.handlers.onactivechange.clone() {
             handler(
                 Some(color.format(self.props.format, self.props.show_alpha)),
                 window,
                 cx,
+            );
+        }
+    }
+
+    fn update_text(&mut self, value: SharedString, window: &mut Window, cx: &mut App) {
+        if self.props.disabled {
+            return;
+        }
+        self.text_draft = Some(value.to_string());
+        if let Some(parsed) = Color::parse(value.as_ref()) {
+            self.color = parsed;
+            if let Some(handler) = self.handlers.onactivechange.clone() {
+                handler(
+                    Some(parsed.format(self.props.format, self.props.show_alpha)),
+                    window,
+                    cx,
+                );
+            }
+        }
+    }
+
+    fn commit_text(&mut self, value: SharedString, window: &mut Window, cx: &mut App) {
+        self.update_text(value, window, cx);
+        if let Some(parsed) = Color::parse(self.text_draft.as_deref().unwrap_or_default()) {
+            self.text_draft = Some(
+                parsed
+                    .format(self.props.format, self.props.show_alpha)
+                    .to_string(),
             );
         }
     }
@@ -1039,6 +1079,11 @@ impl RenderOnce for ColorPicker {
                 panel = panel.child(colors);
             }
             let current = color.format(format, show_alpha);
+            let text_value = state
+                .read(cx)
+                .text_draft
+                .clone()
+                .unwrap_or_else(|| current.to_string());
             let mut actions = div()
                 .flex()
                 .items_center()
@@ -1062,48 +1107,63 @@ impl RenderOnce for ColorPicker {
                 );
             }
             actions = actions.child(
-                div().child(
-                    el_button()
-                        .id(ElementId::NamedChild(
-                            Arc::new(id.clone()),
-                            "confirm".into(),
-                        ))
-                        .small()
-                        .primary()
-                        .label(locale.color_picker_confirm())
-                        .onclick({
-                            let state = state.clone();
-                            move |_, window, cx| {
-                                state.update(cx, |state, cx| state.confirm(window, cx));
-                                window.refresh();
-                            }
-                        }),
-                ),
+                div()
+                    .debug_selector(|| "color-picker-confirm".into())
+                    .child(
+                        el_button()
+                            .id(ElementId::NamedChild(
+                                Arc::new(id.clone()),
+                                "confirm".into(),
+                            ))
+                            .small()
+                            .primary()
+                            .label(locale.color_picker_confirm())
+                            .onclick({
+                                let state = state.clone();
+                                move |_, window, cx| {
+                                    state.update(cx, |state, cx| state.confirm(window, cx));
+                                    window.refresh();
+                                }
+                            }),
+                    ),
             );
             panel = panel.child(
-                div().mt(px(12.)).child(
-                    el_input()
-                        .id(ElementId::NamedChild(
-                            Arc::new(id.clone()),
-                            "text-input".into(),
-                        ))
-                        .value(current)
-                        .small()
-                        .aria_label(locale.color_picker_default_label())
-                        .onchange({
-                            let state = state.clone();
-                            move |reported, window, cx| {
-                                if let Some(parsed) = Color::parse(reported.as_ref()) {
+                div()
+                    .mt(px(12.))
+                    .debug_selector(|| "color-picker-text-input".into())
+                    .child(
+                        el_input()
+                            .id(ElementId::NamedChild(
+                                Arc::new(id.clone()),
+                                "text-input".into(),
+                            ))
+                            .value(text_value)
+                            .small()
+                            .aria_label(locale.color_picker_default_label())
+                            .oninput({
+                                let state = state.clone();
+                                move |value, window, cx| {
                                     state.update(cx, |state, cx| {
-                                        state.update_color(parsed, window, cx)
+                                        state.update_text(value, window, cx)
                                     });
                                     window.refresh();
                                 }
-                            }
-                        }),
-                ),
+                            })
+                            .onchange({
+                                let state = state.clone();
+                                move |reported, window, cx| {
+                                    state.update(cx, |state, cx| {
+                                        state.commit_text(reported, window, cx)
+                                    });
+                                    window.refresh();
+                                }
+                            }),
+                    ),
             );
             panel = panel.child(actions);
+            panel = panel.child(measure(state.clone(), |state, bounds| {
+                state.popup_bounds = Some(bounds)
+            }));
             root = root.child(
                 deferred(
                     anchored()

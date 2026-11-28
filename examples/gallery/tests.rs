@@ -202,6 +202,58 @@ fn gallery_color_picker_panel_opens(cx: &mut gpui::TestAppContext) {
 }
 
 #[gpui::test]
+fn gallery_color_picker_text_input_commits(cx: &mut gpui::TestAppContext) {
+    let (gallery, view) = cx.add_window_view(|_, cx| {
+        Locale::English.set(cx);
+        cx.set_reduce_motion(true);
+        let gallery = Gallery {
+            page: Page::ColorPicker,
+            ..Gallery::default()
+        };
+        gallery.apply_theme(cx);
+        gallery
+    });
+    view.simulate_resize(size(px(1040.), px(660.)));
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let target = view
+        .debug_bounds("color-picker-basic")
+        .expect("gallery color picker bounds");
+    view.simulate_click(target.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let input = view
+        .debug_bounds("color-picker-text-input")
+        .expect("color picker text input");
+    view.simulate_mouse_down(
+        input.center(),
+        gpui::MouseButton::Left,
+        gpui::Modifiers::default(),
+    );
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(view.debug_bounds("color-picker-panel").is_some());
+    let ctrl_a = view
+        .update(|_, cx| gpui::Keystroke::parse_with_os("ctrl-a", cx.platform_info().os).unwrap());
+    view.simulate_event(gpui::KeyDownEvent {
+        keystroke: ctrl_a,
+        is_held: false,
+        prefer_character_input: false,
+    });
+    view.simulate_input("#112233");
+    view.simulate_keystrokes("tab");
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    let confirm = view
+        .debug_bounds("color-picker-confirm")
+        .expect("color picker confirm");
+    view.simulate_click(confirm.center(), gpui::Modifiers::default());
+    view.update(|window, cx| window.draw(cx).clear(cx));
+    gallery.update(cx, |gallery, _| {
+        assert_eq!(
+            pages::color_picker::basic_value(&gallery.color_picker).map(|value| value.as_ref()),
+            Some("#112233")
+        );
+    });
+}
+
+#[gpui::test]
 fn gallery_select_can_create_a_new_option(cx: &mut gpui::TestAppContext) {
     let (gallery, view) = cx.add_window_view(|_, cx| {
         Locale::English.set(cx);
