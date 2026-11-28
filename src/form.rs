@@ -30,6 +30,14 @@ pub struct FormError {
 
 type Validator = Rc<dyn Fn(&str) -> Result<(), String>>;
 
+/// Form validation trigger.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum FormValidateTrigger {
+    #[default]
+    Change,
+    Blur,
+}
+
 /// One synchronous validation rule.
 #[derive(Clone)]
 pub struct FormRule {
@@ -39,6 +47,7 @@ pub struct FormRule {
     max: Option<usize>,
     message: Option<SharedString>,
     validator: Option<Validator>,
+    trigger: FormValidateTrigger,
 }
 
 impl FormRule {
@@ -50,6 +59,7 @@ impl FormRule {
             max: None,
             message: None,
             validator: None,
+            trigger: FormValidateTrigger::Change,
         }
     }
 
@@ -75,6 +85,11 @@ impl FormRule {
 
     pub fn validator(mut self, validator: impl Fn(&str) -> Result<(), String> + 'static) -> Self {
         self.validator = Some(Rc::new(validator));
+        self
+    }
+
+    pub fn trigger(mut self, trigger: FormValidateTrigger) -> Self {
+        self.trigger = trigger;
         self
     }
 
@@ -178,6 +193,18 @@ impl FormState {
         self.model.insert(prop.into(), value.into());
     }
 
+    pub fn set_field_and_validate(
+        &mut self,
+        prop: impl Into<SharedString>,
+        value: impl Into<SharedString>,
+        trigger: FormValidateTrigger,
+        cx: &mut App,
+    ) -> Vec<FormError> {
+        let prop = prop.into();
+        self.model.insert(prop.clone(), value.into());
+        self.validate_triggered(Some(&prop), trigger, cx)
+    }
+
     pub fn field(&self, prop: &SharedString) -> Option<&SharedString> {
         self.model.get(prop)
     }
@@ -203,19 +230,35 @@ impl FormState {
     }
 
     pub fn validate(&mut self, prop: Option<&SharedString>, cx: &mut App) -> Vec<FormError> {
-        self.validate_with_locale(prop, Locale::current(cx))
+        self.validate_with_locale(prop, Locale::current(cx), None)
+    }
+
+    pub fn validate_triggered(
+        &mut self,
+        prop: Option<&SharedString>,
+        trigger: FormValidateTrigger,
+        cx: &mut App,
+    ) -> Vec<FormError> {
+        self.validate_with_locale(prop, Locale::current(cx), Some(trigger))
     }
 
     fn validate_with_locale(
         &mut self,
         prop: Option<&SharedString>,
         locale: Locale,
+        trigger: Option<FormValidateTrigger>,
     ) -> Vec<FormError> {
+        if let Some(prop) = prop {
+            self.errors.remove(prop);
+        } else {
+            self.errors.clear();
+        }
         let mut errors = Vec::new();
         for rule in self
             .rules
             .iter()
             .filter(|rule| prop.is_none_or(|prop| rule.prop == *prop))
+            .filter(|rule| trigger.is_none_or(|trigger| rule.trigger == trigger))
         {
             let value = self.model.get(&rule.prop).map_or("", SharedString::as_ref);
             let label = rule.prop.as_ref();
@@ -256,17 +299,6 @@ impl FormState {
                 prop: rule.prop.clone(),
                 message,
             });
-        }
-        if let Some(prop) = prop {
-            self.errors.retain(|key, _| {
-                !self
-                    .rules
-                    .iter()
-                    .any(|rule| rule.prop == *prop && rule.prop == *key)
-            });
-        } else {
-            self.errors
-                .retain(|key, _| self.rules.iter().any(|rule| rule.prop == *key));
         }
         errors
     }
@@ -648,6 +680,7 @@ impl RenderOnce for FormItem {
         let label_width = label_width.unwrap_or(config.label_width);
         let show_message = show_message.unwrap_or(config.show_message);
         let inline_message = inline_message.unwrap_or(config.inline_message);
+        let inline_error = error.clone().filter(|_| show_message && inline_message);
         let status_icon = status_icon.unwrap_or(config.status_icon);
         let theme = Theme::current(cx);
         let mut label_row = div().flex().items_center().gap(px(4.));
@@ -678,7 +711,7 @@ impl RenderOnce for FormItem {
             .min_w_0()
             .flex_1()
             .child(content);
-        if let Some(error) = error.filter(|_| show_message) {
+        if let Some(error) = error.filter(|_| show_message && !inline_message) {
             content_column = content_column.child(
                 div()
                     .flex()
@@ -702,9 +735,27 @@ impl RenderOnce for FormItem {
                     .child(el_icon("circle-check").size(12.)),
             );
         }
-        let _ = inline_message;
         let mut item = div().id(id).w_full();
-        if horizontal {
+        if let Some(error) = inline_error {
+            item = item
+                .flex()
+                .items_center()
+                .gap(px(12.))
+                .child(label_element)
+                .child(content_column)
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.))
+                        .text_size(px(12.))
+                        .text_color(rgb(crate::theme::DANGER))
+                        .when(status_icon, |el| {
+                            el.child(el_icon("circle-close").size(12.))
+                        })
+                        .child(error),
+                );
+        } else if horizontal {
             item = item
                 .flex()
                 .items_start()
@@ -749,7 +800,7 @@ mod tests {
         ]);
         let errors = state
             .borrow_mut()
-            .validate_with_locale(None, Locale::default());
+            .validate_with_locale(None, Locale::default(), None);
         assert_eq!(errors.len(), 2);
         assert_eq!(errors[0].prop, "name");
         assert_eq!(errors[1].message, "Email is invalid");
@@ -758,9 +809,47 @@ mod tests {
         assert!(
             state
                 .borrow_mut()
-                .validate_with_locale(None, Locale::default())
+                .validate_with_locale(None, Locale::default(), None)
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn triggered_validation_updates_only_the_matching_field() {
+        let state = FormState::new();
+        state.borrow_mut().set_model(BTreeMap::from([
+            ("name".into(), "".into()),
+            ("email".into(), "".into()),
+        ]));
+        state.borrow_mut().set_rules([
+            FormRule::new("name")
+                .required(true)
+                .trigger(FormValidateTrigger::Change),
+            FormRule::new("email")
+                .required(true)
+                .trigger(FormValidateTrigger::Blur),
+        ]);
+        state.borrow_mut().validate_with_locale(
+            Some(&"name".into()),
+            Locale::default(),
+            Some(FormValidateTrigger::Change),
+        );
+        assert!(state.borrow().error(&"name".into()).is_some());
+        state.borrow_mut().validate_with_locale(
+            Some(&"email".into()),
+            Locale::default(),
+            Some(FormValidateTrigger::Blur),
+        );
+        assert!(state.borrow().error(&"name".into()).is_some());
+        assert!(state.borrow().error(&"email".into()).is_some());
+        state.borrow_mut().set_field("name", "valid");
+        state.borrow_mut().validate_with_locale(
+            Some(&"name".into()),
+            Locale::default(),
+            Some(FormValidateTrigger::Change),
+        );
+        assert!(state.borrow().error(&"name".into()).is_none());
+        assert!(state.borrow().error(&"email".into()).is_some());
     }
 
     #[test]
@@ -776,7 +865,7 @@ mod tests {
         assert_eq!(
             state
                 .borrow_mut()
-                .validate_with_locale(None, Locale::default())
+                .validate_with_locale(None, Locale::default(), None)
                 .len(),
             1
         );

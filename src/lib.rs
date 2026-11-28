@@ -224,7 +224,7 @@ pub use date_picker::{DatePicker, DatePickerType, el_date_picker};
 pub use error::{Error, Result};
 pub use form::{
     Form, FormError, FormHandle, FormItem, FormLabelPosition, FormLayout, FormModel, FormRule,
-    FormState, el_form, el_form_item,
+    FormState, FormValidateTrigger, el_form, el_form_item,
 };
 pub use grid::{Col, ColSpec, Row, RowAlign, RowJustify, el_col, el_row};
 pub use icon::{Icon, IconPack, el_icon, register_icon_font};

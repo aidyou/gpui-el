@@ -881,6 +881,12 @@ const INPUT: &[Row] = &[
         "disabled 禁止一切编辑；readonly 仍可移动插入符号与选择并可复制。",
     ),
     (
+        "autofocus",
+        "bool · false",
+        "Focus the field on its first render.",
+        "首次渲染时聚焦字段。",
+    ),
+    (
         "clearable",
         "bool · false",
         "Adds a clear button at the right edge, shown on focus or by hovering it.",
@@ -1125,6 +1131,18 @@ const SELECT: &[Row] = &[
         "设置值/标签对；单个选项可禁用。",
     ),
     (
+        "option_groups",
+        "IntoIterator<SelectOptionGroup> · empty",
+        "Add labeled groups; grouped options participate in filtering, keyboard navigation, and selection.",
+        "添加带标签的选项分组；分组选项参与过滤、键盘导航与选择。",
+    ),
+    (
+        "allow_create, default_first_option",
+        "bool · false / false",
+        "Create a new option from a non-empty filter query and optionally highlight the first match immediately.",
+        "从非空过滤关键词创建新选项，并可立即高亮第一个匹配项。",
+    ),
+    (
         "multiple, multiple_limit",
         "bool / usize · false / 0",
         "Enable multiple selection and optionally cap it; zero means unlimited.",
@@ -1355,6 +1373,12 @@ const COLOR_PICKER: &[Row] = &[
         "设置预设颜色色块；非法条目被跳过。",
     ),
     (
+        "panel text input",
+        "Input · current formatted color",
+        "Edit Hex/RGB/RGBA text directly; valid input updates the draft color and active-change event.",
+        "直接编辑 Hex/RGB/RGBA 文本；合法输入更新草稿颜色与 active-change 事件。",
+    ),
+    (
         "accessibility_label",
         "SharedString · locale",
         "Name the trigger for assistive technology.",
@@ -1417,6 +1441,12 @@ const TIME_PICKER: &[Row] = &[
         "bool · false / false / true",
         "Disable all interaction, allow read-only selection, or disable text editing while keeping the panel.",
         "禁用全部交互、允许只读选择，或禁用文本编辑但保留面板。",
+    ),
+    (
+        "disabled_hours, disabled_minutes, disabled_seconds",
+        "Fn(u32) -> bool · none",
+        "Disable individual time cells; keyboard stepping skips disabled values.",
+        "禁用单个时间单元格；键盘步进会跳过禁用值。",
     ),
     (
         "clearable",
@@ -1591,8 +1621,8 @@ const CASCADER: &[Row] = &[
     (
         "selection",
         "CascaderSelection · Single(empty)",
-        "Control one value path or multiple leaf paths.",
-        "控制单个值路径或多个叶节点路径。",
+        "Control one value path or multiple leaf/parent paths.",
+        "控制单个值路径或多个叶节点/父节点路径。",
     ),
     (
         "options",
@@ -1601,10 +1631,10 @@ const CASCADER: &[Row] = &[
         "设置嵌套值/标签节点；单个节点可禁用。",
     ),
     (
-        "multiple, filterable",
-        "bool · false",
-        "Enable multiple leaf selection and path filtering.",
-        "启用多叶节点选择与路径过滤。",
+        "multiple, filterable, check_strictly, filter_method",
+        "bool / bool / bool / Fn · false",
+        "Enable multiple selection, path filtering, direct parent selection, or custom node filtering.",
+        "启用多选、路径过滤、直接父节点选择或自定义节点过滤。",
     ),
     (
         "show_all_levels, separator",
@@ -1776,6 +1806,12 @@ const TRANSFER: &[Row] = &[
         "Customize left/right titles and move-button labels.",
         "自定义左右标题与移动按钮标签。",
     ),
+    (
+        "left_footer, right_footer, left_empty, right_empty",
+        "IntoElement · none",
+        "Customize each panel's footer and empty state.",
+        "自定义各面板页脚与空态内容。",
+    ),
 ];
 const TRANSFER_EVENTS: &[Row] = &[
     (
@@ -1799,16 +1835,16 @@ const FORM: &[Row] = &[
         "创建共享模型/规则/错误状态与表单容器。",
     ),
     (
-        "set_model, set_initial_model, set_field, field",
-        "FormModel / SharedString",
-        "Control string values and the reset baseline.",
-        "控制字符串值与重置基线。",
+        "set_model, set_initial_model, set_field, set_field_and_validate, field",
+        "FormModel / SharedString / FormValidateTrigger",
+        "Control string values, the reset baseline, and change/blur-triggered field validation.",
+        "控制字符串值、重置基线，以及 change/blur 触发的字段校验。",
     ),
     (
-        "set_rules, validate, clear_validate, reset",
-        "FormRule / Option<prop>",
-        "Run synchronous required/length/custom validation, clear errors, or restore initial values.",
-        "执行同步必填/长度/自定义校验、清除错误或恢复初始值。",
+        "set_rules, validate, validate_triggered, clear_validate, reset",
+        "FormRule / Option<prop> / FormValidateTrigger",
+        "Run synchronous required/length/custom validation manually or by trigger, clear errors, or restore initial values.",
+        "手动或按触发器执行同步必填/长度/自定义校验、清除错误或恢复初始值。",
     ),
     (
         "layout, inline, vertical, label_position, label_width",
@@ -1887,6 +1923,18 @@ const SLIDER: &[Row] = &[
         "步长。按最近步长取整，最大值前的间隙向其取整，结果保留端点精度。",
     ),
     (
+        "step_at_marks",
+        "bool · false",
+        "Restrict values to the configured marks, like upstream step: 'mark'.",
+        "将取值限制在配置的标记上，对应上游 step: 'mark'。",
+    ),
+    (
+        "show_input, show_input_controls, input_size",
+        "bool / bool / InputSize · false / true / slider size",
+        "Show an InputNumber beside a single horizontal slider and configure its controls and size.",
+        "在单选横向滑块旁显示 InputNumber，并配置其控件与尺寸。",
+    ),
+    (
         "size, large, small",
         "SliderSize · Default (32 px)",
         "Large is 40 px, Small is 24 px; the runway is 6 px and the handle 20 px in every size.",
@@ -1963,6 +2011,12 @@ const CHECKBOX: &[Row] = &[
         "复选框旁的文字或自定义内容；自定义内容优先。",
     ),
     (
+        "value, button",
+        "SharedString / bool · label / false",
+        "Set the group value and optionally use the filled checkbox-button presentation.",
+        "设置分组值与可选填充式 CheckboxButton 外观。",
+    ),
+    (
         "checked, indeterminate",
         "bool · false",
         "The controlled state, and the partial state of a check-all parent. Activating an indeterminate checkbox checks it.",
@@ -2013,6 +2067,18 @@ const CHECKBOX_GROUP: &[Row] = &[
         "添加多选框；事件仍由各多选框提供。",
     ),
     (
+        "values, limits, onchange",
+        "Vec<SharedString> / (usize, usize) / Fn",
+        "Control the checked value array, enforce min/max counts, and report the next array.",
+        "控制选中值数组、限制最小/最大数量，并报告下一个数组。",
+    ),
+    (
+        "options, button",
+        "IntoIterator<CheckboxOption> / bool",
+        "Build data-driven children and optionally render them as checkbox buttons.",
+        "构建数据驱动子项，并可选择 CheckboxButton 外观。",
+    ),
+    (
         "direction, horizontal, vertical",
         "Direction · Horizontal",
         "Lay the children out in a row or a column.",
@@ -2043,12 +2109,20 @@ const CHECKBOX_GROUP: &[Row] = &[
         "为辅助技术命名分组。",
     ),
 ];
-const CHECKBOX_EVENTS: &[Row] = &[(
-    "Checkbox::onchange",
-    "bool, &mut Window, &mut App",
-    "Pointer or keyboard activation reports the next checked state; not emitted while disabled.",
-    "指针或键盘激活时报告下一个选中状态；禁用时不触发。",
-)];
+const CHECKBOX_EVENTS: &[Row] = &[
+    (
+        "Checkbox::onchange",
+        "bool, &mut Window, &mut App",
+        "Pointer or keyboard activation reports the next checked state; not emitted while disabled.",
+        "指针或键盘激活时报告下一个选中状态；禁用时不触发。",
+    ),
+    (
+        "CheckboxGroup::onchange",
+        "Vec<SharedString>, &mut Window, &mut App",
+        "A child toggle changes the controlled group array after min/max checks.",
+        "子项切换在 min/max 检查后改变受控分组数组。",
+    ),
+];
 const RADIO: &[Row] = &[
     (
         "el_radio(), Radio::new, id",
@@ -2061,6 +2135,12 @@ const RADIO: &[Row] = &[
         "SharedString / IntoElement · —",
         "Label or custom contents next to the input; custom contents take precedence.",
         "单选框旁的文字或自定义内容；自定义内容优先。",
+    ),
+    (
+        "value, button",
+        "SharedString / bool · label / false",
+        "Set the group value and optionally use the filled radio-button presentation.",
+        "设置分组值与可选填充式 RadioButton 外观。",
     ),
     (
         "checked",
@@ -2107,6 +2187,18 @@ const RADIO_GROUP: &[Row] = &[
         "添加单选框；事件仍由各单选框提供。",
     ),
     (
+        "value, onchange",
+        "SharedString / Fn",
+        "Control the selected value and report the next value.",
+        "控制选中值并报告下一个值。",
+    ),
+    (
+        "options, button",
+        "IntoIterator<RadioOption> / bool",
+        "Build data-driven children and optionally render them as radio buttons.",
+        "构建数据驱动子项，并可选择 RadioButton 外观。",
+    ),
+    (
         "direction, horizontal, vertical, gap",
         "Direction / f32 · Horizontal / 30",
         "Lay the children out and space them.",
@@ -2125,12 +2217,20 @@ const RADIO_GROUP: &[Row] = &[
         "原生颜色默认值；未显式设置的子项继承。",
     ),
 ];
-const RADIO_EVENTS: &[Row] = &[(
-    "Radio::onchange",
-    "bool, &mut Window, &mut App",
-    "The radio was activated by pointer or keyboard; not emitted while disabled or when the radio is already selected.",
-    "指针或键盘激活该单选框时触发；禁用或已选中时不触发。",
-)];
+const RADIO_EVENTS: &[Row] = &[
+    (
+        "Radio::onchange",
+        "bool, &mut Window, &mut App",
+        "The radio was activated by pointer or keyboard; not emitted while disabled or when the radio is already selected.",
+        "指针或键盘激活该单选框时触发；禁用或已选中时不触发。",
+    ),
+    (
+        "RadioGroup::onchange",
+        "SharedString, &mut Window, &mut App",
+        "A child activation changes the controlled group value.",
+        "子项激活改变受控分组值。",
+    ),
+];
 const SWITCH: &[Row] = &[
     (
         "el_switch(), Switch::new, id",
@@ -2161,6 +2261,12 @@ const SWITCH: &[Row] = &[
         "SharedString · —",
         "Labels beside the core; the current state's label is shown. With inline_prompt they move inside the core.",
         "轨道两侧的文字；只显示当前状态一侧。inline_prompt 时改为显示在轨道内。",
+    ),
+    (
+        "active_value, inactive_value",
+        "SharedString · true / false",
+        "Values reported by onvaluechange for the checked and unchecked states.",
+        "onvaluechange 在选中与未选中状态下报告的值。",
     ),
     (
         "active_icon, inactive_icon",
@@ -2211,12 +2317,20 @@ const SWITCH: &[Row] = &[
         "无障碍名称；纯图标开关应提供。",
     ),
 ];
-const SWITCH_EVENTS: &[Row] = &[(
-    "onchange",
-    "bool, &mut Window, &mut App",
-    "Pointer or keyboard activation reports the next checked state; not emitted while disabled or loading, or when before_change returns false.",
-    "指针或键盘激活时报告下一个选中状态；禁用、加载或 before_change 返回 false 时不触发。",
-)];
+const SWITCH_EVENTS: &[Row] = &[
+    (
+        "onchange",
+        "bool, &mut Window, &mut App",
+        "Pointer or keyboard activation reports the next checked state; not emitted while disabled or loading, or when before_change returns false.",
+        "指针或键盘激活时报告下一个选中状态；禁用、加载或 before_change 返回 false 时不触发。",
+    ),
+    (
+        "onvaluechange",
+        "SharedString, &mut Window, &mut App",
+        "Reports the configured active_value or inactive_value after a successful activation.",
+        "成功激活后报告配置的 active_value 或 inactive_value。",
+    ),
+];
 const TAG: &[Row] = &[
     (
         "el_tag(), Tag::new, id",
@@ -2462,15 +2576,15 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .child(heading(if zh { "事件" } else { "Events" }))
         .when(events.is_empty(), |el| el.child(if zh { "无事件" } else { "No events." }))
         .when(!events.is_empty(), |el| el.child(table("api-events", if zh { ["事件", "参数", "触发条件"] } else { ["Event", "Parameters", "When it fires"] }, events)))
-        .when(page == Page::Form, |el| el.child(if zh { "原生差异：使用共享 FormState 句柄与同步字符串规则；未移植嵌套属性路径、异步校验器、自动字段注册/触发校验、滚动定位与命令式 focus/blur。字段控件需调用方自行绑定 set_field。" } else { "Native differences: a shared FormState handle and synchronous string rules are used; nested property paths, async validators, automatic field registration/trigger validation, scroll-to-error, and imperative focus/blur are not mapped. Callers bind field controls through set_field." }))
-        .when(page == Page::Transfer, |el| el.child(if zh { "原生差异：当前仅支持静态数据与文本标签，未移植属性别名、自定义项目渲染、页脚/空态插槽、虚拟滚动与命令式 panel/query exposes。" } else { "Native differences: only static data and text labels are supported; prop aliases, custom item rendering, footer/empty slots, virtual scrolling, and imperative panel/query exposes are not mapped." }))
+        .when(page == Page::Form, |el| el.child(if zh { "原生差异：使用共享 FormState 句柄与同步字符串规则，支持 change/blur 触发校验与行内错误消息；未移植嵌套属性路径、异步校验器、自动字段注册、滚动定位与命令式 focus/blur。字段控件需调用方自行绑定 set_field_and_validate 或 validate_triggered。" } else { "Native differences: a shared FormState handle and synchronous string rules are used, with change/blur triggers and inline error messages. Nested property paths, async validators, automatic field registration, scroll-to-error, and imperative focus/blur are not mapped. Callers bind field controls through set_field_and_validate or validate_triggered." }))
+        .when(page == Page::Transfer, |el| el.child(if zh { "原生差异：支持静态数据、文本标签、自定义页脚与空态；未移植属性别名、自定义项目渲染、虚拟滚动与命令式 panel/query exposes。" } else { "Native differences: static data, text labels, custom footers, and empty states are supported; prop aliases, custom item rendering, virtual scrolling, and imperative panel/query exposes are not mapped." }))
         .when(page == Page::TreeSelect, |el| el.child(if zh { "原生差异：当前仅支持静态树与节点键值，未移植懒加载、cache-data、自定义节点渲染、虚拟滚动与命令式 tree/select exposes。" } else { "Native differences: only static trees and node-key values are supported; lazy loading, cache-data, custom node rendering, virtual scrolling, and imperative tree/select exposes are not mapped." }))
-        .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：当前仅支持静态选项与叶节点选择，未移植懒加载、check-strictly 父节点选择、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: only static options and leaf selection are supported; lazy loading, check-strictly parent selection, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
+        .when(page == Page::Cascader, |el| el.child(if zh { "原生差异：支持静态选项、叶节点或严格父节点选择、自定义过滤与完整路径标签；未移植懒加载、折叠标签提示、自定义渲染、虚拟滚动与命令式 exposes。" } else { "Native differences: static options, leaf or strict parent selection, custom filtering, and full path labels are supported; lazy loading, collapse-tag tooltips, custom rendering, virtual scrolling, and imperative exposes are not mapped." }))
         .when(page == Page::DatePicker, |el| el.child(if zh { "原生差异：使用字符串而非 Date 对象；支持日期/范围/月/年/季度/周与多选，但尚未提供 datetime 时间面板、shortcuts、DOM slots、popper 配置与命令式 exposes。" } else { "Native differences: values are strings rather than Date objects; date/range/month/year/quarter/week and multiple selection are supported, but datetime time panels, shortcuts, DOM slots, popper configuration, and imperative exposes are not mapped yet." }))
-        .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：当前仅支持单选时间，未移植范围模式、disabled-hours/minutes/seconds、自定义 popper 配置与命令式 exposes。时间格式固定为 HH:mm 或 HH:mm:ss。" } else { "Native differences: only single-time picking is supported; range mode, disabled-hours/minutes/seconds, custom popper configuration, and imperative exposes are not mapped. Time formats are fixed to HH:mm or HH:mm:ss." }))
-        .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：面板没有文本颜色输入、自定义 popper 配置或命令式 exposes；拖动仅在指针停留于控件上时跟踪。颜色使用 HSV 转换，支持 #RGB/#RGBA/#RRGGBB/#RRGGBBAA 与 rgb/rgba 字符串。" } else { "Native differences: the panel has no text color input, custom popper configuration, or imperative exposes; dragging is tracked only while the pointer remains over the control. Colors use HSV conversion and accept #RGB/#RGBA/#RRGGBB/#RRGGBBAA plus rgb/rgba strings." }))
+        .when(page == Page::TimePicker, |el| el.child(if zh { "原生差异：支持单选时间、HH:mm/HH:mm:ss、禁用时/分/秒与键盘跳过禁用值；未移植范围模式、自定义 popper 配置与命令式 exposes。" } else { "Native differences: single-time picking, HH:mm/HH:mm:ss, disabled hours/minutes/seconds, and keyboard skipping are supported; range mode, custom popper configuration, and imperative exposes are not mapped." }))
+        .when(page == Page::ColorPicker, |el| el.child(if zh { "原生差异：支持 SV、连续色相渐变、Alpha、预设、文本颜色输入、Hex/RGB/RGBA、清空/确认；未移植自定义 popper 配置与命令式 exposes，拖动仅在指针停留于控件上时跟踪。" } else { "Native differences: SV, a continuous hue gradient, alpha, presets, text color input, Hex/RGB/RGBA, and clear/confirm are supported; custom popper configuration and imperative exposes are not mapped, and dragging is tracked only while the pointer remains over the control." }))
         .when(page == Page::AutoComplete, |el| el.child(if zh { "原生差异：建议使用 AutoCompleteOption 类型而非任意记录；未移植自定义建议渲染、debounce、placement/popper 配置与命令式 exposes。远程搜索由 fetch_method 驱动。" } else { "Native differences: suggestions use the AutoCompleteOption type instead of arbitrary records; custom suggestion rendering, debounce, placement/popper configuration, and imperative exposes are not mapped. Remote search is caller-driven through fetch_method." }))
-        .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、选项分组、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, option groups, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
+        .when(page == Page::Select, |el| el.child(if zh { "原生差异：多选值以逗号摘要显示，不使用可删除 Tag；Backspace 移除最后一个可移除值并通过 onremove 报告。远程搜索由 filter_method 驱动，未移植 debounce、自定义选项渲染、折叠标签提示与命令式 focus/blur。" } else { "Native differences: multiple values are summarized as comma-separated labels instead of removable Tags; Backspace removes the last removable value and reports it through onremove. Remote search is caller-driven through filter_method; debounce, custom option rendering, collapse-tag tooltips, and imperative focus/blur are not mapped." }))
         .when(page == Page::Capsule, |el| el.child(if zh { "这是独立组件，不是 RadioGroup 的圆形单选样式：它保留 ChatSpeed 执行频率控件的连通胶囊几何，但颜色使用本库 Element Plus 主题。选项使用原生 Tab 顺序与 Enter/Space 激活，不提供方向键组导航。" } else { "This is an independent component rather than RadioGroup's circular radio style: it keeps the connected capsule geometry of ChatSpeed's execution-frequency control while resolving colors through this crate's Element Plus theme. Options use native Tab order and Enter/Space activation; arrow-key group navigation is not provided." }))
         .when(page == Page::InputNumber, |el| el.child(if zh { "原生差异：formatter 接收 f64，parser 返回待解析文本；name、inputmode、tabindex 与命令式 focus/blur 暂未映射；validate-event 属于后续 Form。反向 min/max 收敛到 min，精度最多使用 f64 的 15 位有效小数。" } else { "Native differences: formatter receives an f64 and parser returns text to parse; name, inputmode, tabindex, and imperative focus/blur are not mapped yet; validate-event belongs to the future Form component. An inverted min/max range collapses to min, and precision uses at most f64's 15 useful decimal places." }))
         .when(page == Page::Loading, |el| el.child(if zh { "这是声明式原生遮罩，不提供 Web Loading 服务的 beforeClose / closed 回调或 DOM 挂载选项。" } else { "This declarative mask does not expose the web Loading service's beforeClose / closed callbacks or DOM mounting options." }))
@@ -2479,7 +2593,7 @@ pub(super) fn render(page: Page, locale: Locale) -> Div {
         .when(page == Page::Tag, |el| el.child(if zh { "原生差异：标签挂载与卸载立即完成，不重放上游 el-zoom-in-center 过渡，因此也没有 disable-transitions 属性；color 仅覆盖背景；CheckTag 支持键盘聚焦与触发，上游 span 不支持。" } else { "Native differences: tags mount and unmount immediately without the upstream el-zoom-in-center transition, so there is no disable-transitions property; color overrides only the background; CheckTag is keyboard focusable and activatable, which the upstream span is not." }))
         .when(page == Page::Table, |el| el.child(if zh { "原生差异：表头使用粗体字面配正文文字色；上游用 600 字重配次要文字色，缺少 semibold 字面的原生字体栈会把它画成普通字重且偏淡。排序、行选择、筛选、固定列、树形数据和合计行未移植。" } else { "Native differences: headers use the bold face with the body text color; upstream uses weight 600 on secondary text, which native font stacks without a semibold face paint as plain and washed out. Sorting, row selection, filtering, fixed columns, tree data, and summary rows are not reproduced." }))
         .when(page == Page::Rate, |el| el.child(if zh { "原生差异：图标为 Icon 值而非 Vue 组件，三个级别用数组传入，不支持任意内容；悬停星形没有 1.15 倍缩放（GPUI 无变换动画），但填充仍会预览选择；半星通过裁剪的激活图标叠加实现，而非上游的 decimal 伪元素；分数模板按 Rust f32 显示，3 而不是 3.0；悬停预览存在窗口键控状态中，应用不需要持有。" } else { "Native differences: the icons are Icon values instead of Vue components, so the three levels take an array and arbitrary content is not supported. The hovered star does not scale 1.15x (GPUI has no transform animation), but the fill still previews the selection. The half star is a clipped overlay of the active icon rather than upstream's decimal pseudo element. The score template renders with Rust's f32 display, 3 instead of 3.0. The hover preview lives in window-keyed state, so the application does not own it." }))
-        .when(page == Page::Checkbox, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中与半选状态用无障碍 toggle 属性（Mixed）与可见聚焦环表达；勾选标记使用内置 Element Plus Check 轮廓而非 CSS 边框旋转技巧；true-value/false-value 与分组的值集合收集属于应用状态，由各多选框的 onchange 处理；分组不提供上游的方向键导航，用原生 Tab 顺序。" } else { "Native differences: there is no hidden checkbox; the checked and indeterminate states use the accessibility toggle attribute (Mixed) and a visible focus ring. The check mark is the bundled Element Plus Check outline rather than a rotated CSS border trick. true-value/false-value and the group's value collection are the application's concern, handled in each checkbox's onchange. The group does not reproduce upstream's arrow-key navigation; native Tab order applies instead." }))
-        .when(page == Page::Radio, |el| el.child(if zh { "原生差异：没有隐藏 radio，选中状态用无障碍 toggle 属性与可见聚焦环表达；选中圆点为 4 px 实心圆而非 CSS 伪元素缩放；分组不收集选中值，由应用在各单选框的 onchange 中移动选择；分组不提供上游的方向键导航，用原生 Tab 顺序；重复点击已选中的单选框不触发事件，与上游一致。" } else { "Native differences: there is no hidden radio; the selected state uses the accessibility toggle attribute and a visible focus ring. The selection dot is a 4 px filled circle rather than a scaled CSS pseudo element. The group does not collect the picked value; the application moves the selection in each radio's onchange. Upstream's arrow-key navigation between group items is not reproduced; native Tab order applies instead. Activating the already selected radio fires nothing, like upstream." }))
-        .when(page == Page::Switch, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中状态用无障碍 toggle 属性与可见聚焦环表达；滑块滑动为 0.2 秒桌面版上游 300 ms 过渡；inline-prompt 显示完整文字并按宽度省略，而不是仅首个字符；active-value/inactive-value 属于应用状态，由 onchange 映射；before-change 为同步谓词，异步拦截由应用自行调度。" } else { "Native differences: there is no hidden checkbox; the checked state is conveyed with the accessibility toggle attribute and a visible focus ring. The knob slides for 0.2 s, the desktop variant of the upstream 300 ms transition. inline-prompt renders the full text with ellipsis instead of the first character. active-value/inactive-value are the application's state, mapped in onchange. before-change is a synchronous predicate; asynchronous gating is the caller's to schedule." }))
+        .when(page == Page::Checkbox, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中与半选状态用无障碍 toggle 属性（Mixed）与可见焦点环表达；勾选标记使用内置 Element Plus Check 轮廓而非 CSS 边框旋转技巧；分组现在收集受控值数组并支持 min/max、options 与 CheckboxButton，但 true-value/false-value 仍由应用映射；分组不提供上游的方向键导航，用原生 Tab 顺序。" } else { "Native differences: there is no hidden checkbox; checked and indeterminate states use the accessibility toggle attribute (Mixed) and a visible focus ring. The check mark is the bundled Element Plus Check outline rather than a rotated CSS border trick. Groups now collect the controlled value array and support min/max, options, and CheckboxButton, while true-value/false-value remain caller-mapped. Upstream arrow-key group navigation is not reproduced; native Tab order applies." }))
+        .when(page == Page::Radio, |el| el.child(if zh { "原生差异：没有隐藏 radio，选中状态用无障碍 toggle 属性与可见聚焦环表达；选中圆点为 4 px 实心圆而非 CSS 伪元素缩放；分组现在收集受控值并支持 options 与 RadioButton；分组不提供上游的方向键导航，用原生 Tab 顺序；重复点击已选中的单选框不触发事件，与上游一致。" } else { "Native differences: there is no hidden radio; the selected state uses the accessibility toggle attribute and a visible focus ring. The selection dot is a 4 px filled circle rather than a scaled CSS pseudo element. Groups now collect the controlled value and support options and RadioButton. Upstream's arrow-key navigation between group items is not reproduced; native Tab order applies instead. Activating the already selected radio fires nothing, like upstream." }))
+        .when(page == Page::Switch, |el| el.child(if zh { "原生差异：没有隐藏 checkbox，选中状态用无障碍 toggle 属性与可见聚焦环表达；滑块滑动为 0.2 秒桌面版上游 300 ms 过渡；inline-prompt 显示完整文字并按宽度省略，而不是仅首个字符；active-value/inactive-value 由 onvaluechange 直接报告；before-change 为同步谓词，异步拦截由应用自行调度。" } else { "Native differences: there is no hidden checkbox; the checked state is conveyed with the accessibility toggle attribute and a visible focus ring. The knob slides for 0.2 s, the desktop variant of the upstream 300 ms transition. inline-prompt renders the full text with ellipsis instead of the first character. active-value/inactive-value are reported directly by onvaluechange. before-change is a synchronous predicate; asynchronous gating is the caller's to schedule." }))
 }

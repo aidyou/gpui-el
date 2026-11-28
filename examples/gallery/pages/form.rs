@@ -1,6 +1,7 @@
 use gpui::{Context, Div, SharedString, div, prelude::*, px};
 use gpui_el::{
-    FormHandle, FormLabelPosition, FormRule, el_button, el_form, el_form_item, el_icon, el_input,
+    FormHandle, FormLabelPosition, FormRule, FormValidateTrigger, el_button, el_form, el_form_item,
+    el_icon, el_input,
 };
 
 use crate::{Gallery, copy::Copy};
@@ -43,22 +44,39 @@ impl Gallery {
         let field = |prop: &'static str, id: &'static str, width: f32, disabled: bool| {
             let form = form.clone();
             let view = view.clone();
+            let blur_form = form.clone();
+            let blur_view = view.clone();
             let value = form
                 .borrow()
                 .field(&SharedString::from(prop))
                 .cloned()
                 .unwrap_or_default();
-            div()
-                .w(px(width))
-                .child(el_input().id(id).value(value).disabled(disabled).oninput(
-                    move |value, _, cx| {
-                        form.borrow_mut().set_field(prop, value);
+            div().w(px(width)).child(
+                el_input()
+                    .id(id)
+                    .value(value)
+                    .disabled(disabled)
+                    .oninput(move |value, _, cx| {
+                        form.borrow_mut().set_field_and_validate(
+                            prop,
+                            value,
+                            FormValidateTrigger::Change,
+                            cx,
+                        );
                         view.update(cx, |this, cx| {
                             this.form.submitted = false;
                             cx.notify();
                         });
-                    },
-                ))
+                    })
+                    .onblur(move |_, cx| {
+                        blur_form.borrow_mut().validate_triggered(
+                            Some(&SharedString::from(prop)),
+                            FormValidateTrigger::Blur,
+                            cx,
+                        );
+                        blur_view.update(cx, |_, cx| cx.notify());
+                    }),
+            )
         };
         let horizontal = el_form(form.clone())
             .id("form-horizontal")
